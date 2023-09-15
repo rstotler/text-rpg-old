@@ -23,8 +23,11 @@ class Console:
             endIndex = 38
         drawLoc = [5, self.surface.get_height() - 18]
         for line in self.lineList[0:endIndex]:
-            if "String" in line and "Code" in line:
-                writeColor(line["String"], line["Code"], drawLoc, self.font, self.surface)
+            if "String" in line:
+                lineCode = str(len(line["String"])) + "w"
+                if "Code" in line:
+                    lineCode = line["Code"]
+                writeColor(line["String"], lineCode, drawLoc, self.font, self.surface)
             drawLoc[1] -= 18
 
         window.blit(self.surface, [0, 0])

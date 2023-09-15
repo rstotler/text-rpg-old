@@ -25,7 +25,7 @@ def writeColor(label, colorCode, location, font, surface):
             writeColor = [255, 255, 255]
             if targetColor in colorDict : writeColor = colorDict[targetColor]
 
-            textString = label[printIndex:printIndex+colorCount]
+            textString = label[printIndex:printIndex + colorCount]
             textRender = font.render(textString, True, writeColor)	
             surface.blit(textRender, [displayX, location[1]])
 
