@@ -39,12 +39,12 @@ class InputBar:
             if len(self.input) > 0:
                 if len(self.previousInputList) == 0 or self.input != self.previousInputList[0]:
                     self.previousInputList.insert(0, self.input)
-                    self.previousInputIndex = -1
                     if len(self.previousInputList) > 20:
                         self.previousInputList = self.previousInputList[0:20]
 
                 game.processInputBarCommand(self.input)
                 self.input = ""
+                self.previousInputIndex = -1
 
         elif keyName in game.keyboard.keys:
             targetKey = game.keyboard.keys[keyName]

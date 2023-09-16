@@ -12,19 +12,75 @@ class Player:
         self.itemDict = {"Armor": [], "Misc": []}
         self.maxWeight = 100.0
 
+        self.maxLookDistance = 5
+
+    def lookDirection(self, console, galaxyList, lookDir, count):
+        currentRoom = Room.exists(galaxyList, self.currentGalaxy, self.currentSystem, self.currentPlanet, self.currentArea, self.currentRoom)
+        if currentRoom != None:
+            messageType = None
+            lookCheck = False
+            lookDistance = count
+            if lookDistance > self.maxLookDistance:
+                lookDistance = self.maxLookDistance
+            for i in range(lookDistance):
+                if currentRoom.exit[lookDir] == None:
+                    messageType = "Can't See Further"
+                    break
+                elif currentRoom.door[lookDir] != None and currentRoom.door[lookDir]["Status"] in ["Closed", "Locked"]:
+                    messageType = "View Obstructed"
+                    break
+                else:
+                    lookCheck = True
+                    currentRoom = Room.exists(galaxyList, currentRoom.exit[lookDir][0], currentRoom.exit[lookDir][1], currentRoom.exit[lookDir][2], currentRoom.exit[lookDir][3], currentRoom.exit[lookDir][4])
+                    if currentRoom == None:
+                        currentRoom = galaxyList[0].systemList[0].planetList[0].areaList[0].roomList[0]
+                    
+            if messageType != None:
+                countString = ""
+                countCode = ""
+                if i > 0:
+                    sString = ""
+                    if i > 1:
+                        sString = "s"
+                    countString = " (" + str(i) + " Room" + sString + " Away)"
+                    if sString == "" : countCode = "2r" + str(len(str(i))) + "w10w1r"
+                    else : countCode = "2r" + str(len(str(i))) + "w11w1r"
+
+                console.lineList.insert(0, {"Blank": True})
+                if messageType == "Can't See Further":
+                    console.lineList.insert(0, {"String": "You can't see any farther to the " + lookDir + "." + countString, "Code":"7w1y25w" + str(len(lookDir)) + "w1y" + countCode})
+                elif messageType == "View Obstructed":
+                    console.lineList.insert(0, {"String": "Your view is obstructed to the " + lookDir + "." + countString, "Code":"31w" + str(len(lookDir)) + "w1y" + countCode})
+            if lookCheck:
+                console.lineList.insert(0, {"Blank": True})
+                currentRoom.display(console, galaxyList)
+        
     def moveCheck(self, console, galaxyList, targetDir):
         currentRoom = Room.exists(galaxyList, self.currentGalaxy, self.currentSystem, self.currentPlanet, self.currentArea, self.currentRoom)
         if currentRoom != None:
             if currentRoom.exit[targetDir] != None:
-                targetRoomData = currentRoom.exit[targetDir]
-                self.currentGalaxy = targetRoomData[0]
-                self.currentSystem = targetRoomData[1]
-                self.currentPlanet = targetRoomData[2]
-                self.currentArea = targetRoomData[3]
-                self.currentRoom = targetRoomData[4]
+                if currentRoom.door[targetDir] != None and currentRoom.door[targetDir]["Type"] == "Manual" and currentRoom.door[targetDir]["Status"] in ["Closed", "Locked"]:
+                    console.lineList.insert(0, {"Blank": True})
+                    console.lineList.insert(0, {"String": "The door is closed.", "Code":"18w1y"})
+                elif currentRoom.door[targetDir] != None and currentRoom.door[targetDir]["Type"] == "Automatic" and currentRoom.door[targetDir]["Status"] == "Locked" and "Password" in currentRoom.door[targetDir] and self.hasKey(currentRoom.door[targetDir]["Password"]) == False:
+                    console.lineList.insert(0, {"Blank": True})
+                    console.lineList.insert(0, {"String": "This door requires a key to pass through.", "Code":"40w1y"})
 
-                targetRoom = Room.exists(galaxyList, targetRoomData[0], targetRoomData[1], targetRoomData[2], targetRoomData[3], targetRoomData[4])
-                targetRoom.display(console, galaxyList)
+                else:
+                    targetRoomData = currentRoom.exit[targetDir]
+                    targetRoom = Room.exists(galaxyList, targetRoomData[0], targetRoomData[1], targetRoomData[2], targetRoomData[3], targetRoomData[4])
+                    if targetRoom != None:
+                        self.currentGalaxy = targetRoomData[0]
+                        self.currentSystem = targetRoomData[1]
+                        self.currentPlanet = targetRoomData[2]
+                        self.currentArea = targetRoomData[3]
+                        self.currentRoom = targetRoomData[4]
+
+                        console.lineList.insert(0, {"Blank": True})
+                        if currentRoom.door[targetDir] != None and currentRoom.door[targetDir]["Type"] == "Automatic":
+                            console.lineList.insert(0, {"String": "The door opens and closes as you walk through.", "Code":"45w1y"})
+                            console.lineList.insert(0, {"Blank": True})
+                        targetRoom.display(console, galaxyList)
 
             else:
                 console.lineList.insert(0, {"Blank": True})
@@ -227,3 +283,12 @@ class Player:
                         itemDisplayCode = str(len(item.prefix)) + "w1w" + item.name["Code"] + countCode
                         console.lineList.insert(0, {"String":itemDisplayString, "Code":itemDisplayCode})
                         del displayDict[item.num]
+
+    def hasKey(self, password):
+        for pocket in self.itemDict:
+            for item in self.itemDict[pocket]:
+                if "Password List" in item.flags:
+                    for playerPassword in item.flags["Password List"]:
+                        if playerPassword == password:
+                            return True
+        return False
