@@ -14,7 +14,6 @@ class Item:
         self.loadItem(num)
 
     def loadItem(self, num):
-
         if num == 1:
             self.prefix = "An"
             self.name = {"String":"Oak Seed", "Code":"1ddo3do4w"}
@@ -23,8 +22,11 @@ class Item:
         elif num == 3:
             self.name = {"String":"Pine Seed", "Code":"1ddo4do4w"}
         elif num == 4:
-            self.name = {"String":"Silver Key", "Code":"1ddw6dw3w"}
-            self.flags["Password List"] = ["123"]
+            self.name = {"String":"Gold Key", "Code":"1y4dy3w"}
+            self.flags["Password List"] = ["1234"]
+        elif num == 5:
+            self.name = {"String":"Silver Keycard", "Code":"1ddw6dw7w"}
+            self.flags["Password List"] = ["Spaceport"]
 
         # Create Key List #
         for word in self.name["String"].split():

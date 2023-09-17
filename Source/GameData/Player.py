@@ -5,7 +5,7 @@ class Player:
     def __init__(self):
         self.currentGalaxy = 0
         self.currentSystem = 0
-        self.currentPlanet = 0
+        self.currentPlanet = 3
         self.currentArea = 0
         self.currentRoom = 1
 
@@ -13,6 +13,8 @@ class Player:
         self.maxWeight = 100.0
 
         self.maxLookDistance = 5
+
+        self.emoteList = ["hmm", "hm", "nod", "nodnod", "tap"]
 
     def lookDirection(self, console, galaxyList, lookDir, count):
         currentRoom = Room.exists(galaxyList, self.currentGalaxy, self.currentSystem, self.currentPlanet, self.currentArea, self.currentRoom)
@@ -142,8 +144,19 @@ class Player:
                             console.lineList.insert(0, {"Blank": True})
                             console.lineList.insert(0, {"String":"You can't pick anything up.", "Code":"7w1y18w1y"})
                     else:
-                        console.lineList.insert(0, {"Blank": True})
-                        console.lineList.insert(0, {"String":"You get everything you can.", "Code":"26w1y"})
+                        if getItem != "Multiple":
+                            countString = ""
+                            countCode = ""
+                            if getCount > 1:
+                                countString = " (" + str(getCount) + ")"
+                                countCode = "2r" + str(len(str(getCount))) + "w1r"
+                            getString = "You get " + getItem.prefix.lower() + " " + getItem.name["String"] + "." + countString
+                            getCode = "8w" + str(len(getItem.prefix)) + "w1w" + getItem.name["Code"] + "1y" + countCode
+                            console.lineList.insert(0, {"Blank": True})
+                            console.lineList.insert(0, {"String":getString, "Code":getCode})
+                        else:
+                            console.lineList.insert(0, {"Blank": True})
+                            console.lineList.insert(0, {"String":"You get everything you can.", "Code":"26w1y"})
 
                 else:
                     countString = ""
@@ -292,3 +305,19 @@ class Player:
                         if playerPassword == password:
                             return True
         return False
+
+    def emote(self, console, input):
+        
+        if input in ["hmm", "hm"]:
+            console.lineList.insert(0, {"Blank": True})
+            console.lineList.insert(0, {"String":"You scratch your chin and go, 'Hmm..'", "Code":"28w3y3w3y"})
+        elif input in "nod":
+            console.lineList.insert(0, {"Blank": True})
+            console.lineList.insert(0, {"String":"You nod your head in agreement.", "Code":"30w1y"})
+        elif input == "nodnod":
+            console.lineList.insert(0, {"Blank": True})
+            console.lineList.insert(0, {"String":"You nodnod.", "Code":"10w1y"})
+        elif input == "tap":
+            console.lineList.insert(0, {"Blank": True})
+            console.lineList.insert(0, {"String":"You tap your foot impatiently.", "Code":"29w1y"})
+        
