@@ -4,6 +4,6 @@ class SolarSystem:
         self.name = {"String":"", "Code":""}
         self.planetList = []
 
-    def update(self, player, console):
+    def update(self, galaxyList, player, console):
         for planet in self.planetList:
-            planet.update(player, console)
+            planet.update(galaxyList, player, console)

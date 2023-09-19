@@ -8,20 +8,39 @@ class Room:
         self.room = room
 
         self.name = {"String":"A Debug Room"}
+        self.description = []
         self.exit = {"North": None, "East": None, "South": None, "West": None}
         self.door = {"North": None, "East": None, "South": None, "West": None}
-        self.description = []
 
         self.itemList = []
 
-    def display(self, console, galaxyList):
+        self.inside = False
+
+    def display(self, console, galaxyList, player):
+        targetPlanet = galaxyList[self.galaxy].systemList[self.system].planetList[self.planet]
+        dayCheck = self.isLit(galaxyList, player)
 
         # Name #
-        console.lineList.insert(0, self.name)
+        nameString = self.name["String"]
+        nameCode = str(len(nameString)) + "w"
+        if "Code" in self.name:
+            nameCode = self.name["Code"]
+        if dayCheck == False:
+            nameString = "Darkness"
+            nameCode = "1ddda1dda1da1da1da1a1da1dda"
+        console.lineList.insert(0, {"String":nameString, "Code":nameCode})
+
+        # Underline #
         underlineString = ""
         underlineCode = ""
-        for i in range(len(self.name["String"])):
-            underlineString = underlineString + "-"
+        for i in range(len(nameString)):
+            underlineChar = "-"
+            indentCount = int(len(nameString) * .15)
+            if indentCount <= 0:
+                indentCount = 1
+            if i not in range(0, indentCount) and i not in range(len(nameString) - indentCount, len(nameString)):
+                underlineChar = "="
+            underlineString = underlineString + underlineChar
             if i % 2 == 1:
                 underlineCode = underlineCode + "1y"
             else:
@@ -29,8 +48,11 @@ class Room:
         console.lineList.insert(0, {"String":underlineString, "Code":underlineCode})
 
         # Description #
-        for line in self.description:
-            console.lineList.insert(0, line)
+        if dayCheck == False:
+            console.lineList.insert(0, {"String":"It's too dark to see..", "Code":"2w1y17w2y"})
+        else:
+            for line in self.description:
+                console.lineList.insert(0, line)
 
         # Exits #
         for exitDir in ["North", "East", "South", "West"]:
@@ -42,48 +64,103 @@ class Room:
                 if exitRoom == None:
                     exitRoom = galaxyList[0].systemList[0].planetList[0].areaList[0].roomList[0]
                 
-                if self.door[exitDir] != None and self.door[exitDir]["Status"] in ["Closed", "Locked"]:
+                if dayCheck == False:
+                    exitRoomString = "( " + spaceString + exitDir + " ) - ( Black )"
+                    exitRoomCode = "2r1w4ddw2r3y2r1dw1a2da1dda2r"
+                elif self.door[exitDir] != None and self.door[exitDir]["Status"] in ["Closed", "Locked"]:
                     exitRoomString = "( " + spaceString + exitDir + " ) - [Closed]"
-                    exitRoomCode = "2r5w2r3y1r6w1r"
+                    exitRoomCode = "2r1w4ddw2r3y1r6w1r"
                 else:
                     exitRoomString = "( " + spaceString + exitDir + " ) - " + exitRoom.name["String"]
                 
-                exitRoomNameCode = str(len(exitRoomString)) + "w"
-                if "Code" in exitRoom.name:
-                    exitRoomNameCode = exitRoom.name["Code"]
+                if dayCheck == False:
+                    exitRoomNameCode = "2r1dw1a2da1dda2r"
+                else:
+                    exitRoomNameCode = str(len(exitRoomString)) + "w"
+                    if "Code" in exitRoom.name:
+                        exitRoomNameCode = exitRoom.name["Code"]
                 
                 if self.door[exitDir] == None or self.door[exitDir]["Status"] == "Open":
                     if exitDir in ["East", "West"]:
-                        exitRoomCode = "3r" + str(len(exitDir)) + "w2r3y" + exitRoomNameCode
+                        exitRoomCode = "3r1w" + str(len(exitDir) - 1) + "ddw2r3y" + exitRoomNameCode
                     else:
-                        exitRoomCode = "2r" + str(len(exitDir)) + "w2r3y" + exitRoomNameCode
+                        exitRoomCode = "2r1w" + str(len(exitDir) - 1) + "ddw2r3y" + exitRoomNameCode
                 console.lineList.insert(0, {"String":exitRoomString, "Code":exitRoomCode})
             else:
                 if exitDir in ["East", "West"]:
-                    exitRoomCode = "3r" + str(len(exitDir)) + "w2r3y2r7w2r"
+                    exitRoomCode = "3r1w" + str(len(exitDir) - 1) + "ddw2r3y2r1w6ddw2r"
                 else:
-                    exitRoomCode = "2r" + str(len(exitDir)) + "w2r3y2r7w2r"
-                console.lineList.insert(0, {"String":"( " + spaceString + exitDir + " ) - ( Nothing )", "Code":exitRoomCode})
+                    exitRoomCode = "2r1w" + str(len(exitDir) - 1) + "ddw2r3y2r1w6ddw2r"
+                
+                if dayCheck == False:
+                    exitRoomCode = exitRoomCode[0:-8] + "1dw1a2da1dda2r"
+                    console.lineList.insert(0, {"String":"( " + spaceString + exitDir + " ) - ( Black )", "Code":exitRoomCode})
+                else:
+                    console.lineList.insert(0, {"String":"( " + spaceString + exitDir + " ) - ( Nothing )", "Code":exitRoomCode})
 
         # Items #
         itemDisplayDict = {}
+        totalCount = 0
         for item in self.itemList:
             if item.num not in itemDisplayDict:
                 itemDisplayDict[item.num] = {"Count":1, "ItemData":item}
+                totalCount += 1
             else:
                 itemDisplayDict[item.num]["Count"] += 1
+                totalCount += 1
+        
+        if dayCheck == False and totalCount > 0:
+            countString = ""
+            countCode = ""
+            if totalCount > 1:
+                countString = " (" + str(totalCount) + ")"
+                countCode = "2r" + str(len(str(totalCount))) + "w1r"
+            console.lineList.insert(0, {"String":"There is something on the ground." + countString, "Code":"32w1y" + countCode})
+                    
+        else:
+            for item in self.itemList:
+                if item.num in itemDisplayDict:
+                    modString = ""
+                    modCode = ""
+                    if "Glowing" in item.flags and item.flags["Glowing"] == True:
+                        modString = " (Glowing)"
+                        modCode = "2y1w1dw1ddw1w2dw1ddw1y"
+
+                    countString = ""
+                    countCode = ""
+                    if itemDisplayDict[item.num]["Count"] > 1:
+                        countString = " (" + str(itemDisplayDict[item.num]["Count"]) + ")"
+                        countCode = "2r" + str(len(str(itemDisplayDict[item.num]["Count"]))) + "w1r"
+
+                    itemDisplayString = itemDisplayDict[item.num]["ItemData"].prefix + " " + itemDisplayDict[item.num]["ItemData"].name["String"] + " " + itemDisplayDict[item.num]["ItemData"].roomDescription["String"] + modString + countString
+                    itemDisplayCode = str(len(itemDisplayDict[item.num]["ItemData"].prefix)) + "w1w" + itemDisplayDict[item.num]["ItemData"].name["Code"] + "1w" + itemDisplayDict[item.num]["ItemData"].roomDescription["Code"] + modCode + countCode
+                    console.lineList.insert(0, {"String":itemDisplayString, "Code":itemDisplayCode})
+                    del itemDisplayDict[item.num]
+
+    def isLit(self, galaxyList, player):
+        targetPlanet = galaxyList[self.galaxy].systemList[self.system].planetList[self.planet]
+
+        if self.inside == False and targetPlanet.dayCheck() == True:
+            return True
+
         for item in self.itemList:
-            if item.num in itemDisplayDict:
-                countString = ""
-                countCode = ""
-                if itemDisplayDict[item.num]["Count"] > 1:
-                    countString = " (" + str(itemDisplayDict[item.num]["Count"]) + ")"
-                    countCode = "2r" + str(len(str(itemDisplayDict[item.num]["Count"]))) + "w1r"
+            if "Glowing" in item.flags and item.flags["Glowing"] == True:
+                return True
+
+        if player.currentGalaxy == self.galaxy and player.currentSystem == self.system and player.currentPlanet == self.planet and player.currentArea == self.area and player.currentRoom == self.room:
+            for gearSlot in player.gearDict:
+                if isinstance(player.gearDict[gearSlot], list):
+                    for gearSubSlot in player.gearDict[gearSlot]:
+                        if gearSubSlot != None:
+                            if "Glowing" in gearSubSlot.flags and gearSubSlot.flags["Glowing"] == True:
+                                return True
+                else:
+                    if player.gearDict[gearSlot] != None:
+                        item = player.gearDict[gearSlot]
+                        if "Glowing" in item.flags and item.flags["Glowing"] == True:
+                            return True
                 
-                itemDisplayString = itemDisplayDict[item.num]["ItemData"].prefix + " " + itemDisplayDict[item.num]["ItemData"].name["String"] + " " + itemDisplayDict[item.num]["ItemData"].roomDescription["String"] + countString
-                itemDisplayCode = str(len(itemDisplayDict[item.num]["ItemData"].prefix)) + "w1w" + itemDisplayDict[item.num]["ItemData"].name["Code"] + "1w" + itemDisplayDict[item.num]["ItemData"].roomDescription["Code"] + countCode
-                console.lineList.insert(0, {"String":itemDisplayString, "Code":itemDisplayCode})
-                del itemDisplayDict[item.num]
+        return False
 
     def installDoor(self, galaxyList, targetDir, doorType, password, status="Closed"):
         self.door[targetDir] = {"Type": doorType, "Status": status}

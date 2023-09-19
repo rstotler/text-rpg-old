@@ -37,12 +37,14 @@ class InputBar:
 
         elif keyName == "return":
             if len(self.input) > 0:
-                if len(self.previousInputList) == 0 or self.input != self.previousInputList[0]:
-                    self.previousInputList.insert(0, self.input)
-                    if len(self.previousInputList) > 20:
-                        self.previousInputList = self.previousInputList[0:20]
+                self.input = self.input.strip()
+                if len(self.input) > 0:
+                    if len(self.previousInputList) == 0 or self.input != self.previousInputList[0]:
+                        self.previousInputList.insert(0, self.input)
+                        if len(self.previousInputList) > 20:
+                            self.previousInputList = self.previousInputList[0:20]
+                    game.processInputBarCommand(self.input)
 
-                game.processInputBarCommand(self.input)
                 self.input = ""
                 self.previousInputIndex = -1
 
