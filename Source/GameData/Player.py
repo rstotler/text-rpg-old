@@ -4,11 +4,12 @@ from GameData.Item import Item
 class Player:
 
     def __init__(self):
-        self.currentGalaxy = 0
-        self.currentSystem = 0
-        self.currentPlanet = 1
-        self.currentArea = 0
-        self.currentRoom = 0
+        self.spaceship = None
+        self.galaxy = 0
+        self.system = 0
+        self.planet = 1
+        self.area = 0
+        self.room = 5
 
         self.itemDict = {"Armor": [], "Misc": []}
         self.gearDict = {"Head":None, "Face":None, "Neck":[None, None], "Body Under":None, "Body Over":None, "Hands":None, "Finger":[None, None], "Legs Under":None, "Legs Over":None, "Feet":None, "Left Hand":None, "Right Hand":None}
@@ -19,7 +20,7 @@ class Player:
         self.emoteList = ["hmm", "hm", "nod", "nodnod", "tap"]
 
     def lookDirection(self, console, galaxyList, lookDir, count):
-        currentRoom = Room.exists(galaxyList, self.currentGalaxy, self.currentSystem, self.currentPlanet, self.currentArea, self.currentRoom)
+        currentRoom = Room.exists(galaxyList, self.spaceship, self.galaxy, self.system, self.planet, self.area, self.room)
         if currentRoom != None:
             messageType = None
             lookCheck = False
@@ -35,7 +36,14 @@ class Player:
                     break
                 else:
                     lookCheck = True
-                    currentRoom = Room.exists(galaxyList, currentRoom.exit[lookDir][0], currentRoom.exit[lookDir][1], currentRoom.exit[lookDir][2], currentRoom.exit[lookDir][3], currentRoom.exit[lookDir][4])
+                    if len(currentRoom.exit[lookDir]) == 3:
+                        currentSpaceship = galaxyList[self.galaxy].systemList[self.system].getSpaceship(self.spaceship)
+                        if currentSpaceship != None:
+                            currentRoom = currentSpaceship.areaList[currentRoom.exit[lookDir][1]].roomList[currentRoom.exit[lookDir][2]]
+                        else:
+                            currentRoom = galaxyList[0].systemList[0].planetList[0].areaList[0].roomList[0]
+                    elif len(currentRoom.exit[lookDir]) == 5:
+                        currentRoom = Room.exists(galaxyList, None, currentRoom.exit[lookDir][0], currentRoom.exit[lookDir][1], currentRoom.exit[lookDir][2], currentRoom.exit[lookDir][3], currentRoom.exit[lookDir][4])
                     if currentRoom == None:
                         currentRoom = galaxyList[0].systemList[0].planetList[0].areaList[0].roomList[0]
                     
@@ -52,15 +60,15 @@ class Player:
 
                 console.lineList.insert(0, {"Blank": True})
                 if messageType == "Can't See Further":
-                    console.lineList.insert(0, {"String": "You can't see any farther to the " + lookDir + "." + countString, "Code":"7w1y25w" + str(len(lookDir)) + "w1y" + countCode})
+                    console.lineList.insert(0, {"String":"You can't see any farther to the " + lookDir + "." + countString, "Code":"7w1y25w" + str(len(lookDir)) + "w1y" + countCode})
                 elif messageType == "View Obstructed":
-                    console.lineList.insert(0, {"String": "Your view is obstructed to the " + lookDir + "." + countString, "Code":"31w" + str(len(lookDir)) + "w1y" + countCode})
+                    console.lineList.insert(0, {"String":"Your view is obstructed to the " + lookDir + "." + countString, "Code":"31w" + str(len(lookDir)) + "w1y" + countCode})
             if lookCheck:
                 console.lineList.insert(0, {"Blank": True})
                 currentRoom.display(console, galaxyList, self)
         
     def moveCheck(self, console, galaxyList, targetDir):
-        currentRoom = Room.exists(galaxyList, self.currentGalaxy, self.currentSystem, self.currentPlanet, self.currentArea, self.currentRoom)
+        currentRoom = Room.exists(galaxyList, self.spaceship, self.galaxy, self.system, self.planet, self.area, self.room)
         if currentRoom != None:
             if currentRoom.exit[targetDir] != None:
                 if currentRoom.door[targetDir] != None and currentRoom.door[targetDir]["Type"] == "Manual" and currentRoom.door[targetDir]["Status"] in ["Closed", "Locked"]:
@@ -68,17 +76,29 @@ class Player:
                     console.lineList.insert(0, {"String": "The door is closed.", "Code":"18w1y"})
                 elif currentRoom.door[targetDir] != None and currentRoom.door[targetDir]["Type"] == "Automatic" and currentRoom.door[targetDir]["Status"] == "Locked" and "Password" in currentRoom.door[targetDir] and self.hasKey(currentRoom.door[targetDir]["Password"]) == False:
                     console.lineList.insert(0, {"Blank": True})
-                    console.lineList.insert(0, {"String": "This door requires a key to pass through.", "Code":"40w1y"})
+                    console.lineList.insert(0, {"String": "You lack the proper key.", "Code":"23w1y"})
 
                 else:
+                    targetRoom = None
                     targetRoomData = currentRoom.exit[targetDir]
-                    targetRoom = Room.exists(galaxyList, targetRoomData[0], targetRoomData[1], targetRoomData[2], targetRoomData[3], targetRoomData[4])
+                    if len(targetRoomData) == 3:
+                        targetSpaceship = galaxyList[self.galaxy].systemList[self.system].getSpaceship(self.spaceship)
+                        if targetSpaceship != None:
+                            targetRoom = targetSpaceship.areaList[targetRoomData[1]].roomList[targetRoomData[2]]
+                    elif len(targetRoomData) == 5:
+                        targetRoom = Room.exists(galaxyList, None, targetRoomData[0], targetRoomData[1], targetRoomData[2], targetRoomData[3], targetRoomData[4])
                     if targetRoom != None:
-                        self.currentGalaxy = targetRoomData[0]
-                        self.currentSystem = targetRoomData[1]
-                        self.currentPlanet = targetRoomData[2]
-                        self.currentArea = targetRoomData[3]
-                        self.currentRoom = targetRoomData[4]
+                        if len(targetRoomData) == 3:
+                            self.area = targetRoomData[1]
+                            self.room = targetRoomData[2]
+                        else:
+                            self.galaxy = targetRoomData[0]
+                            self.system = targetRoomData[1]
+                            self.planet = targetRoomData[2]
+                            self.area = targetRoomData[3]
+                            self.room = targetRoomData[4]
+                            if self.spaceship != None:
+                                self.spaceship = None
 
                         console.lineList.insert(0, {"Blank": True})
                         if currentRoom.door[targetDir] != None and currentRoom.door[targetDir]["Type"] == "Automatic":
@@ -91,7 +111,7 @@ class Player:
                 console.lineList.insert(0, {"String": "You can't go that way!", "Code":"7w1y13w1y"})
 
     def getCheck(self, console, galaxyList, targetItemKey, count):
-        currentRoom = Room.exists(galaxyList, self.currentGalaxy, self.currentSystem, self.currentPlanet, self.currentArea, self.currentRoom)
+        currentRoom = Room.exists(galaxyList, self.spaceship, self.galaxy, self.system, self.planet, self.area, self.room)
         if currentRoom != None:
             getItem = None
             if targetItemKey != "All":
@@ -196,7 +216,7 @@ class Player:
         return currentWeight
 
     def dropCheck(self, console, galaxyList, targetItemKey, count):
-        currentRoom = Room.exists(galaxyList, self.currentGalaxy, self.currentSystem, self.currentPlanet, self.currentArea, self.currentRoom)
+        currentRoom = Room.exists(galaxyList, self.spaceship, self.galaxy, self.system, self.planet, self.area, self.room)
         if currentRoom != None:
             dropItem = None
             breakCheck = False
@@ -298,7 +318,7 @@ class Player:
             console.lineList.insert(0, {"String": targetPocketDisplayString + " Bag", "Code": targetPocketDisplayCode + "4w"})
             console.lineList.insert(0, {"String": underlineString, "Code": underlineCode})
 
-            currentRoom = Room.exists(galaxyList, self.currentGalaxy, self.currentSystem, self.currentPlanet, self.currentArea, self.currentRoom)
+            currentRoom = Room.exists(galaxyList, self.spaceship, self.galaxy, self.system, self.planet, self.area, self.room)
             if currentRoom == None:
                 currentRoom = galaxyList[0].systemList[0].planetList[0].areaList[0].roomList[0]
     
@@ -533,7 +553,7 @@ class Player:
                 gearCode = "1r1w6ddw1r"
                 modString = ""
                 modCode = ""
-                currentRoom = Room.exists(galaxyList, self.currentGalaxy, self.currentSystem, self.currentPlanet, self.currentArea, self.currentRoom)
+                currentRoom = Room.exists(galaxyList, self.spaceship, self.galaxy, self.system, self.planet, self.area, self.room)
                 if currentRoom == None:
                     currentRoom = galaxyList[0].systemList[0].planetList[0].areaList[0].roomList[0]
         
@@ -564,7 +584,36 @@ class Player:
                             if "Code" in self.gearDict[gearSlot].name:
                                 gearCode = self.gearDict[gearSlot].name["Code"]
                 console.lineList.insert(0, {"String":gearSlotString + ": " + gearString + modString, "Code":gearSlotCode + "2y" + gearCode + modCode})
-                
+
+    def boardCheck(self, console, galaxyList, targetRoom, targetSpaceshipKey):
+        targetSpaceship = None
+        for spaceship in targetRoom.spaceshipList:
+            if targetSpaceshipKey in spaceship.keyList:
+                targetSpaceship = spaceship
+                break
+
+        if self.spaceship != None:
+            console.lineList.insert(0, {"Blank": True})
+            console.lineList.insert(0, {"String":"You are already inside.", "Code":"22w1y"})
+        elif targetSpaceship == None:
+            console.lineList.insert(0, {"Blank": True})
+            console.lineList.insert(0, {"String":"You don't see it.", "Code":"7w1y8w1y"})
+        elif targetSpaceship.hatchStatus in ["Closed", "Locked"]:
+            console.lineList.insert(0, {"Blank": True})
+            console.lineList.insert(0, {"String":"The hatch is closed.", "Code":"19w1y"})
+        
+        else:
+            self.spaceship = spaceship.num
+            self.area = spaceship.hatchLocation[0]
+            self.room = spaceship.hatchLocation[1]
+
+            console.lineList.insert(0, {"Blank": True})
+            console.lineList.insert(0, {"String":"You step inside.", "Code":"15w1y"})
+            console.lineList.insert(0, {"Blank": True})
+
+            spaceshipHatchRoom = spaceship.areaList[self.area].roomList[self.room]
+            spaceshipHatchRoom.display(console, galaxyList, self)
+
     def hasKey(self, password):
         for pocket in self.itemDict:
             for item in self.itemDict[pocket]:
@@ -575,7 +624,6 @@ class Player:
         return False
 
     def emote(self, console, input):
-        
         if input in ["hmm", "hm"]:
             console.lineList.insert(0, {"Blank": True})
             console.lineList.insert(0, {"String":"You scratch your chin and go, 'Hmm..'", "Code":"28w3y3w3y"})

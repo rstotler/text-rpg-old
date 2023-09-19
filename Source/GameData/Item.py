@@ -2,15 +2,18 @@ class Item:
 
     def __init__(self, num):
         self.num = num
-        self.weight = 1.0
         self.flags = {}
 
         self.prefix = "A"
         self.name = {"String":"Debug Item"}
         self.roomDescription = {"String":"is laying on the ground.", "Code":"23w1y"}
         self.keyList = []
+
+        self.weight = 1.0
         self.pocket = "Misc"
         self.gearSlot = None
+
+        self.containerList = None
 
         self.loadItem(num)
 
@@ -82,22 +85,13 @@ class Item:
             self.name = {"String":"Leather Boots"}
             self.pocket = "Armor"
             self.gearSlot = "Feet"
-        # elif num == 18:
-        #     self.name = {"String":"Gilded Shield"}
-        #     self.pocket = "Armor"
-        #     self.gearSlot = ""
-        # elif num == 18:
-        #     self.name = {"String":"Iron Sword"}
-        #     self.pocket = "Weapons"
-        #     self.gearSlot = ""
-        # elif num == 19:
-        #     self.name = {"String":"Lance"}
-        #     self.pocket = "Weapons"
-        #     self.gearSlot = ""
-        # elif num == 20:
-        #     self.name = {"String":"Warhammer"}
-        #     self.pocket = "Weapons"
-        #     self.gearSlot = ""
+        elif num == 18:
+            self.name = {"String":"An Ornate Chest"}
+            self.containerList = []
+
+        # Containers Are Automatically NO GET #
+        if self.containerList != None:
+            self.flags['No Get'] = True
         
         # Create Key List #
         for word in self.name["String"].split():

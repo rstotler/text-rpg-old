@@ -31,40 +31,31 @@ class Planet:
         self.currentMinutesInYear += 1
 
         # Sunrise/Sunset Messages #
-        if self.type == "Planet" and self.galaxy == player.currentGalaxy and self.system == player.currentSystem and self.planet == player.currentPlanet:
+        if self.type == "Planet" and self.galaxy == player.galaxy and self.system == player.system and self.planet == player.planet:
             dayPercent = 0.0
             if self.minutesInDay != 0:
                 dayPercent = self.currentMinutesInDay / self.minutesInDay
 
-            targetRoom = Room.exists(galaxyList, player.currentGalaxy, player.currentSystem, player.currentPlanet, player.currentArea, player.currentRoom)
-            if targetRoom == None:
-                targetRoom = galaxyList[0].systemList[0].planetList[0].areaList[0].roomList[0]
-
             if dayPercent >= self.dawnPercent and self.dawnMessage == False:
                 self.dawnMessage = True
-                if targetRoom.inside == False:
-                    console.lineList.insert(0, {"Blank": True})
-                    console.lineList.insert(0, {"String":"The sky begins to lighten.", "Code":"4w1dc2ddc11w1dw6ddw1y"})
+                console.lineList.insert(0, {"Blank": True})
+                console.lineList.insert(0, {"String":"The sky begins to lighten.", "Code":"4w1dc2ddc11w1dw6ddw1y"})
             elif dayPercent >= self.sunrisePercent and self.sunriseMessage == False:
                 self.sunriseMessage = True
-                if targetRoom.inside == False:
-                    console.lineList.insert(0, {"Blank": True})
-                    console.lineList.insert(0, {"String":"The sun rises over the horizon.", "Code":"4w1dy2ddy16w1dw6ddw1y"})
+                console.lineList.insert(0, {"Blank": True})
+                console.lineList.insert(0, {"String":"The sun rises over the horizon.", "Code":"4w1dy2ddy16w1dw6ddw1y"})
             elif dayPercent >= self.noonPercent and self.noonMessage == False:
                 self.noonMessage = True
-                if targetRoom.inside == False:
-                    console.lineList.insert(0, {"Blank": True})
-                    console.lineList.insert(0, {"String":"It is noon.", "Code":"10w1y"})
+                console.lineList.insert(0, {"Blank": True})
+                console.lineList.insert(0, {"String":"It is noon.", "Code":"10w1y"})
             elif dayPercent >= self.duskPercent and self.duskMessage == False:
                 self.duskMessage = True
-                if targetRoom.inside == False:
-                    console.lineList.insert(0, {"Blank": True})
-                    console.lineList.insert(0, {"String":"The sun begins to set.", "Code":"4w1dy2ddy11w1dw2ddw1y"})
+                console.lineList.insert(0, {"Blank": True})
+                console.lineList.insert(0, {"String":"The sun begins to set.", "Code":"4w1dy2ddy11w1dw2ddw1y"})
             elif dayPercent >= self.sunsetPercent and self.sunsetMessage == False:
                 self.sunsetMessage = True
-                if targetRoom.inside == False:
-                    console.lineList.insert(0, {"Blank": True})
-                    console.lineList.insert(0, {"String":"The sun sinks beyond the horizon.", "Code":"4w1dy2ddy18w1dw6ddw1y"})
+                console.lineList.insert(0, {"Blank": True})
+                console.lineList.insert(0, {"String":"The sun sinks beyond the horizon.", "Code":"4w1dy2ddy18w1dw6ddw1y"})
 
         if self.currentMinutesInDay % 60 == 0:
             self.updateLocation()
