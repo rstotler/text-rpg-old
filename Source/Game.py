@@ -118,16 +118,14 @@ class Game:
             areaCOTU.roomList.append(roomCOTU05)
             roomCOTU05.name = {"String":"COTU Landing Pad"}
             roomCOTU05.exit["North"] = [0, 0, 1, 0, 2]
-            #roomCOTU05.flags["Landing Pad"] = True
 
         # Debug Spaceship #
         if True:
-            debugShip = Spaceship(0, 0, 1)
+            debugShip = Spaceship(0, 0, 1, "COTU Spaceport", [0, 1], [[0, 1]])
             roomCOTU05.spaceshipList.append(debugShip)
             systemProtoSol.spaceshipList.append(debugShip)
             debugShip.name = {"String":"Debug Ship", "Code":"10w"}
             debugShip.keyList = ["debug", "ship", "debug ship"]
-            debugShip.hatchLocation = [0, 1]
 
             debugShipArea0 = Area()
             debugShip.areaList.append(debugShipArea0)
@@ -142,14 +140,22 @@ class Game:
             debugShipArea0.roomList.append(debugShipRoom01)
             debugShipRoom01.name = {"String":"Ship Hallway"}
             debugShipRoom01.exit["North"] = [0, 0]
-            debugShipRoom01.exit["West"] = [0, 0, 1, 0, 5]
 
-            for room in debugShipArea0.roomList:
-                for exitDir in room.exit:
-                    if room.exit[exitDir] != None and len(room.exit[exitDir]) == 2:
-                        room.exit[exitDir].insert(0, debugShip.num)
-                room.inside = True
-                room.spaceshipObject = debugShip
+            debugShip.landedLocation = [0, 0, 1, 0, 5]
+            for area in debugShip.areaList:
+                for room in area.roomList:
+                    for exitDir in room.exit:
+                        if room.exit[exitDir] != None and len(room.exit[exitDir]) == 2:
+                            room.exit[exitDir].insert(0, debugShip.num)
+                    room.inside = True
+                    room.spaceshipObject = debugShip
+            for spaceshipExit in debugShip.exitList:
+                for exitDir in ["West", "South", "North", "East"]:
+                    if debugShip.areaList[spaceshipExit[0]].roomList[spaceshipExit[1]].exit[exitDir] == None:
+                        targetExitRoom = debugShip.areaList[spaceshipExit[0]].roomList[spaceshipExit[1]]
+                        targetExitRoom.exit[exitDir] = "Spaceship Exit"
+                        targetExitRoom.installDoor(self.galaxyList, exitDir, "Automatic", None, "Closed", True)
+                        break
 
         # Sol #
         if True:
@@ -200,7 +206,7 @@ class Game:
         # Load Doors AFTER ALL Rooms Are Loaded! #
         roomCOTU02.installDoor(self.galaxyList, "North", "Automatic", "COTU Spaceport")
         roomCOTU02.lockUnlockDoor(self.galaxyList, "Lock", "North")
-        roomCOTU04.installDoor(self.galaxyList, "East", "Manual", None, "Open")
+        roomCOTU04.installDoor(self.galaxyList, "East", "Manual", None)
         debugShipRoom00.installDoor(self.galaxyList, "South", "Automatic", "COTU Spaceport")
         debugShipRoom00.lockUnlockDoor(self.galaxyList, "Lock", "South")
 
@@ -259,7 +265,7 @@ class Game:
                     targetDir = "East"
                 elif input.lower().split()[1] in ["south", "sout", "sou", "so", "s"]:
                     targetDir = "South"
-                else:
+                elif input.lower().split()[1] in ["west", "wes", "we", "w"]:
                     targetDir = "West"
             
             # Look 'Dir' #
@@ -270,11 +276,28 @@ class Game:
             elif len(input.split()) == 3 and targetDir != None and stringIsNumber(input.split()[2]) and int(input.split()[2]) > 0:
                 self.player.lookDirection(self.console, self.galaxyList, targetDir, int(input.split()[2]))
 
+            # Look 'Dir' '#' Item/Mob/Spaceship #
+            elif len(input.split()) > 3 and input.lower().split()[1] in ["north", "nort", "nor", "no", "n", "east", "eas", "ea", "e", "south", "sout", "sou", "so", "s", "west", "wes", "we", "w"] and stringIsNumber(input.split()[2]) and int(input.split()[2]) > 0:
+                if input.lower().split()[1] in ["north", "nort", "nor", "no", "n"] : targetDir = "North"
+                elif input.lower().split()[1] in ["east", "eas", "ea", "e"] : targetDir = "East"
+                elif input.lower().split()[1] in ["south", "sout", "sou", "so", "s"] : targetDir = "South"
+                else : targetDir = "West"
+                lookTarget = ' '.join(input.lower().split()[3::])
+                self.player.lookTargetCheck(self.console, self.galaxyList, targetDir, int(input.split()[2]), lookTarget)
+
+            # Look 'Dir' Item/Mob/Spaceship #
+            elif len(input.split()) > 2 and input.lower().split()[-1] in ["north", "nort", "nor", "no", "n", "east", "eas", "ea", "e", "south", "sout", "sou", "so", "s", "west", "wes", "we", "w"]:
+                if input.lower().split()[1] in ["north", "nort", "nor", "no", "n"] : targetDir = "North"
+                elif input.lower().split()[1] in ["east", "eas", "ea", "e"] : targetDir = "East"
+                elif input.lower().split()[1] in ["south", "sout", "sou", "so", "s"] : targetDir = "South"
+                else : targetDir = "West"
+                lookTarget = ' '.join(input.lower().split()[2::])
+                self.player.lookTargetCheck(self.console, self.galaxyList, targetDir, 1, lookTarget)
+
             # Look Item/Mob/Spaceship #
-
-            # Look Item/Mob/Spaceship 'Dir' #
-
-            # Look Item/Mob/Spaceship 'Dir' '#' #
+            elif len(input.split()) > 1:
+                lookTarget = ' '.join(input.lower().split()[1::])
+                self.player.lookTargetCheck(self.console, self.galaxyList, None, None, lookTarget)
 
             # Look #
             elif len(input.split()) == 1:
@@ -291,14 +314,10 @@ class Game:
         
         # Movement - (North, East, South, West) #
         elif len(input.split()) == 1 and input.lower() in ["north", "nort", "nor", "no", "n", "east", "eas", "ea", "e", "south", "sout", "sou", "so", "s", "west", "wes", "we", "w"]:
-            if input.lower() in ["north", "nort", "nor", "no", "n"]:
-                targetDir = "North"
-            elif input.lower() in ["east", "eas", "ea", "e"]:
-                targetDir = "East"
-            elif input.lower() in ["south", "sout", "sou", "so", "s"]:
-                targetDir = "South"
-            else:
-                targetDir = "West"
+            if input.lower() in ["north", "nort", "nor", "no", "n"] : targetDir = "North"
+            elif input.lower() in ["east", "eas", "ea", "e"] : targetDir = "East"
+            elif input.lower() in ["south", "sout", "sou", "so", "s"] : targetDir = "South"
+            else : targetDir = "West"
 
             # Move Direction '#' #
 
@@ -307,27 +326,21 @@ class Game:
 
         # Open/Close #
         elif input.lower().split()[0] in ["open", "ope", "op", "o", "close", "clos", "clo", "cl"]:
-            if input.lower().split()[0] in ["open", "ope", "op", "o"]:
-                targetAction = "Open"
-            else:
-                targetAction = "Close"
+            if input.lower().split()[0] in ["open", "ope", "op", "o"] : targetAction = "Open"
+            else : targetAction = "Close"
             
             # Open/Close 'Direction' #
             if len(input.split()) == 2 and input.lower().split()[1] in ["north", "nort", "nor", "no", "n", "east", "eas", "ea", "e", "south", "sout", "sou", "so", "s", "west", "wes", "we", "w"]:
-                if input.lower().split()[1] in ["north", "nort", "nor", "no", "n"]:
-                    targetDir = "North"
-                elif input.lower().split()[1] in ["east", "eas", "ea", "e"]:
-                    targetDir = "East"
-                elif input.lower().split()[1] in ["south", "sout", "sou", "so", "s"]:
-                    targetDir = "South"
-                else:
-                    targetDir = "West"
+                if input.lower().split()[1] in ["north", "nort", "nor", "no", "n"] : targetDir = "North"
+                elif input.lower().split()[1] in ["east", "eas", "ea", "e"] : targetDir = "East"
+                elif input.lower().split()[1] in ["south", "sout", "sou", "so", "s"] : targetDir = "South"
+                else : targetDir = "West"
                 
-                targetRoom.openCloseDoorCheck(self.console, self.galaxyList, targetAction, targetDir)
+                self.player.openCloseDoorCheck(self.console, self.galaxyList, targetRoom, targetAction, targetDir)
 
             # Open/Close Container #
-
-            # Open/Close Spaceship #
+            elif len(input.split()) > 1:
+                self.player.openCloseTargetCheck(self.console, targetRoom, targetAction, ' '.join(input.lower().split()[1::]))
 
             else:
                 self.console.lineList.insert(0, {"Blank": True})
@@ -335,27 +348,21 @@ class Game:
 
         # Lock/Unlock #
         elif input.lower().split()[0] in ["lock", "loc", "unlock", "unloc", "unlo", "unl", "un"]:
-            if input.lower().split()[0] in ["lock", "loc"]:
-                targetAction = "Lock"
-            else:
-                targetAction = "Unlock"
+            if input.lower().split()[0] in ["lock", "loc"] : targetAction = "Lock"
+            else : targetAction = "Unlock"
 
             # Lock/Unlock 'Direction' #
             if len(input.split()) == 2 and input.lower().split()[1] in ["north", "nort", "nor", "no", "n", "east", "eas", "ea", "e", "south", "sout", "sou", "so", "s", "west", "wes", "we", "w"]:
-                if input.lower().split()[1] in ["north", "nort", "nor", "no", "n"]:
-                    targetDir = "North"
-                elif input.lower().split()[1] in ["east", "eas", "ea", "e"]:
-                    targetDir = "East"
-                elif input.lower().split()[1] in ["south", "sout", "sou", "so", "s"]:
-                    targetDir = "South"
-                else:
-                    targetDir = "West"
+                if input.lower().split()[1] in ["north", "nort", "nor", "no", "n"] : targetDir = "North"
+                elif input.lower().split()[1] in ["east", "eas", "ea", "e"] : targetDir = "East"
+                elif input.lower().split()[1] in ["south", "sout", "sou", "so", "s"] : targetDir = "South"
+                else : targetDir = "West"
                 
-                targetRoom.lockUnlockDoorCheck(self.console, self.galaxyList, self.player, targetAction, targetDir)
+                self.player.lockUnlockDoorCheck(self.console, self.galaxyList, targetRoom, targetAction, targetDir)
 
             # Lock/Unlock Container #
-
-            # Lock/Unlock Spaceship #
+            elif len(input.split()) > 1:
+                self.player.lockUnlockTargetCheck(self.console, targetRoom, targetAction, ' '.join(input.lower().split()[1::]))
 
             else:
                 self.console.lineList.insert(0, {"Blank": True})
@@ -528,7 +535,7 @@ class Game:
         elif input.lower().split()[0] in ["board", "boar", "boa", "bo"]:
             if len(input.split()) > 1:
                 self.player.boardCheck(self.console, self.galaxyList, targetRoom, ' '.join(input.lower().split()[1::]))
-
+            
             else:
                 self.console.lineList.insert(0, {"Blank": True})
                 self.console.lineList.insert(0, {"String": "Board what?", "Code":"10w1y"})

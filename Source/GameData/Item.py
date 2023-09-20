@@ -54,8 +54,8 @@ class Item:
             self.pocket = "Armor"
             self.gearSlot = "Body Over"
         elif num == 11:
-            self.name = {"String":"Leather Gloves"}
             self.prefix = "A pair of"
+            self.name = {"String":"Leather Gloves"}
             self.roomDescription = {"String":"are laying on the ground.", "Code":"24w1y"}
             self.pocket = "Armor"
             self.gearSlot = "Hands"
@@ -86,7 +86,8 @@ class Item:
             self.pocket = "Armor"
             self.gearSlot = "Feet"
         elif num == 18:
-            self.name = {"String":"An Ornate Chest"}
+            self.prefix = "An"
+            self.name = {"String":"Ornate Chest"}
             self.containerList = []
 
         # Containers Are Automatically NO GET #
