@@ -20,16 +20,19 @@ class Room:
         self.inside = False
 
     def display(self, console, galaxyList, player):
-        dayCheck = self.isLit(galaxyList, player)
+        roomIsLit = self.isLit(galaxyList, player)
 
         # Name #
         nameString = self.name["String"]
         nameCode = str(len(nameString)) + "w"
         if "Code" in self.name:
             nameCode = self.name["Code"]
-        if dayCheck == False:
+        if roomIsLit == False:
             nameString = "Darkness"
             nameCode = "1ddda1dda1da1da1da1a1da1dda"
+        if self.inside == True:
+            nameString = "(Inside) " + nameString
+            nameCode = "1r6w2r" + nameCode
         console.lineList.insert(0, {"String":nameString, "Code":nameCode})
 
         # Underline #
@@ -50,7 +53,7 @@ class Room:
         console.lineList.insert(0, {"String":underlineString, "Code":underlineCode})
 
         # Description #
-        if dayCheck == False:
+        if roomIsLit == False:
             console.lineList.insert(0, {"String":"It's too dark to see..", "Code":"2w1y17w2y"})
         else:
             for line in self.description:
@@ -73,7 +76,7 @@ class Room:
                 if exitRoom == None:
                     exitRoom = galaxyList[0].systemList[0].planetList[0].areaList[0].roomList[0]
                 
-                if dayCheck == False and exitRoom.isLit(galaxyList, player) == False:
+                if roomIsLit == False and exitRoom.isLit(galaxyList, player) == False:
                     exitRoomString = "( " + spaceString + exitDir + " ) - ( Black )"
                     exitRoomCode = "2r1w4ddw2r3y2r1dw1a2da1dda2r"
                 elif self.door[exitDir] != None and self.door[exitDir]["Status"] in ["Closed", "Locked"]:
@@ -82,7 +85,7 @@ class Room:
                 else:
                     exitRoomString = "( " + spaceString + exitDir + " ) - " + exitRoom.name["String"]
                 
-                if dayCheck == False and exitRoom.isLit(galaxyList, player) == False:
+                if roomIsLit == False and exitRoom.isLit(galaxyList, player) == False:
                     exitRoomNameCode = "2r1dw1a2da1dda2r"
                 else:
                     exitRoomNameCode = str(len(exitRoomString)) + "w"
@@ -101,7 +104,7 @@ class Room:
                 else:
                     exitRoomCode = "2r1w" + str(len(exitDir) - 1) + "ddw2r3y2r1w6ddw2r"
                 
-                if dayCheck == False:
+                if roomIsLit == False:
                     exitRoomCode = exitRoomCode[0:-8] + "1dw1a2da1dda2r"
                     console.lineList.insert(0, {"String":"( " + spaceString + exitDir + " ) - ( Black )", "Code":exitRoomCode})
                 else:
@@ -125,7 +128,7 @@ class Room:
                 itemDisplayDict[item.num]["Count"] += 1
                 totalCount += 1
         
-        if dayCheck == False and totalCount > 0:
+        if roomIsLit == False and totalCount > 0:
             countString = ""
             countCode = ""
             if totalCount > 1:
@@ -225,10 +228,11 @@ class Room:
     def isLit(self, galaxyList, player):
         targetPlanet = None
         if self.galaxy != None and self.system != None and self.planet != None:
-            targetPlanet = galaxyList[self.galaxy].systemList[self.system].planetList[self.planet]
-
+            if self.galaxy <= len(galaxyList) - 1 and self.system <= len(galaxyList[self.galaxy].systemList) -1 and self.planet <= len(galaxyList[self.galaxy].systemList[self.system].planetList) - 1:
+                targetPlanet = galaxyList[self.galaxy].systemList[self.system].planetList[self.planet]
         if targetPlanet != None and self.inside == False:
-            return targetPlanet.dayCheck()
+            if targetPlanet.dayCheck():
+                return True
 
         for item in self.itemList:
             if "Glowing" in item.flags and item.flags["Glowing"] == True:
@@ -249,7 +253,7 @@ class Room:
                 
         return False
 
-    def getTargetObject(self, targetObjectKey, includeList):
+    def getTargetObject(self, targetObjectKey, includeList=["Mobs", "Items", "Spaceships"]):
         objectCheckList = []
         if "Mob" in includeList or "Mobs" in includeList:
             objectCheckList.append(self.mobList)

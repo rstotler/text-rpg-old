@@ -13,6 +13,12 @@ from GameData.Room import Room
 from GameData.Item import Item
 from GameData.Spaceship import Spaceship
 
+# loot command
+# examine command
+# fumble around in the dark when switching gear n stuff
+# wield, update remove
+# dominant hand
+
 class Game:
 
     def __init__(self):
@@ -28,14 +34,14 @@ class Game:
         self.loadGame()
 
     def loadGame(self):
-        galaxyMilkyWay = Galaxy()
-        self.galaxyList.append(galaxyMilkyWay)
-        galaxyMilkyWay.name = {"String":"Milky Way"}
+        galaxyProtoMilkyWay = Galaxy()
+        self.galaxyList.append(galaxyProtoMilkyWay)
+        galaxyProtoMilkyWay.name = {"String":"Proto Milky Way"}
 
         # (System) Proto Sol #
         if True:
             systemProtoSol = SolarSystem()
-            galaxyMilkyWay.systemList.append(systemProtoSol)
+            galaxyProtoMilkyWay.systemList.append(systemProtoSol)
             systemProtoSol.name = {"String":"Proto Sol"}
 
             starProtoSol = Planet(0, 0, 0, 0, 38880, 0)
@@ -76,10 +82,8 @@ class Game:
             roomCOTU00.description = [{"String":"You stand on a large floating platform at the Center of the", "Code":"46w1w1ddw1da2dw2da1dw2ddw1da1dw1w"},
                                     {"String":"Universe. Billions of multi-colored stars twinkle and flash", "Code":"1w2dw2ddw1da2ddw2y13w1dc1c1ddc1w1y1r1dr1do1o1y1dy1ddy7w1c1dc1ddc2dc1c1ddc5w1c1dc1ddc1dc1c"},
                                     {"String":"from ages past. You see a bridge leading to the Spaceport", "Code":"14w2y32w1w1dw2ddw1dw1w1dw1ddw1dw"},
-                                    {"String":"to the South and a garden lies to the North.", "Code":"7w1w5ddw6w1g1dg1ddg1g1dg1ddg13w1w4ddw1y"}]
-            # for i in range(5, 18):
-            #     roomCOTU00.itemList.append(Item(i))
-
+                                    {"String":"to the South and a garden to the North.", "Code":"7w1w5ddw6w1g1dg1ddg1g1dg1ddg8w1w4ddw1y"}]
+            
             roomCOTU01 = Room(0, 0, 1, 0, 1)
             areaCOTU.roomList.append(roomCOTU01)
             roomCOTU01.name = {"String":"Bridge To The Spaceport", "Code":"14w1w1dw2ddw1dw1w1dw1ddw1dw"}
@@ -98,21 +102,17 @@ class Game:
             roomCOTU03.name = {"String":"A Peaceful Garden", "Code":"2w1w1dw2ddw1dw1w1ddw1da1w1g1dg1ddg1g1dg1ddg"}
             roomCOTU03.exit["South"] = [0, 0, 1, 0, 0]
             roomCOTU03.exit["West"] = [0, 0, 1, 0, 4]
-            # for i in range(random.randrange(5, 15)):
-            #     roomCOTU03.itemList.append(Item(1))
-            # for i in range(random.randrange(5, 15)):
-            #     roomCOTU03.itemList.append(Item(2))
-            # for i in range(random.randrange(5, 15)):
-            #     roomCOTU03.itemList.append(Item(3))
 
             roomCOTU04 = Room(0, 0, 1, 0, 4)
             areaCOTU.roomList.append(roomCOTU04)
-            roomCOTU04.name = {"String":"A Little Wooden Shack", "Code":"9w1do1dddo1ddo1do1dddo1ddo6w"}
+            roomCOTU04.name = {"String":"A Little Wooden Shack", "Code":"9w1do1ddo1dddo1do1ddo1dddo6w"}
             roomCOTU04.exit["East"] = [0, 0, 1, 0, 3]
             roomCOTU04.inside = True
-            itemChest = Item(18)
-            itemChest.containerList.append(Item(12))
+            itemChest = Item(101)
             roomCOTU04.itemList.append(itemChest)
+            itemChest.containerList.append(Item(100))
+            for i in range(1, 14):
+                itemChest.containerList.append(Item(i))
 
             roomCOTU05 = Room(0, 0, 1, 0, 5)
             areaCOTU.roomList.append(roomCOTU05)
@@ -121,98 +121,99 @@ class Game:
 
         # Debug Spaceship #
         if True:
-            debugShip = Spaceship(0, 0, 1, "COTU Spaceport", [0, 1], [[0, 1]])
-            roomCOTU05.spaceshipList.append(debugShip)
-            systemProtoSol.spaceshipList.append(debugShip)
-            debugShip.name = {"String":"Debug Ship", "Code":"10w"}
-            debugShip.keyList = ["debug", "ship", "debug ship"]
+            cotuTransportShip = Spaceship(0, 0, 1, "COTU Spaceport", [0, 1], [[0, 1]])
+            roomCOTU05.spaceshipList.append(cotuTransportShip)
+            systemProtoSol.spaceshipList.append(cotuTransportShip)
+            cotuTransportShip.name = {"String":"COTU Transport Ship", "Code":"19w"}
+            cotuTransportShip.keyList = ["debug", "ship", "debug ship"]
 
-            debugShipArea0 = Area()
-            debugShip.areaList.append(debugShipArea0)
-            debugShipArea0.name = {"String":"Debug Ship"}
+            cotuTransportShipArea0 = Area()
+            cotuTransportShip.areaList.append(cotuTransportShipArea0)
+            cotuTransportShipArea0.name = {"String":"Debug Ship"}
             
-            debugShipRoom00 = Room(None, None, None, 0, 0)
-            debugShipArea0.roomList.append(debugShipRoom00)
-            debugShipRoom00.name = {"String":"Ship Cockpit"}
-            debugShipRoom00.exit["South"] = [0, 1]
+            cotuTransportShipRoom00 = Room(None, None, None, 0, 0)
+            cotuTransportShipArea0.roomList.append(cotuTransportShipRoom00)
+            cotuTransportShipRoom00.name = {"String":"Ship Cockpit"}
+            cotuTransportShipRoom00.exit["South"] = [0, 1]
 
-            debugShipRoom01 = Room(None, None, None, 0, 1)
-            debugShipArea0.roomList.append(debugShipRoom01)
-            debugShipRoom01.name = {"String":"Ship Hallway"}
-            debugShipRoom01.exit["North"] = [0, 0]
+            cotuTransportShipRoom01 = Room(None, None, None, 0, 1)
+            cotuTransportShipArea0.roomList.append(cotuTransportShipRoom01)
+            cotuTransportShipRoom01.name = {"String":"Ship Hallway"}
+            cotuTransportShipRoom01.exit["North"] = [0, 0]
 
-            debugShip.landedLocation = [0, 0, 1, 0, 5]
-            for area in debugShip.areaList:
+            # Spaceship Setup #
+            cotuTransportShip.landedLocation = [0, 0, 1, 0, 5]
+            for area in cotuTransportShip.areaList:
                 for room in area.roomList:
                     for exitDir in room.exit:
                         if room.exit[exitDir] != None and len(room.exit[exitDir]) == 2:
-                            room.exit[exitDir].insert(0, debugShip.num)
+                            room.exit[exitDir].insert(0, cotuTransportShip.num)
                     room.inside = True
-                    room.spaceshipObject = debugShip
-            for spaceshipExit in debugShip.exitList:
+                    room.spaceshipObject = cotuTransportShip
+            for spaceshipExit in cotuTransportShip.exitList:
                 for exitDir in ["West", "South", "North", "East"]:
-                    if debugShip.areaList[spaceshipExit[0]].roomList[spaceshipExit[1]].exit[exitDir] == None:
-                        targetExitRoom = debugShip.areaList[spaceshipExit[0]].roomList[spaceshipExit[1]]
+                    if cotuTransportShip.areaList[spaceshipExit[0]].roomList[spaceshipExit[1]].exit[exitDir] == None:
+                        targetExitRoom = cotuTransportShip.areaList[spaceshipExit[0]].roomList[spaceshipExit[1]]
                         targetExitRoom.exit[exitDir] = "Spaceship Exit"
                         targetExitRoom.installDoor(self.galaxyList, exitDir, "Automatic", None, "Closed", True)
                         break
 
-        # Sol #
+        # Milky Way & Sol #
         if True:
+            galaxyMilkyWay = Galaxy()
+            self.galaxyList.append(galaxyMilkyWay)
+            galaxyMilkyWay.name = {"String":"Milky Way"}
+
             systemSol = SolarSystem()
             galaxyMilkyWay.systemList.append(systemSol)
             systemSol.name = {"String":"Sol"}
 
-            starSol = Planet(0, 1, 0, 0, 38880, 0)
+            starSol = Planet(1, 1, 0, 0, 38880, 0)
             systemSol.planetList.append(starSol)
             starSol.name = {"String":"Sol"}
             starSol.type = "Star"
             starSol.axialTilt = 6
 
-            planetMercury = Planet(0, 1, 1, 29945, 84960, 126720)
+            planetMercury = Planet(1, 1, 1, 29945, 84960, 126720)
             systemSol.planetList.append(planetMercury)
             planetMercury.name = {"String":"Mercury"}
             
-            planetVenus = Planet(0, 1, 2, 67443, 349920, 324000)
+            planetVenus = Planet(1, 1, 2, 67443, 349920, 324000)
             systemSol.planetList.append(planetVenus)
             planetVenus.name = {"String":"Venus"}
             planetVenus.orbit = "Clockwise"
             planetVenus.axialTilt = 3
             
-            planetEarth = Planet(0, 1, 3, 93456, 1440, 525600)
+            planetEarth = Planet(1, 1, 3, 93456, 1440, 525600)
             systemSol.planetList.append(planetEarth)
             planetEarth.name = {"String":"Earth"}
             planetEarth.axialTilt = 23.5
 
-            planetMars = Planet(0, 1, 4, 15044, 1477, 989280)
+            planetMars = Planet(1, 1, 4, 15044, 1477, 989280)
             systemSol.planetList.append(planetMars)
             planetMars.name = {"String":"Mars"}
-            planetJupiter = Planet(0, 1, 5, 484000000, 596, 6239520)
+            planetJupiter = Planet(1, 1, 5, 484000000, 596, 6239520)
             systemSol.planetList.append(planetJupiter)
             planetJupiter.name = {"String":"Jupiter"}
-            planetSaturn = Planet(0, 1, 6, 886000000, 634, 15448640)
+            planetSaturn = Planet(1, 1, 6, 886000000, 634, 15448640)
             systemSol.planetList.append(planetSaturn)
             planetSaturn.name = {"String":"Saturn"}
-            planetUranus = Planet(0, 1, 7, 1824000000, 1034, 44189280)
+            planetUranus = Planet(1, 1, 7, 1824000000, 1034, 44189280)
             systemSol.planetList.append(planetUranus)
             planetUranus.name = {"String":"Uranus"}
-            planetNeptune = Planet(0, 1, 8, 2779300000, 966, 86673600)
+            planetNeptune = Planet(1, 1, 8, 2779300000, 966, 86673600)
             systemSol.planetList.append(planetNeptune)
             planetNeptune.name = {"String":"Neptune"}
-            planetPluto = Planet(0, 1, 9, 3700000000, 9180, 130348800)
+            planetPluto = Planet(1, 1, 9, 3700000000, 9180, 130348800)
             systemSol.planetList.append(planetPluto)
             planetPluto.name = {"String":"Pluto"}
 
         # Load Doors AFTER ALL Rooms Are Loaded! #
         roomCOTU02.installDoor(self.galaxyList, "North", "Automatic", "COTU Spaceport")
         roomCOTU02.lockUnlockDoor(self.galaxyList, "Lock", "North")
-        roomCOTU04.installDoor(self.galaxyList, "East", "Manual", None)
-        debugShipRoom00.installDoor(self.galaxyList, "South", "Automatic", "COTU Spaceport")
-        debugShipRoom00.lockUnlockDoor(self.galaxyList, "Lock", "South")
-
-        # Load Player #
-        self.player.itemDict["Misc"].append(Item(4))
-        self.player.gearDict["Finger"][0] = Item(12)
+        roomCOTU04.installDoor(self.galaxyList, "East", "Manual", None, "Open")
+        cotuTransportShipRoom00.installDoor(self.galaxyList, "South", "Automatic", "COTU Spaceport")
+        cotuTransportShipRoom00.lockUnlockDoor(self.galaxyList, "Lock", "South")
 
     def update(self, window):
         self.processInput()
@@ -251,9 +252,9 @@ class Game:
         self.keyboard.update()
 
     def processInputBarCommand(self, input):
-        targetRoom = Room.exists(self.galaxyList, self.player.spaceship, self.player.galaxy, self.player.system, self.player.planet, self.player.area, self.player.room)
-        if targetRoom == None:
-            targetRoom = self.galaxyList[0].systemList[0].planetList[0].areaList[0].roomList[0]
+        currentRoom = Room.exists(self.galaxyList, self.player.spaceship, self.player.galaxy, self.player.system, self.player.planet, self.player.area, self.player.room)
+        if currentRoom == None:
+            currentRoom = self.galaxyList[0].systemList[0].planetList[0].areaList[0].roomList[0]
         
         # Look #
         if input.lower().split()[0] in ["look", "loo", "lo", "l"]:
@@ -286,7 +287,7 @@ class Game:
                 self.player.lookTargetCheck(self.console, self.galaxyList, targetDir, int(input.split()[2]), lookTarget)
 
             # Look 'Dir' Item/Mob/Spaceship #
-            elif len(input.split()) > 2 and input.lower().split()[-1] in ["north", "nort", "nor", "no", "n", "east", "eas", "ea", "e", "south", "sout", "sou", "so", "s", "west", "wes", "we", "w"]:
+            elif len(input.split()) > 2 and input.lower().split()[1] in ["north", "nort", "nor", "no", "n", "east", "eas", "ea", "e", "south", "sout", "sou", "so", "s", "west", "wes", "we", "w"]:
                 if input.lower().split()[1] in ["north", "nort", "nor", "no", "n"] : targetDir = "North"
                 elif input.lower().split()[1] in ["east", "eas", "ea", "e"] : targetDir = "East"
                 elif input.lower().split()[1] in ["south", "sout", "sou", "so", "s"] : targetDir = "South"
@@ -294,7 +295,7 @@ class Game:
                 lookTarget = ' '.join(input.lower().split()[2::])
                 self.player.lookTargetCheck(self.console, self.galaxyList, targetDir, 1, lookTarget)
 
-            # Look Item/Mob/Spaceship #
+            # Look Item/Mob/Spaceship/Inventory/Gear #
             elif len(input.split()) > 1:
                 lookTarget = ' '.join(input.lower().split()[1::])
                 self.player.lookTargetCheck(self.console, self.galaxyList, None, None, lookTarget)
@@ -302,7 +303,7 @@ class Game:
             # Look #
             elif len(input.split()) == 1:
                 self.console.lineList.insert(0, {"Blank": True})
-                targetRoom.display(self.console, self.galaxyList, self.player)
+                currentRoom.display(self.console, self.galaxyList, self.player)
 
         # Examine #
 
@@ -312,6 +313,8 @@ class Game:
 
             # Examine Item/Mob/Spaceship 'Dir' '#' #
         
+        # Target #
+
         # Movement - (North, East, South, West) #
         elif len(input.split()) == 1 and input.lower() in ["north", "nort", "nor", "no", "n", "east", "eas", "ea", "e", "south", "sout", "sou", "so", "s", "west", "wes", "we", "w"]:
             if input.lower() in ["north", "nort", "nor", "no", "n"] : targetDir = "North"
@@ -336,11 +339,11 @@ class Game:
                 elif input.lower().split()[1] in ["south", "sout", "sou", "so", "s"] : targetDir = "South"
                 else : targetDir = "West"
                 
-                self.player.openCloseDoorCheck(self.console, self.galaxyList, targetRoom, targetAction, targetDir)
+                self.player.openCloseDoorCheck(self.console, self.galaxyList, currentRoom, targetAction, targetDir)
 
-            # Open/Close Container #
+            # Open/Close Mob/Item/Spaceship/Inventory/Gear #
             elif len(input.split()) > 1:
-                self.player.openCloseTargetCheck(self.console, targetRoom, targetAction, ' '.join(input.lower().split()[1::]))
+                self.player.openCloseTargetCheck(self.console, self.galaxyList, currentRoom, targetAction, ' '.join(input.lower().split()[1::]))
 
             else:
                 self.console.lineList.insert(0, {"Blank": True})
@@ -358,19 +361,15 @@ class Game:
                 elif input.lower().split()[1] in ["south", "sout", "sou", "so", "s"] : targetDir = "South"
                 else : targetDir = "West"
                 
-                self.player.lockUnlockDoorCheck(self.console, self.galaxyList, targetRoom, targetAction, targetDir)
+                self.player.lockUnlockDoorCheck(self.console, self.galaxyList, currentRoom, targetAction, targetDir)
 
-            # Lock/Unlock Container #
+            # Lock/Unlock Mob/Item/Spaceship/Inventory/Gear #
             elif len(input.split()) > 1:
-                self.player.lockUnlockTargetCheck(self.console, targetRoom, targetAction, ' '.join(input.lower().split()[1::]))
+                self.player.lockUnlockTargetCheck(self.console, self.galaxyList, currentRoom, targetAction, ' '.join(input.lower().split()[1::]))
 
             else:
                 self.console.lineList.insert(0, {"Blank": True})
                 self.console.lineList.insert(0, {"String": targetAction + " what?", "Code":str(len(targetAction)) + "w5w1y"})
-
-        # Loot #
-
-        # Target #
 
         # Get #
         elif input.lower().split()[0] in ["get", "ge", "g"]:
@@ -383,6 +382,14 @@ class Game:
             elif len(input.split()) > 2 and input.split()[1].lower() == "all":
                 targetItemKey = ' '.join(input.lower().split()[2::])
                 self.player.getCheck(self.console, self.galaxyList, targetItemKey, "All")
+
+            # Get All From Container #
+
+            # Get All Item From Container #
+
+            # Get '#' Item From Container #
+
+            # Get Item From Container #
 
             # Get '#' Item #
             elif len(input.split()) > 2 and stringIsNumber(input.split()[1]) and int(input.split()[1]) > 0:
@@ -397,6 +404,8 @@ class Game:
             else:
                 self.console.lineList.insert(0, {"Blank": True})
                 self.console.lineList.insert(0, {"String": "Get what?", "Code":"8w1y"})
+
+        # Loot #
 
         # Drop #
         elif input.lower().split()[0] in ["drop", "dro", "dr"]:
@@ -423,22 +432,7 @@ class Game:
             else:
                 self.console.lineList.insert(0, {"Blank": True})
                 self.console.lineList.insert(0, {"String": "Drop what?", "Code":"9w1y"})
-
-        # Inventory #
-        elif input.lower().split()[0] in ["inventory", "inventor", "invento", "invent", "inven", "inve", "inv", "in", "i"]:
-            
-            # Display Armor Pocket #
-            if len(input.split()) == 2 and input.lower().split()[1] in ["armor", "armo", "arm", "ar", "a"]:
-                self.player.displayInventory(self.console, self.galaxyList, "Armor")
-            
-            # Display Misc. Pocket #
-            elif len(input.split()) == 2 and input.lower().split()[1] in ["misc", "mis", "mi", "m"]:
-                self.player.displayInventory(self.console, self.galaxyList, "Misc")
-
-            else:
-                self.console.lineList.insert(0, {"Blank": True})
-                self.console.lineList.insert(0, {"String":"Open which bag? (Armor, Misc.)", "Code":"14w2y1r5w2y4w1y1r"})
-
+        
         # Wear #
         elif input.lower().split()[0] in ["wear", "wea"]:
 
@@ -470,6 +464,18 @@ class Game:
             else:
                 self.console.lineList.insert(0, {"Blank": True})
                 self.console.lineList.insert(0, {"String": "Wear what?", "Code":"9w1y"})
+        
+        # Wield #
+
+            # Wield All #
+
+            # Wield All Item #
+
+            # Wield '#' Item #
+
+            # Wield Item #
+
+        # Sheath/Unsheath(?) #
 
         # Remove #
         elif input.lower().split()[0] in ["remove", "remov", "remo", "rem"]:
@@ -503,23 +509,24 @@ class Game:
                 self.console.lineList.insert(0, {"Blank": True})
                 self.console.lineList.insert(0, {"String": "Remove what?", "Code":"11w1y"})
 
-        # Wield #
+        # Inventory #
+        elif input.lower().split()[0] in ["inventory", "inventor", "invento", "invent", "inven", "inve", "inv", "in", "i"]:
+            
+            # Display Armor Pocket #
+            if len(input.split()) == 2 and input.lower().split()[1] in ["armor", "armo", "arm", "ar", "a"]:
+                self.player.displayInventory(self.console, self.galaxyList, "Armor")
+            
+            # Display Misc. Pocket #
+            elif len(input.split()) == 2 and input.lower().split()[1] in ["misc", "mis", "mi", "m"]:
+                self.player.displayInventory(self.console, self.galaxyList, "Misc")
 
-            # Wield All #
-
-            # Wield All Item #
-
-            # Wield '#' Item #
-
-            # Wield Item #
+            else:
+                self.console.lineList.insert(0, {"Blank": True})
+                self.console.lineList.insert(0, {"String":"Open which bag? (Armor, Misc.)", "Code":"14w2y1r5w2y4w1y1r"})
 
         # Gear #
         elif len(input.split()) == 1 and input.lower() in ["gear", "gea"]:
             self.player.displayGear(self.console, self.galaxyList)
-
-        # Wield #
-
-        # Sheath/Unsheath(?) #
 
         # Reload #
 
@@ -534,7 +541,7 @@ class Game:
         # Board #
         elif input.lower().split()[0] in ["board", "boar", "boa", "bo"]:
             if len(input.split()) > 1:
-                self.player.boardCheck(self.console, self.galaxyList, targetRoom, ' '.join(input.lower().split()[1::]))
+                self.player.boardCheck(self.console, self.galaxyList, currentRoom, ' '.join(input.lower().split()[1::]))
             
             else:
                 self.console.lineList.insert(0, {"Blank": True})
