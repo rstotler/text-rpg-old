@@ -13,7 +13,8 @@ from GameData.Room import Room
 from GameData.Item import Item
 from GameData.Spaceship import Spaceship
 
-# loot command
+# mob messages
+# area effect messages
 # examine command
 # fumble around in the dark when switching gear n stuff
 # wield, update remove
@@ -341,7 +342,7 @@ class Game:
                 
                 self.player.openCloseDoorCheck(self.console, self.galaxyList, currentRoom, targetAction, targetDir)
 
-            # Open/Close Mob/Item/Spaceship/Inventory/Gear #
+            # Open/Close Target #
             elif len(input.split()) > 1:
                 self.player.openCloseTargetCheck(self.console, self.galaxyList, currentRoom, targetAction, ' '.join(input.lower().split()[1::]))
 
@@ -363,7 +364,7 @@ class Game:
                 
                 self.player.lockUnlockDoorCheck(self.console, self.galaxyList, currentRoom, targetAction, targetDir)
 
-            # Lock/Unlock Mob/Item/Spaceship/Inventory/Gear #
+            # Lock/Unlock Target #
             elif len(input.split()) > 1:
                 self.player.lockUnlockTargetCheck(self.console, self.galaxyList, currentRoom, targetAction, ' '.join(input.lower().split()[1::]))
 
@@ -374,38 +375,118 @@ class Game:
         # Get #
         elif input.lower().split()[0] in ["get", "ge", "g"]:
 
+            # Get All Item From All #
+            if len(input.split()) > 4 and input.lower().split()[1] == "all" and "from" in input.lower().split() and input.lower().split()[2] != "from" and input.lower().split()[-1] == "all":
+                fromIndex = input.lower().split().index("from")
+                targetItemKey = ' '.join(input.lower().split()[2:fromIndex])
+                self.player.getCheck(self.console, self.galaxyList, targetItemKey, "All", "All")
+             
+            # Get All Item From Container #
+            elif len(input.split()) > 4 and input.lower().split()[1] == "all" and "from" in input.lower().split() and input.lower().split()[2] != "from" and input.lower().split()[-1] != "from":
+                fromIndex = input.lower().split().index("from")
+                targetItemKey = ' '.join(input.lower().split()[2:fromIndex])
+                targetContainerKey = ' '.join(input.lower().split()[fromIndex + 1::])
+                self.player.getCheck(self.console, self.galaxyList, targetItemKey, targetContainerKey, "All")
+
+            # Get All From All #
+            elif len(input.split()) == 4 and input.lower().split()[1] == "all" and input.lower().split()[2] == "from" and input.lower().split()[3] == "all":
+                self.player.getCheck(self.console, self.galaxyList, "All", "All", "All")
+
+            # Get All From Container #
+            elif len(input.split()) > 3 and input.lower().split()[1] == "all" and input.lower().split()[2] == "from":
+                targetContainerKey = ' '.join(input.lower().split()[3::])
+                self.player.getCheck(self.console, self.galaxyList, "All", targetContainerKey, "All")
+
+            # Get '#' Item From All #
+            elif len(input.split()) > 4 and stringIsNumber(input.split()[1]) and int(input.split()[1]) > 0 and "from" in input.lower().split() and input.lower().split()[2] != "from" and input.lower().split()[-1] == "all":
+                fromIndex = input.lower().split().index("from")
+                targetItemKey = ' '.join(input.lower().split()[2:fromIndex])
+                self.player.getCheck(self.console, self.galaxyList, targetItemKey, "All", int(input.split()[1]))
+
+            # Get '#' Item From Container #
+            elif len(input.split()) > 4 and stringIsNumber(input.split()[1]) and int(input.split()[1]) > 0 and "from" in input.lower().split() and input.lower().split()[2] != "from" and input.lower().split()[-1] != "from":
+                fromIndex = input.lower().split().index("from")
+                targetItemKey = ' '.join(input.lower().split()[2:fromIndex])
+                targetContainerKey = ' '.join(input.lower().split()[fromIndex + 1::])
+                self.player.getCheck(self.console, self.galaxyList, targetItemKey, targetContainerKey, int(input.split()[1]))
+
+            # Get Item From Container #
+            elif len(input.split()) > 3 and "from" in input.lower().split() and input.lower().split()[1] != "from" and input.lower().split()[-1] != "from":
+                fromIndex = input.lower().split().index("from")
+                targetItemKey = ' '.join(input.lower().split()[1:fromIndex])
+                targetContainerKey = ' '.join(input.lower().split()[fromIndex + 1::])
+                self.player.getCheck(self.console, self.galaxyList, targetItemKey, targetContainerKey, 1)
+
             # Get All #
-            if len(input.split()) == 2 and input.split()[1].lower() == "all":
-                self.player.getCheck(self.console, self.galaxyList, "All", "All")
+            elif len(input.split()) == 2 and input.split()[1].lower() == "all":
+                self.player.getCheck(self.console, self.galaxyList, "All", None, "All")
                 
             # Get All Item #
             elif len(input.split()) > 2 and input.split()[1].lower() == "all":
                 targetItemKey = ' '.join(input.lower().split()[2::])
-                self.player.getCheck(self.console, self.galaxyList, targetItemKey, "All")
-
-            # Get All From Container #
-
-            # Get All Item From Container #
-
-            # Get '#' Item From Container #
-
-            # Get Item From Container #
+                self.player.getCheck(self.console, self.galaxyList, targetItemKey, None, "All")
 
             # Get '#' Item #
             elif len(input.split()) > 2 and stringIsNumber(input.split()[1]) and int(input.split()[1]) > 0:
                 targetItemKey = ' '.join(input.lower().split()[2::])
-                self.player.getCheck(self.console, self.galaxyList, targetItemKey, int(input.split()[1]))
+                self.player.getCheck(self.console, self.galaxyList, targetItemKey, None, int(input.split()[1]))
 
             # Get Item #
             elif len(input.split()) > 1:
                 targetItemKey = ' '.join(input.lower().split()[1::])
-                self.player.getCheck(self.console, self.galaxyList, targetItemKey, 1)
+                self.player.getCheck(self.console, self.galaxyList, targetItemKey, None, 1)
 
             else:
                 self.console.lineList.insert(0, {"Blank": True})
                 self.console.lineList.insert(0, {"String": "Get what?", "Code":"8w1y"})
 
         # Loot #
+        elif input.lower().split()[0] in ["loot"]:
+
+            # Loot All #
+            if len(input.split()) == 2 and input.lower().split()[1] == "all":
+                self.player.getCheck(self.console, self.galaxyList, "All", "All", "All")
+
+            # Loot Container #
+            elif len(input.split()) > 1:
+                self.player.getCheck(self.console, self.galaxyList, "All", ' '.join(input.lower().split()[1::]), "All")
+
+            else:
+                self.console.lineList.insert(0, {"Blank": True})
+                self.console.lineList.insert(0, {"String": "Loot what?", "Code":"9w1y"})
+
+        # Put #
+        elif input.lower().split()[0] in ["put", "pu", "p"]:
+
+            # Put All Item In Container #
+            if len(input.split()) > 4 and input.lower().split()[1] == "all" and "in" in input.lower().split() and input.lower().split()[2] != "in" and input.lower().split()[-1] != "in":
+                inIndex = input.lower().split().index("in")
+                targetItemKey = ' '.join(input.lower().split()[2:inIndex])
+                targetContainerKey = ' '.join(input.lower().split()[inIndex + 1::])
+                self.player.putCheck(self.console, self.galaxyList, targetItemKey, targetContainerKey, "All")
+
+            # Put All In Container #
+            elif len(input.split()) > 3 and input.lower().split()[1] == "all" and input.lower().split()[2] == "in":
+                targetContainerKey = ' '.join(input.lower().split()[3::])
+                self.player.putCheck(self.console, self.galaxyList, "All", targetContainerKey, "All")
+
+            # Put '#' Item In Container #
+            elif len(input.split()) > 4 and stringIsNumber(input.split()[1]) and int(input.split()[1]) > 0 and "in" in input.lower().split() and input.lower().split()[2] != "in" and input.lower().split()[-1] != "in":
+                inIndex = input.lower().split().index("in")
+                targetItemKey = ' '.join(input.lower().split()[2:inIndex])
+                targetContainerKey = ' '.join(input.lower().split()[inIndex + 1::])
+                self.player.putCheck(self.console, self.galaxyList, targetItemKey, targetContainerKey, int(input.split()[1]))
+
+            # Put Item In Container #
+            elif len(input.split()) > 3 and "in" in input.lower().split() and input.lower().split()[1] != "in" and input.lower().split()[-1] != "in":
+                inIndex = input.lower().split().index("in")
+                targetItemKey = ' '.join(input.lower().split()[1:inIndex])
+                targetContainerKey = ' '.join(input.lower().split()[inIndex + 1::])
+                self.player.putCheck(self.console, self.galaxyList, targetItemKey, targetContainerKey, 1)
+
+            else:
+                self.console.lineList.insert(0, {"Blank": True})
+                self.console.lineList.insert(0, {"String": "Put what in what?", "Code":"16w1y"})
 
         # Drop #
         elif input.lower().split()[0] in ["drop", "dro", "dr"]:

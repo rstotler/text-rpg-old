@@ -15,6 +15,7 @@ class Item:
 
         self.containerList = None
         self.containerPassword = None
+        self.containerMaxLimit = None
 
         self.loadItem(num)
 
@@ -98,10 +99,12 @@ class Item:
                 self.prefix = "An"
                 self.name = {"String":"Ornate Chest", "Code":"1y1dy1ddy1dddy1ddy1dy1w1ddo4dddo"}
                 self.containerList = []
-            
+
         # All Containers Are Automatically NO GET #
         if self.containerList != None:
             self.flags['No Get'] = True
+            if self.containerMaxLimit == None:
+                self.containerMaxLimit = 100.0
         
         # Create Key List #
         for word in self.name["String"].split():
@@ -160,3 +163,10 @@ class Item:
                     return True
 
         return False
+
+    def getContainerWeight(self):
+        totalWeight = 0
+        if self.containerList != None:
+            for item in self.containerList:
+                totalWeight += item.weight
+        return totalWeight
