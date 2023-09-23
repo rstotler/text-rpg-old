@@ -13,6 +13,12 @@ class Mob:
     def loadMob(self, num):
         if num == 1:
             self.name = {"String":"Robotic Greeter Droid", "Code":"21w"}
+        elif num == 2:
+            self.name = {"String":"Mummy", "Code":"5w"}
+        elif num == 3:
+            self.name = {"String":"Reptoid", "Code":"7w"}
+        elif num == 4:
+            self.name = {"String":"Tall Droid", "Code":"10w"}
 
         # Create Key List #
         for word in self.name["String"].split():

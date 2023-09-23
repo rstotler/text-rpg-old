@@ -1,3 +1,5 @@
+import copy
+
 class Room:
 
     def __init__(self, galaxy, system, planet, area, room):
@@ -138,6 +140,8 @@ class Room:
                 else:
                     mobDisplayDict[mob.num]["Count"] += 1
                     totalMobCount += 1
+                if mob in player.targetList:
+                    mobDisplayDict[mob.num]["Target Check"] = True
 
             if roomIsLit == False and totalMobCount > 0:
                 countString = ""
@@ -150,14 +154,19 @@ class Room:
             else:
                 for mob in self.mobList:
                     if mob.num in mobDisplayDict:
+                        targetString = ""
+                        targetCode = ""
+                        if "Target Check" in mobDisplayDict[mob.num] and mobDisplayDict[mob.num]["Target Check"] == True:
+                            targetString = "[+]"
+                            targetCode = "3m"
                         countString = ""
                         countCode = ""
                         if mobDisplayDict[mob.num]["Count"] > 1:
                             countString = " (" + str(mobDisplayDict[mob.num]["Count"]) + ")"
                             countCode = "2r" + str(len(str(mobDisplayDict[mob.num]["Count"]))) + "w1r"
 
-                        mobDisplayString = mobDisplayDict[mob.num]["MobData"].prefix + " " + mobDisplayDict[mob.num]["MobData"].name["String"] + " " + mobDisplayDict[mob.num]["MobData"].roomDescription["String"] + countString
-                        mobDisplayCode = str(len(mobDisplayDict[mob.num]["MobData"].prefix)) + "w1w" + mobDisplayDict[mob.num]["MobData"].name["Code"] + "1w" + mobDisplayDict[mob.num]["MobData"].roomDescription["Code"] + countCode
+                        mobDisplayString = targetString + mobDisplayDict[mob.num]["MobData"].prefix + " " + mobDisplayDict[mob.num]["MobData"].name["String"] + " " + mobDisplayDict[mob.num]["MobData"].roomDescription["String"] + countString
+                        mobDisplayCode = targetCode + str(len(mobDisplayDict[mob.num]["MobData"].prefix)) + "w1w" + mobDisplayDict[mob.num]["MobData"].name["Code"] + "1w" + mobDisplayDict[mob.num]["MobData"].roomDescription["Code"] + countCode
                         console.lineList.insert(0, {"String":mobDisplayString, "Code":mobDisplayCode})
                         del mobDisplayDict[mob.num]
 
@@ -330,3 +339,66 @@ class Room:
                 return targetSpaceshipObject.areaList[targetArea].roomList[targetRoom]
             
         return None
+
+    @staticmethod
+    def getTargetRoomFromStartRoom(galaxyList, currentArea, currentRoom, targetDir, targetRoomDistance):
+        for rNum in range(targetRoomDistance):
+            if currentRoom.exit[targetDir] == None:
+                break
+            else:
+                targetExit = currentRoom.exit[targetDir]
+                
+                # Spaceship Exit #
+                if targetExit == "Spaceship Exit" and currentRoom.spaceshipObject != None and currentRoom.spaceshipObject.landedLocation != None:
+                    landedLocation = currentRoom.spaceshipObject.landedLocation
+                    if Room.exists(galaxyList, None, landedLocation[0], landedLocation[1], landedLocation[2], landedLocation[3], landedLocation[4]) != None:
+                        currentRoom = Room.exists(galaxyList, None, landedLocation[0], landedLocation[1], landedLocation[2], landedLocation[3], landedLocation[4])
+                        currentArea = galaxyList[currentRoom.galaxy].systemList[currentRoom.system].planetList[currentRoom.planet].areaList[currentRoom.area]
+                        
+                # Spaceship Room #
+                elif len(targetExit) == 3 and currentRoom.spaceshipObject != None:
+                    if currentArea.num != targetExit[1]:
+                        currentArea = currentRoom.spaceshipObject.areaList[targetExit[1]]
+                    if targetExit[2] < len(currentArea.roomList):
+                        currentRoom = currentArea.roomList[targetExit[2]]
+
+                # Planet Room #
+                elif Room.exists(galaxyList, None, targetExit[0], targetExit[1], targetExit[2], targetExit[3], targetExit[4]) != None:
+                    currentRoom = Room.exists(galaxyList, None, targetExit[0], targetExit[1], targetExit[2], targetExit[3], targetExit[4])
+                    if currentArea.num != targetExit[3]:
+                        currentArea = galaxyList[targetExit[0]].systemList[targetExit[1]].planetList[targetExit[2]].areaList[targetExit[3]]
+                        
+        return currentArea, currentRoom
+
+    @staticmethod
+    def getSurroundingRoomData(galaxyList, startArea, startRoom, targetRange):
+        oppositeDir = {"North":"South", "East":"West", "South":"North", "West":"East"}
+        def examineRoomData(targetArea, targetRoom, targetRange, targetDir, examinedAreaList, examinedRoomList, viewLoc):
+            spaceshipNum = targetRoom.spaceshipObject
+            if spaceshipNum != None:
+                spaceshipNum = spaceshipNum.num
+            if {"Galaxy":targetRoom.galaxy, "System":targetRoom.system, "Planet":targetRoom.planet, "Area":targetRoom.area, "Spaceship":spaceshipNum} not in examinedAreaList:
+                examinedAreaList.append({"Galaxy":targetRoom.galaxy, "System":targetRoom.system, "Planet":targetRoom.planet, "Area":targetRoom.area, "Spaceship":spaceshipNum})
+            examinedRoomList.append({"Galaxy":targetRoom.galaxy, "System":targetRoom.system, "Planet":targetRoom.planet, "Area":targetRoom.area, "Room":targetRoom.room, "Spaceship":spaceshipNum})
+
+            if viewLoc[0] + viewLoc[1] < targetRange:
+                firstLoc = copy.deepcopy(viewLoc)
+                exitDirList = ["North", "East", "South", "West"]
+                if targetDir != None and oppositeDir[targetDir] in exitDirList:
+                    del exitDirList[exitDirList.index(oppositeDir[targetDir])]
+                for targetExitDir in exitDirList:
+                    if targetExitDir != "North":
+                        viewLoc = copy.deepcopy(firstLoc)
+                    if targetExitDir in targetRoom.exit:
+                        nextArea, nextRoom = Room.getTargetRoomFromStartRoom(galaxyList, targetArea, targetRoom, targetExitDir, 1)
+                        if targetExitDir in ["East", "West"] : viewLoc[0] += 1
+                        elif targetExitDir in ["North", "South"] : viewLoc[1] += 1
+
+                        spaceshipNum = nextRoom.spaceshipObject
+                        if spaceshipNum != None:
+                            spaceshipNum = spaceshipNum.num
+                        if {"Galaxy":nextRoom.galaxy, "System":nextRoom.system, "Planet":nextRoom.planet, "Area":nextRoom.area, "Room":nextRoom.room, "Spaceship":spaceshipNum} not in examinedRoomList:
+                            examinedAreaList, examinedRoomList = examineRoomData(nextArea, nextRoom, targetRange, targetExitDir, examinedAreaList, examinedRoomList, viewLoc)
+
+            return examinedAreaList, examinedRoomList
+        return examineRoomData(startArea, startRoom, targetRange, None, [], [], [0, 0])

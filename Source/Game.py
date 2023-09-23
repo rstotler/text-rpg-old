@@ -14,12 +14,12 @@ from GameData.Mob import Mob
 from GameData.Item import Item
 from GameData.Spaceship import Spaceship
 
-# get surrounding room list
 # mob room messages
 # area effect messages
 # examine command
 # target command
 # fumble around in the dark when switching gear n stuff
+# limit player int() inputs
 
 class Game:
 
@@ -31,7 +31,7 @@ class Game:
         self.player = Player()
         self.galaxyList = []
 
-        self.updateTick = 0
+        self.frameTick = 0
 
         self.loadGame()
 
@@ -52,7 +52,7 @@ class Game:
             starProtoSol.type = "Star"
             starProtoSol.axialTilt = 6
 
-            areaLimbo = Area()
+            areaLimbo = Area(0)
             starProtoSol.areaList.append(areaLimbo)
             areaLimbo.name = {"String":"Limbo"}
 
@@ -72,7 +72,7 @@ class Game:
 
         # (Area) Center of the Universe #
         if True:
-            areaCOTU = Area()
+            areaCOTU = Area(0)
             planetProtoEarth.areaList.append(areaCOTU)
             areaCOTU.name = {"String":"Center of the Universe"}
 
@@ -92,6 +92,11 @@ class Game:
             roomCOTU01.exit["North"] = [0, 0, 1, 0, 0]
             roomCOTU01.exit["South"] = [0, 0, 1, 0, 2]
             roomCOTU01.mobList.append(Mob(1))
+            roomCOTU01.mobList.append(Mob(1))
+            roomCOTU01.mobList.append(Mob(2))
+            roomCOTU01.mobList.append(Mob(2))
+            roomCOTU01.mobList.append(Mob(3))
+            roomCOTU01.mobList.append(Mob(4))
 
             roomCOTU02 = Room(0, 0, 1, 0, 2)
             areaCOTU.roomList.append(roomCOTU02)
@@ -116,6 +121,7 @@ class Game:
             ornateChest.containerList.append(Item(901))
             for i in range(1, 14):
                 ornateChest.containerList.append(Item(i))
+                ornateChest.containerList.append(Item(i))
             for i in range(101, 105):
                 ornateChest.containerList.append(Item(i))
                 ornateChest.containerList.append(Item(i))
@@ -133,7 +139,7 @@ class Game:
             cotuTransportShip.name = {"String":"COTU Transport Ship", "Code":"19w"}
             cotuTransportShip.keyList = ["spaceship", "debug", "ship", "debug ship"]
 
-            cotuTransportShipArea0 = Area()
+            cotuTransportShipArea0 = Area(0)
             cotuTransportShip.areaList.append(cotuTransportShipArea0)
             cotuTransportShipArea0.name = {"String":"Debug Ship"}
             
@@ -225,10 +231,19 @@ class Game:
         self.processInput()
         self.inputBar.update(self.keyboard)
 
-        self.updateTick += 1
-        if self.updateTick >= 60:
+        if self.frameTick in [0, 30]:
+            playerRoom = Room.exists(self.galaxyList, self.player.spaceship, self.player.galaxy, self.player.system, self.player.planet, self.player.area, self.player.room)
+            if playerRoom != None:
+                if playerRoom.spaceshipObject == None:
+                    playerArea = self.galaxyList[playerRoom.galaxy].systemList[playerRoom.system].planetList[playerRoom.planet].areaList[playerRoom.area]
+                else:
+                    playerArea = playerRoom.spaceshipObject.areaList[playerRoom.area]
+                updateAreaList, updateRoomList = Room.getSurroundingRoomData(self.galaxyList, playerArea, playerRoom, 4)
+                
+        self.frameTick += 1
+        if self.frameTick >= 60:
             self.galaxyList[self.player.galaxy].systemList[self.player.system].update(self.galaxyList, self.player, self.console)
-            self.updateTick = 0
+            self.frameTick = 0
 
         self.draw(window)
 
@@ -277,11 +292,11 @@ class Game:
             
             # Look 'Dir' #
             if len(input.split()) == 2 and targetDir != None:
-                self.player.lookDirection(self.console, self.galaxyList, targetDir, 1)
+                self.player.lookDirection(self.console, self.galaxyList, currentRoom, targetDir, 1)
 
             # Look 'Dir' '#' #
             elif len(input.split()) == 3 and targetDir != None and stringIsNumber(input.split()[2]) and int(input.split()[2]) > 0:
-                self.player.lookDirection(self.console, self.galaxyList, targetDir, int(input.split()[2]))
+                self.player.lookDirection(self.console, self.galaxyList, currentRoom, targetDir, int(input.split()[2]))
 
             # Look 'Dir' '#' Item/Mob/Spaceship #
             elif len(input.split()) > 3 and input.lower().split()[1] in ["north", "nort", "nor", "no", "n", "east", "eas", "ea", "e", "south", "sout", "sou", "so", "s", "west", "wes", "we", "w"] and stringIsNumber(input.split()[2]) and int(input.split()[2]) > 0:
@@ -395,7 +410,7 @@ class Game:
 
             # Target Mob #
             elif len(input.split()) > 1:
-                targetMobKey = ' '.split(input.lower().split()[1::])
+                targetMobKey = ' '.join(input.lower().split()[1::])
                 self.player.targetCheck(self.console, self.galaxyList, currentRoom, targetMobKey, None, 1, None)
 
             else:
@@ -403,6 +418,22 @@ class Game:
                 self.console.lineList.insert(0, {"String": "Target what?", "Code":"11w1y"})
 
         # Untarget #
+
+            # Untarget All Mob 'Direction' '#' #
+
+            # Untarget All Mob 'Direction' #
+
+            # Untarget '#' Mob 'Direction' '#' #
+
+            # Untarget '#' Mob 'Direction' #
+
+            # Untarget All 'Direction' '#' #
+
+            # Untarget All 'Direction' #
+
+            # Untarget Mob 'Direction' '#' #
+
+            # Untarget Mob 'Direction' #
 
             # Untarget All #
 
@@ -426,7 +457,7 @@ class Game:
             # Move Direction '#' #
 
             # Move Direction #
-            self.player.moveCheck(self.console, self.galaxyList, targetDir)
+            self.player.moveCheck(self.console, self.galaxyList, currentRoom, targetDir)
 
         # Open/Close #
         elif input.lower().split()[0] in ["open", "ope", "op", "o", "close", "clos", "clo", "cl"]:
@@ -755,7 +786,7 @@ class Game:
 
             # Unload #
 
-        # Tame #
+        # Tame/Recruit #
 
         # Disband #
 
@@ -774,6 +805,8 @@ class Game:
                 self.console.lineList.insert(0, {"Blank": True})
                 self.console.lineList.insert(0, {"String": "Board what?", "Code":"10w1y"})
 
+        # Launch #
+
         # Scan #
 
         # Radar #
@@ -785,8 +818,6 @@ class Game:
         # Throttle #
 
         # System #
-
-        # Launch #
 
         # Land #
 
