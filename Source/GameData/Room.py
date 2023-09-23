@@ -112,49 +112,94 @@ class Room:
 
         # Spaceships #
         if len(self.spaceshipList) > 0:
-            for spaceship in self.spaceshipList:
-                displayString = "A " + spaceship.name["String"] + " is sitting on the launch pad."
-                displayCode = "2w" + spaceship.name["Code"] + "29w1y"
-                console.lineList.insert(0, {"String":displayString, "Code":displayCode})
-            
-        # Items #
-        itemDisplayDict = {}
-        totalCount = 0
-        for item in self.itemList:
-            if item.num not in itemDisplayDict:
-                itemDisplayDict[item.num] = {"Count":1, "ItemData":item}
-                totalCount += 1
+            if roomIsLit == False:
+                displayString = "A spaceship is sitting on the launch pad."
+                displayCode = "40w1y"
+                countString = ""
+                countCode = ""
+                if len(self.spaceshipList) > 1:
+                    countString = " (" + str(len(self.spaceshipList)) + ")"
+                    countCode = "2r" + str(len(str(len(self.spaceshipList)))) + "w1r"
+                console.lineList.insert(0, {"String":displayString + countString, "Code":displayCode + countCode})
             else:
-                itemDisplayDict[item.num]["Count"] += 1
-                totalCount += 1
-        
-        if roomIsLit == False and totalCount > 0:
-            countString = ""
-            countCode = ""
-            if totalCount > 1:
-                countString = " (" + str(totalCount) + ")"
-                countCode = "2r" + str(len(str(totalCount))) + "w1r"
-            console.lineList.insert(0, {"String":"There is something on the ground." + countString, "Code":"32w1y" + countCode})
-                    
-        else:
+                for spaceship in self.spaceshipList:
+                    displayString = "A " + spaceship.name["String"] + " is sitting on the launch pad."
+                    displayCode = "2w" + spaceship.name["Code"] + "29w1y"
+                    console.lineList.insert(0, {"String":displayString, "Code":displayCode})
+            
+        # Mobs #
+        if True:
+            mobDisplayDict = {}
+            totalMobCount = 0
+            for mob in self.mobList:
+                if mob.num not in mobDisplayDict:
+                    mobDisplayDict[mob.num] = {"Count":1, "MobData":mob}
+                    totalMobCount += 1
+                else:
+                    mobDisplayDict[mob.num]["Count"] += 1
+                    totalMobCount += 1
+
+            if roomIsLit == False and totalMobCount > 0:
+                countString = ""
+                countCode = ""
+                if totalMobCount > 1:
+                    countString = " (" + str(totalMobCount) + ")"
+                    countCode = "2r" + str(len(str(totalMobCount))) + "w1r"
+                console.lineList.insert(0, {"String":"There is someone here." + countString, "Code":"21w1y" + countCode})
+
+            else:
+                for mob in self.mobList:
+                    if mob.num in mobDisplayDict:
+                        countString = ""
+                        countCode = ""
+                        if mobDisplayDict[mob.num]["Count"] > 1:
+                            countString = " (" + str(mobDisplayDict[mob.num]["Count"]) + ")"
+                            countCode = "2r" + str(len(str(mobDisplayDict[mob.num]["Count"]))) + "w1r"
+
+                        mobDisplayString = mobDisplayDict[mob.num]["MobData"].prefix + " " + mobDisplayDict[mob.num]["MobData"].name["String"] + " " + mobDisplayDict[mob.num]["MobData"].roomDescription["String"] + countString
+                        mobDisplayCode = str(len(mobDisplayDict[mob.num]["MobData"].prefix)) + "w1w" + mobDisplayDict[mob.num]["MobData"].name["Code"] + "1w" + mobDisplayDict[mob.num]["MobData"].roomDescription["Code"] + countCode
+                        console.lineList.insert(0, {"String":mobDisplayString, "Code":mobDisplayCode})
+                        del mobDisplayDict[mob.num]
+
+        # Items #
+        if True:
+            itemDisplayDict = {}
+            totalItemCount = 0
             for item in self.itemList:
-                if item.num in itemDisplayDict:
-                    modString = ""
-                    modCode = ""
-                    if "Glowing" in item.flags and item.flags["Glowing"] == True:
-                        modString = " (Glowing)"
-                        modCode = "2y1w1dw1ddw1w2dw1ddw1y"
+                if item.num not in itemDisplayDict:
+                    itemDisplayDict[item.num] = {"Count":1, "ItemData":item}
+                    totalItemCount += 1
+                else:
+                    itemDisplayDict[item.num]["Count"] += 1
+                    totalItemCount += 1
+            
+            if roomIsLit == False and totalItemCount > 0:
+                countString = ""
+                countCode = ""
+                if totalItemCount > 1:
+                    countString = " (" + str(totalItemCount) + ")"
+                    countCode = "2r" + str(len(str(totalItemCount))) + "w1r"
+                console.lineList.insert(0, {"String":"There is something on the ground." + countString, "Code":"32w1y" + countCode})
+                        
+            else:
+                for item in self.itemList:
+                    if item.num in itemDisplayDict:
+                        modString = ""
+                        modCode = ""
+                        if "Glowing" in item.flags and item.flags["Glowing"] == True:
+                            modString = " (Glowing)"
+                            modCode = "2y1w1dw1ddw1w2dw1ddw1y"
 
-                    countString = ""
-                    countCode = ""
-                    if itemDisplayDict[item.num]["Count"] > 1:
-                        countString = " (" + str(itemDisplayDict[item.num]["Count"]) + ")"
-                        countCode = "2r" + str(len(str(itemDisplayDict[item.num]["Count"]))) + "w1r"
+                        countString = ""
+                        countCode = ""
+                        if itemDisplayDict[item.num]["Count"] > 1:
+                            countString = " (" + str(itemDisplayDict[item.num]["Count"]) + ")"
+                            countCode = "2r" + str(len(str(itemDisplayDict[item.num]["Count"]))) + "w1r"
 
-                    itemDisplayString = itemDisplayDict[item.num]["ItemData"].prefix + " " + itemDisplayDict[item.num]["ItemData"].name["String"] + " " + itemDisplayDict[item.num]["ItemData"].roomDescription["String"] + modString + countString
-                    itemDisplayCode = str(len(itemDisplayDict[item.num]["ItemData"].prefix)) + "w1w" + itemDisplayDict[item.num]["ItemData"].name["Code"] + "1w" + itemDisplayDict[item.num]["ItemData"].roomDescription["Code"] + modCode + countCode
-                    console.lineList.insert(0, {"String":itemDisplayString, "Code":itemDisplayCode})
-                    del itemDisplayDict[item.num]
+                        itemDisplayString = itemDisplayDict[item.num]["ItemData"].prefix + " " + itemDisplayDict[item.num]["ItemData"].name["String"] + " " + itemDisplayDict[item.num]["ItemData"].roomDescription["String"] + modString + countString
+                        itemDisplayCode = str(len(itemDisplayDict[item.num]["ItemData"].prefix)) + "w1w" + itemDisplayDict[item.num]["ItemData"].name["Code"] + "1w" + itemDisplayDict[item.num]["ItemData"].roomDescription["Code"] + modCode + countCode
+                        console.lineList.insert(0, {"String":itemDisplayString, "Code":itemDisplayCode})
+                        del itemDisplayDict[item.num]
 
     def installDoor(self, galaxyList, targetDir, doorType, password, status="Closed", oneWay=False):
         self.door[targetDir] = {"Type": doorType, "Status": status}

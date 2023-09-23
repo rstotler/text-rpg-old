@@ -98,7 +98,7 @@ class Planet:
 
     def displayTime(self, console):
         hoursString = str(int(self.currentMinutesInDay / 60))
-        if self.galaxy == 0 and self.system == 0 and self.planet == 3:
+        if self.name["String"] in ["Earth", "Proto Earth"]:
             if hoursString == "0":
                 hoursString = "12"
             elif int(hoursString) > 12:
@@ -108,8 +108,7 @@ class Planet:
         if len(minutesString) == 1:
             minutesString = "0" + minutesString
 
-        if (self.galaxy == 0 and self.system == 1 and self.planet == 3) \
-        or (self.galaxy == 0 and self.system == 0 and self.planet == 1):
+        if self.name["String"] in ["Earth", "Proto Earth"]:
             amPmString = " A.M"
             if self.currentMinutesInDay >= self.minutesInDay / 2:
                 amPmString = " P.M"

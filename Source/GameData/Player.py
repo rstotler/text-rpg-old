@@ -1,4 +1,5 @@
 import random
+from Components.Utility import stringIsNumber
 from GameData.Room import Room
 from GameData.Mob import Mob
 from GameData.Item import Item
@@ -14,13 +15,16 @@ class Player:
         self.area = 0
         self.room = 0
 
-        self.itemDict = {"Armor": [], "Misc": []}
+        self.itemDict = {"Armor": [], "Weapon":[], "Misc": []}
         self.gearDict = {"Head":None, "Face":None, "Neck":[None, None], "Body Under":None, "Body Over":None, "Hands":None, "Finger":[None, None], "Legs Under":None, "Legs Over":None, "Feet":None, "Left Hand":None, "Right Hand":None}
         self.maxWeight = 150.0
+        self.dominantHand = "Right Hand"
 
         self.maxLookDistance = 5
 
-        self.emoteList = ["hmm", "hm", "nod", "nodnod", "tap", "cackle"]
+        self.emoteList = ["hmm", "hm", "nod", "nodnod", "tap", "boggle", "jump"]
+
+        self.debugDualWield = False
 
     def lookDirection(self, console, galaxyList, lookDir, count):
         currentRoom = Room.exists(galaxyList, self.spaceship, self.galaxy, self.system, self.planet, self.area, self.room)
@@ -125,6 +129,9 @@ class Player:
                     roomTarget.lookDescription(console, lookCount, passwordCheck)
                 else:
                     roomTarget.lookDescription(console)
+
+    def targetCheck(console, galaxyList, currentRoom, targetMobKey, targetDirKey, targetMobCount, targetDirCount):
+        pass
 
     def moveCheck(self, console, galaxyList, targetDir):
         currentRoom = Room.exists(galaxyList, self.spaceship, self.galaxy, self.system, self.planet, self.area, self.room)
@@ -304,7 +311,7 @@ class Player:
                 console.lineList.insert(0, {"String": "It doesn't " + targetAction.lower() + ".", "Code":"8w1y2w" + str(len(targetAction)) + "w1y"})
             else:
                 console.lineList.insert(0, {"Blank": True})
-                console.lineList.insert(0, {"String":"Syntax: 'Loot Item'", "Code":"6w3y9w1y"})
+                console.lineList.insert(0, {"String":"There is no need to " + targetAction.lower() + " it.", "Code":"20w" + str(len(targetAction)) + "w3w1y"})
             
     def lockUnlockTargetCheck(self, console, galaxyList, currentRoom, targetAction, targetObjectKey):
         targetObject = currentRoom.getTargetObject(targetObjectKey)
@@ -336,149 +343,152 @@ class Player:
                 console.lineList.insert(0, {"String": "It doesn't " + targetAction.lower() + ".", "Code":"8w1y2w" + str(len(targetAction)) + "w1y"})
             else:
                 console.lineList.insert(0, {"Blank": True})
-                console.lineList.insert(0, {"String":"Syntax: 'Loot Item'", "Code":"6w3y9w1y"})
+                console.lineList.insert(0, {"String":"There is no need to " + targetAction.lower() + " it.", "Code":"20w" + str(len(targetAction)) + "w3w1y"})
 
-    def getCheck(self, console, galaxyList, targetItemKey, targetContainerKey, count):
-        currentRoom = Room.exists(galaxyList, self.spaceship, self.galaxy, self.system, self.planet, self.area, self.room)
-        if currentRoom != None:
-            itemList = currentRoom.itemList
-            if targetContainerKey != None:
-                if targetContainerKey == "All":
-                    itemList = "All Room Containers"
-                else:
-                    itemList = currentRoom.getTargetObject(targetContainerKey)
-
-            if targetContainerKey not in [None, "All"] and itemList != None and (isinstance(itemList, Item) == False or itemList.containerList == None):
-                console.lineList.insert(0, {"Blank": True})
-                console.lineList.insert(0, {"String":"That's not a container!", "Code":"4w1y17w1y"})
+    def getCheck(self, console, galaxyList, currentRoom, targetItemKey, targetContainerKey, count):
+        itemList = currentRoom.itemList
+        if targetContainerKey != None:
+            if targetContainerKey == "All":
+                itemList = "All Room Containers"
             else:
-                if isinstance(itemList, Item):
-                    itemList = itemList.containerList
+                itemList = currentRoom.getTargetObject(targetContainerKey)
 
-                getItem = None
-                if itemList != None:
-                    if targetItemKey != "All":
-                        if itemList == "All Room Containers":
-                            breakCheck = False
-                            for container in currentRoom.itemList:
-                                if container.containerList != None:
-                                    for item in container.containerList:
-                                        if targetItemKey in item.keyList:
-                                            getItem = item
-                                            breakCheck = True
-                                            break
-                                if breakCheck:
-                                    break
-                        else:
-                            for item in itemList:
-                                if targetItemKey in item.keyList:
-                                    getItem = item
-                                    break
-                
-                if itemList == None or (targetItemKey != "All" and getItem == None):
-                    console.lineList.insert(0, {"Blank": True})
-                    console.lineList.insert(0, {"String":"You can't find it.", "Code":"7w1y9w1y"})
+        if targetContainerKey not in [None, "All"] and itemList != None and (isinstance(itemList, Item) == False or itemList.containerList == None):
+            console.lineList.insert(0, {"Blank": True})
+            console.lineList.insert(0, {"String":"That's not a container!", "Code":"4w1y17w1y"})
+        else:
+            if isinstance(itemList, Item):
+                itemList = itemList.containerList
 
-                else:
+            getItem = None
+            if itemList != None:
+                if targetItemKey != "All":
                     if itemList == "All Room Containers":
-                        itemCount = 0
+                        breakCheck = False
                         for container in currentRoom.itemList:
-                            if container.containerList != None and len(container.containerList) > 0:
-                                itemCount += len(container.containerList)
-                    else:
-                        itemCount = len(itemList)
-
-                    if targetContainerKey == "All" and itemCount == 0:
-                        console.lineList.insert(0, {"Blank": True})
-                        console.lineList.insert(0, {"String":"There is nothing to loot.", "Code":"24w1y"})
-                    
-                    else:
-                        getCount = 0
-                        getContainerIndexList = []
-                        noGetCheck = False
-                        tooMuchWeightCheck = False
-                        for c in range(itemCount):
-                            containerCount = 1
-                            if targetContainerKey == "All":
-                                containerCount = len(currentRoom.itemList)
-                            for containerIndex in range(containerCount):
-                                delIndex = -1
-                                if targetContainerKey == "All":
-                                    itemList = currentRoom.itemList[containerIndex].containerList
-                                for i, item in enumerate(itemList):
-                                    if targetItemKey == "All" or targetItemKey in item.keyList:
-                                        if "No Get" in item.flags:
-                                            noGetCheck = True
-                                        elif self.getCurrentWeight() + item.weight > self.maxWeight:
-                                            tooMuchWeightCheck = True
-                                        else:
-                                            self.itemDict[item.pocket].append(item)
-                                            getCount += 1
-                                            if getItem == None:
-                                                getItem = item
-                                            elif getItem != "Multiple" and getItem.num != item.num:
-                                                getItem = "Multiple"
-                                            if containerIndex not in getContainerIndexList:
-                                                getContainerIndexList.append(containerIndex)
-
-                                            delIndex = i
-                                            break
-                                if delIndex != -1:
-                                    del itemList[delIndex]
-                                    break
-                            if count != "All" and getCount == count:
+                            if container.containerList != None:
+                                for item in container.containerList:
+                                    if targetItemKey in item.keyList:
+                                        getItem = item
+                                        breakCheck = True
+                                        break
+                            if breakCheck:
                                 break
-                            
-                        if getCount == 0:
-                            if noGetCheck == True:
+                    else:
+                        for item in itemList:
+                            if targetItemKey in item.keyList:
+                                getItem = item
+                                break
+            
+            if itemList == None or (targetItemKey != "All" and getItem == None):
+                console.lineList.insert(0, {"Blank": True})
+                console.lineList.insert(0, {"String":"You can't find it.", "Code":"7w1y9w1y"})
+
+            else:
+                if itemList == "All Room Containers":
+                    itemCount = 0
+                    for container in currentRoom.itemList:
+                        if container.containerList != None and len(container.containerList) > 0:
+                            itemCount += len(container.containerList)
+                else:
+                    itemCount = len(itemList)
+
+                if targetContainerKey == "All" and itemCount == 0:
+                    console.lineList.insert(0, {"Blank": True})
+                    console.lineList.insert(0, {"String":"There is nothing to loot.", "Code":"24w1y"})
+                
+                else:
+                    getCount = 0
+                    getContainerIndexList = []
+                    noGetCheck = False
+                    tooMuchWeightCheck = False
+                    for c in range(itemCount):
+                        containerCount = 1
+                        if targetContainerKey == "All":
+                            containerCount = len(currentRoom.itemList)
+                        for containerIndex in range(containerCount):
+                            delIndex = -1
+                            if targetContainerKey == "All":
+                                itemList = currentRoom.itemList[containerIndex].containerList
+                            for i, item in enumerate(itemList):
+                                if targetItemKey == "All" or targetItemKey in item.keyList:
+                                    if "No Get" in item.flags:
+                                        noGetCheck = True
+                                    elif self.getCurrentWeight() + item.weight > self.maxWeight:
+                                        tooMuchWeightCheck = True
+                                    else:
+                                        self.itemDict[item.pocket].append(item)
+                                        getCount += 1
+                                        if getItem == None:
+                                            getItem = item
+                                        elif getItem != "Multiple" and getItem.num != item.num:
+                                            getItem = "Multiple"
+                                        if containerIndex not in getContainerIndexList:
+                                            getContainerIndexList.append(containerIndex)
+
+                                        delIndex = i
+                                        break
+                            if delIndex != -1:
+                                del itemList[delIndex]
+                                break
+                        if count != "All" and getCount == count:
+                            break
+                        
+                    if getCount == 0:
+                        if noGetCheck == True:
+                            console.lineList.insert(0, {"Blank": True})
+                            console.lineList.insert(0, {"String":"You can't pick that up.", "Code":"7w1y14w1y"})
+                        elif tooMuchWeightCheck == True:
+                            console.lineList.insert(0, {"Blank": True})
+                            console.lineList.insert(0, {"String":"You can't carry that much weight.", "Code":"7w1y24w1y"})
+                        elif itemCount == 0:
+                            console.lineList.insert(0, {"Blank": True})
+                            console.lineList.insert(0, {"String":"There is nothing to get.", "Code":"23w1y"})
+                        else:
+                            console.lineList.insert(0, {"Blank": True})
+                            console.lineList.insert(0, {"String":"You can't pick anything up.", "Code":"7w1y18w1y"})
+                    else:
+                        if targetContainerKey == "All" and (count == "All" or count > 1):
+                            modString = ""
+                            modCode = ""
+                            if tooMuchWeightCheck == False and targetItemKey == "All":
+                                modString = "every corner of "
+                                modCode = "16w"
+                            console.lineList.insert(0, {"Blank": True})
+                            console.lineList.insert(0, {"String":"You loot " + modString + "the place.", "Code":"9w" + modCode + "9w1y"})
+                        elif targetContainerKey == None and getCount == itemCount:
+                            console.lineList.insert(0, {"Blank": True})
+                            console.lineList.insert(0, {"String":"You pick everything up.", "Code":"22w1y"})
+                        elif getItem == "Multiple":
+                            if targetContainerKey != None and getContainerIndexList[-1] < len(currentRoom.itemList):
+                                targetContainer = currentRoom.itemList[getContainerIndexList[-1]]
                                 console.lineList.insert(0, {"Blank": True})
-                                console.lineList.insert(0, {"String":"You can't pick that up.", "Code":"7w1y14w1y"})
-                            elif tooMuchWeightCheck == True:
-                                console.lineList.insert(0, {"Blank": True})
-                                console.lineList.insert(0, {"String":"You can't carry that much weight.", "Code":"7w1y24w1y"})
-                            elif itemCount == 0:
-                                console.lineList.insert(0, {"Blank": True})
-                                console.lineList.insert(0, {"String":"There is nothing to get.", "Code":"23w1y"})
+                                console.lineList.insert(0, {"String":"You get some things out of " + targetContainer.prefix.lower() + " " + targetContainer.name["String"] + ".", "Code":"27w" + str(len(targetContainer.prefix)) + "w1w" + targetContainer.name["Code"] + "1y"})
                             else:
                                 console.lineList.insert(0, {"Blank": True})
-                                console.lineList.insert(0, {"String":"You can't pick anything up.", "Code":"7w1y18w1y"})
-                        else:
-                            if targetContainerKey == "All" and (count == "All" or count > 1):
-                                modString = ""
-                                modCode = ""
-                                if tooMuchWeightCheck == False and targetItemKey == "All":
-                                    modString = "every corner of "
-                                    modCode = "16w"
-                                console.lineList.insert(0, {"Blank": True})
-                                console.lineList.insert(0, {"String":"You loot " + modString + "the place.", "Code":"9w" + modCode + "9w1y"})
-                            elif targetContainerKey == None and getCount == itemCount:
-                                console.lineList.insert(0, {"Blank": True})
-                                console.lineList.insert(0, {"String":"You pick everything up.", "Code":"22w1y"})
-                            elif getItem == "Multiple":
-                                if targetContainerKey != None and getContainerIndexList[-1] < len(currentRoom.itemList):
-                                    targetContainer = currentRoom.itemList[getContainerIndexList[-1]]
-                                    console.lineList.insert(0, {"Blank": True})
-                                    console.lineList.insert(0, {"String":"You get some things out of " + targetContainer.prefix.lower() + " " + targetContainer.name["String"] + ".", "Code":"27w" + str(len(targetContainer.prefix)) + "w1w" + targetContainer.name["Code"] + "1y"})
-                                else:
-                                    console.lineList.insert(0, {"Blank": True})
-                                    console.lineList.insert(0, {"String":"You pick some things up.", "Code":"23w1y"})
-                            elif getItem != "Multiple":
-                                countString = ""
-                                countCode = ""
-                                if getCount > 1:
-                                    countString = " (" + str(getCount) + ")"
-                                    countCode = "2r" + str(len(str(getCount))) + "w1r"
-                                fromString = ""
-                                fromCode = ""
-                                if targetContainerKey != None and getContainerIndexList[0] < len(currentRoom.itemList):
-                                    targetContainer = currentRoom.itemList[getContainerIndexList[0]]
-                                    fromString = " from " + targetContainer.prefix.lower() + " " + targetContainer.name["String"]
-                                    fromCode = "6w" + str(len(targetContainer.prefix)) + "w1w" + targetContainer.name["Code"]
-                                getString = "You get " + getItem.prefix.lower() + " " + getItem.name["String"] + countString + fromString + "."
-                                getCode = "8w" + str(len(getItem.prefix)) + "w1w" + getItem.name["Code"] + countCode + fromCode + "1y"
-                                console.lineList.insert(0, {"Blank": True})
-                                console.lineList.insert(0, {"String":getString, "Code":getCode})
-                            
+                                console.lineList.insert(0, {"String":"You pick some things up.", "Code":"23w1y"})
+                        elif getItem != "Multiple":
+                            countString = ""
+                            countCode = ""
+                            if getCount > 1:
+                                countString = " (" + str(getCount) + ")"
+                                countCode = "2r" + str(len(str(getCount))) + "w1r"
+                            fromString = ""
+                            fromCode = ""
+                            if targetContainerKey != None and getContainerIndexList[0] < len(currentRoom.itemList):
+                                targetContainer = currentRoom.itemList[getContainerIndexList[0]]
+                                targetContainerString = targetContainer.prefix.lower() + " " + targetContainer.name["String"]
+                                targetContainerCode = str(len(targetContainer.prefix)) + "w1w" + targetContainer.name["Code"]
+                                if currentRoom.isLit(galaxyList, self) == False:
+                                    targetContainerString = "something"
+                                    targetContainerCode = "9w"
+                                fromString = " from " + targetContainerString
+                                fromCode = "6w" + targetContainerCode
+                            getString = "You get " + getItem.prefix.lower() + " " + getItem.name["String"] + countString + fromString + "."
+                            getCode = "8w" + str(len(getItem.prefix)) + "w1w" + getItem.name["Code"] + countCode + fromCode + "1y"
+                            console.lineList.insert(0, {"Blank": True})
+                            console.lineList.insert(0, {"String":getString, "Code":getCode})
+                        
     def getCurrentWeight(self):
         currentWeight = 0.0
         for itemPocket in self.itemDict:
@@ -486,148 +496,170 @@ class Player:
                 currentWeight += item.weight
         return currentWeight
 
-    def putCheck(self, console, galaxyList, targetItemKey, targetContainerKey, count):
-        currentRoom = Room.exists(galaxyList, self.spaceship, self.galaxy, self.system, self.planet, self.area, self.room)
-        if currentRoom != None:
-            targetContainer = currentRoom.getTargetObject(targetContainerKey)
-            if targetContainer == None:
-                console.lineList.insert(0, {"Blank": True})
-                console.lineList.insert(0, {"String":"You can't find it.", "Code":"7w1y9w1y"})
-            elif isinstance(targetContainer, Item) == False or targetContainer.containerList == None:
-                console.lineList.insert(0, {"Blank": True})
-                console.lineList.insert(0, {"String":"That's not a container!", "Code":"4w1y17w1y"})
-            
-            else:
-                putItem = None
-                inventorySize = 0
-                breakCheck = False
-                for pocket in self.itemDict:
-                    inventorySize += len(self.itemDict[pocket])
-                    if targetItemKey != "All":
-                        for item in self.itemDict[pocket]:
-                            if putItem == None and targetItemKey in item.keyList:
-                                putItem = item
-
-                if targetItemKey != "All" and putItem == None:
-                    console.lineList.insert(0, {"Blank": True})
-                    console.lineList.insert(0, {"String":"You can't find it.", "Code":"7w1y9w1y"})
-                elif inventorySize == 0:
-                    console.lineList.insert(0, {"Blank": True})
-                    console.lineList.insert(0, {"String":"You don't have anything.", "Code":"7w1y15w1y"})
-
-                else:
-                    putCount = 0
-                    for i in range(inventorySize):
-                        for pocket in self.itemDict:
-                            delIndex = -1
-                            for i, item in enumerate(self.itemDict[pocket]):
-                                if targetContainer.getContainerWeight() + item.weight <= targetContainer.containerMaxLimit:
-                                    if targetItemKey == "All" or targetItemKey in item.keyList:
-                                        targetContainer.containerList.append(item)
-                                        putCount += 1
-                                        if putItem == None:
-                                            putItem = item
-                                        elif putItem != "Multiple" and putItem.num != item.num:
-                                            putItem = "Multiple"
-                                        delIndex = i
-                                        break
-                            if delIndex != -1:
-                                del self.itemDict[pocket][i]
-                        if count != "All" and putCount == count:
-                            break
-
-                    if putCount == 0:
-                        console.lineList.insert(0, {"Blank": True})
-                        console.lineList.insert(0, {"String":"It won't fit.", "Code":"6w1t5w1y"})
-                    elif putItem == "Multiple":
-                        displayString = "You put some things in " + targetContainer.prefix.lower() + " " + targetContainer.name["String"] + "."
-                        displayCode = "23w" + str(len(targetContainer.prefix)) + "w1w" + targetContainer.name["Code"] + "1y"
-                        console.lineList.insert(0, {"Blank": True})
-                        console.lineList.insert(0, {"String":displayString, "Code":displayCode})
-                    else:
-                        countString = ""
-                        countCode = ""
-                        if putCount > 1:
-                            countString = " (" + str(putCount) + ")"
-                            countCode = "2r" + str(len(str(putCount))) + "w1r" 
-                        displayString = "You put " + putItem.prefix.lower() + " " + putItem.name["String"] + countString + " in " + targetContainer.prefix.lower() + " " + targetContainer.name["String"] + "."
-                        displayCode = "8w" + str(len(putItem.prefix)) + "w1w" + putItem.name["Code"] + countCode + "4w" + str(len(targetContainer.prefix)) + "w1w" + targetContainer.name["Code"] + "1y"
-                        console.lineList.insert(0, {"Blank": True})
-                        console.lineList.insert(0, {"String":displayString, "Code":displayCode})
-                    
-    def dropCheck(self, console, galaxyList, targetItemKey, count):
-        currentRoom = Room.exists(galaxyList, self.spaceship, self.galaxy, self.system, self.planet, self.area, self.room)
-        if currentRoom != None:
-            dropItem = None
+    def putCheck(self, console, galaxyList, currentRoom, targetItemKey, targetContainerKey, count):
+        targetContainer = currentRoom.getTargetObject(targetContainerKey)
+        if targetContainer == None:
+            console.lineList.insert(0, {"Blank": True})
+            console.lineList.insert(0, {"String":"You can't find it.", "Code":"7w1y9w1y"})
+        elif isinstance(targetContainer, Item) == False or targetContainer.containerList == None:
+            console.lineList.insert(0, {"Blank": True})
+            console.lineList.insert(0, {"String":"That's not a container!", "Code":"4w1y17w1y"})
+        
+        else:
+            putItem = None
+            inventorySize = 0
             breakCheck = False
-            if targetItemKey != "All":
-                for pocket in self.itemDict:
+            for pocket in self.itemDict:
+                inventorySize += len(self.itemDict[pocket])
+                if targetItemKey != "All":
                     for item in self.itemDict[pocket]:
-                        if targetItemKey in item.keyList:
-                            dropItem = item
-                            breakCheck = True
-                            break
-                    if breakCheck:
-                        break
+                        if putItem == None and targetItemKey in item.keyList:
+                            putItem = item
 
-            if targetItemKey != "All" and dropItem == None:
+            if targetItemKey != "All" and putItem == None:
                 console.lineList.insert(0, {"Blank": True})
                 console.lineList.insert(0, {"String":"You can't find it.", "Code":"7w1y9w1y"})
+            elif inventorySize == 0:
+                console.lineList.insert(0, {"Blank": True})
+                console.lineList.insert(0, {"String":"You don't have anything.", "Code":"7w1y15w1y"})
 
             else:
-                dropCount = 0
-                delDict = {}
-                breakCheck = False
-                for pocket in self.itemDict:
-                    delDict[pocket] = []
-                    for i, item in enumerate(self.itemDict[pocket]):
-                        if targetItemKey == "All" or targetItemKey in item.keyList:
-                            currentRoom.itemList.append(item)
-                            delDict[pocket].append(i)
-                            dropCount += 1
-
-                            if dropItem == None:
-                                dropItem = item
-                            elif dropItem != "Multiple" and dropItem.num != item.num:
-                                dropItem = "Multiple"
-
-                            if count != "All" and dropCount >= count:
-                                breakCheck = True
-                                break
-                    if breakCheck:
+                putCount = 0
+                for i in range(inventorySize):
+                    breakCheck = False
+                    for pocket in self.itemDict:
+                        delIndex = -1
+                        for i, item in enumerate(self.itemDict[pocket]):
+                            if targetContainer.getContainerWeight() + item.weight <= targetContainer.containerMaxLimit:
+                                if targetItemKey == "All" or targetItemKey in item.keyList:
+                                    targetContainer.containerList.append(item)
+                                    putCount += 1
+                                    if putItem == None:
+                                        putItem = item
+                                    elif putItem != "Multiple" and putItem.num != item.num:
+                                        putItem = "Multiple"
+                                    delIndex = i
+                                    breakCheck = True
+                                    break
+                        if delIndex != -1:
+                            del self.itemDict[pocket][i]
+                        if breakCheck == True:
+                            break
+                    if count != "All" and putCount == count:
                         break
 
-                inventoryCount = 0
-                for pocket in self.itemDict:
-                    inventoryCount += len(self.itemDict[pocket])
-
-                for pocket in delDict:
-                    delDict[pocket].reverse()
-                    for i in delDict[pocket]:
-                        del self.itemDict[pocket][i]
-
-                if dropCount == 0:
+                if putCount == 0:
                     console.lineList.insert(0, {"Blank": True})
-                    console.lineList.insert(0, {"String":"You aren't carrying anything.", "Code":"8w1y19w1y"})
-                elif dropCount > 1 and dropCount == inventoryCount:
+                    console.lineList.insert(0, {"String":"It won't fit.", "Code":"6w1t5w1y"})
+                elif putItem == "Multiple":
+                    targetContainerString = targetContainer.prefix.lower() + " " + targetContainer.name["String"]
+                    targetContainerCode = str(len(targetContainer.prefix)) + "w1w" + targetContainer.name["Code"]
+                    if currentRoom.isLit(galaxyList, self) == False:
+                        targetContainerString = "something"
+                        targetContainerCode = "9w"
+                    displayString = "You put some things in " + targetContainerString + "."
+                    displayCode = "23w" + targetContainerCode + "1y"
                     console.lineList.insert(0, {"Blank": True})
-                    console.lineList.insert(0, {"String":"You drop everything on the ground.", "Code":"33w1y"})    
-                elif dropItem == "Multiple":
-                    console.lineList.insert(0, {"Blank": True})
-                    console.lineList.insert(0, {"String":"You drop some things on the ground.", "Code":"34w1y"})
-                elif dropItem != None:
+                    console.lineList.insert(0, {"String":displayString, "Code":displayCode})
+                else:
                     countString = ""
                     countCode = ""
-                    if dropCount > 1:
-                        countString = " (" + str(dropCount) + ")"
-                        countCode = "2r" + str(len(str(dropCount))) + "w1r"
-                    dropString = "You drop " + dropItem.prefix.lower() + " " + dropItem.name["String"] + " on the ground." + countString
-                    dropCode = "9w" + str(len(dropItem.prefix.lower())) + "w1w" + dropItem.name["Code"] + "14w1y" + countCode
+                    if putCount > 1:
+                        countString = " (" + str(putCount) + ")"
+                        countCode = "2r" + str(len(str(putCount))) + "w1r"
+                    targetContainerString = targetContainer.prefix.lower() + " " + targetContainer.name["String"]
+                    targetContainerCode = str(len(targetContainer.prefix)) + "w1w" + targetContainer.name["Code"]
+                    if currentRoom.isLit(galaxyList, self) == False:
+                        targetContainerString = "something"
+                        targetContainerCode = "9w"
+                    displayString = "You put " + putItem.prefix.lower() + " " + putItem.name["String"] + countString + " in " + targetContainerString + "."
+                    displayCode = "8w" + str(len(putItem.prefix)) + "w1w" + putItem.name["Code"] + countCode + "4w" + targetContainerCode + "1y"
                     console.lineList.insert(0, {"Blank": True})
-                    console.lineList.insert(0, {"String":dropString, "Code":dropCode})
+                    console.lineList.insert(0, {"String":displayString, "Code":displayCode})
                 
-    def displayInventory(self, console, galaxyList, targetPocket):
-        if targetPocket in self.itemDict:
+    def dropCheck(self, console, galaxyList, currentRoom, targetItemKey, count):
+        dropItem = None
+        breakCheck = False
+        if targetItemKey != "All":
+            for pocket in self.itemDict:
+                for item in self.itemDict[pocket]:
+                    if targetItemKey in item.keyList:
+                        dropItem = item
+                        breakCheck = True
+                        break
+                if breakCheck:
+                    break
+
+        if targetItemKey != "All" and dropItem == None:
+            console.lineList.insert(0, {"Blank": True})
+            console.lineList.insert(0, {"String":"You can't find it.", "Code":"7w1y9w1y"})
+
+        else:
+            dropCount = 0
+            delDict = {}
+            breakCheck = False
+            for pocket in self.itemDict:
+                delDict[pocket] = []
+                for i, item in enumerate(self.itemDict[pocket]):
+                    if targetItemKey == "All" or targetItemKey in item.keyList:
+                        currentRoom.itemList.append(item)
+                        delDict[pocket].append(i)
+                        dropCount += 1
+
+                        if dropItem == None:
+                            dropItem = item
+                        elif dropItem != "Multiple" and dropItem.num != item.num:
+                            dropItem = "Multiple"
+
+                        if count != "All" and dropCount >= count:
+                            breakCheck = True
+                            break
+                if breakCheck:
+                    break
+
+            inventoryCount = 0
+            for pocket in self.itemDict:
+                inventoryCount += len(self.itemDict[pocket])
+
+            for pocket in delDict:
+                delDict[pocket].reverse()
+                for i in delDict[pocket]:
+                    del self.itemDict[pocket][i]
+
+            if dropCount == 0:
+                console.lineList.insert(0, {"Blank": True})
+                console.lineList.insert(0, {"String":"You aren't carrying anything.", "Code":"8w1y19w1y"})
+            elif dropCount > 1 and dropCount == inventoryCount:
+                console.lineList.insert(0, {"Blank": True})
+                console.lineList.insert(0, {"String":"You drop everything on the ground.", "Code":"33w1y"})    
+            elif dropItem == "Multiple":
+                console.lineList.insert(0, {"Blank": True})
+                console.lineList.insert(0, {"String":"You drop some things on the ground.", "Code":"34w1y"})
+            elif dropItem != None:
+                countString = ""
+                countCode = ""
+                if dropCount > 1:
+                    countString = " (" + str(dropCount) + ")"
+                    countCode = "2r" + str(len(str(dropCount))) + "w1r"
+                dropString = "You drop " + dropItem.prefix.lower() + " " + dropItem.name["String"] + " on the ground." + countString
+                dropCode = "9w" + str(len(dropItem.prefix.lower())) + "w1w" + dropItem.name["Code"] + "14w1y" + countCode
+                console.lineList.insert(0, {"Blank": True})
+                console.lineList.insert(0, {"String":dropString, "Code":dropCode})
+            
+    def displayInventory(self, console, galaxyList, currentRoom, targetPocketKey):
+        targetPocket = None
+        if targetPocketKey in ["armor", "armo", "arm", "ar", "a"]:
+            targetPocket = "Armor"
+        elif targetPocketKey in ["weapons", "weapon", "weapo", "weap", "wea", "we", "w"]:
+            targetPocket = "Weapon"
+        elif targetPocketKey in ["misc.", "misc", "mis", "mi", "m"]:
+            targetPocket = "Misc"
+
+        if targetPocket not in self.itemDict:
+            console.lineList.insert(0, {"Blank": True})
+            console.lineList.insert(0, {"String":"Open which bag? (Armor, Weapon, Misc.)", "Code":"14w2y1r5w2y6w2y4w1y1r"})
+
+        else:
             displayDict = {}
             for item in self.itemDict[targetPocket]:
                 if item.num not in displayDict:
@@ -658,10 +690,6 @@ class Player:
             console.lineList.insert(0, {"String": targetPocketDisplayString + " Bag", "Code": targetPocketDisplayCode + "4w"})
             console.lineList.insert(0, {"String": underlineString, "Code": underlineCode})
 
-            currentRoom = Room.exists(galaxyList, self.spaceship, self.galaxy, self.system, self.planet, self.area, self.room)
-            if currentRoom == None:
-                currentRoom = galaxyList[0].systemList[0].planetList[0].areaList[0].roomList[0]
-    
             if len(self.itemDict[targetPocket]) == 0:
                 console.lineList.insert(0, {"String": "-Empty", "Code": "1y5w"})
             elif currentRoom.isLit(galaxyList, self) == False and self.lightInBagCheck(targetPocket) == False:
@@ -695,7 +723,7 @@ class Player:
     def wearCheck(self, console, targetItemKey, count, targetGearSlotIndex=None):
         wearItem = None
         if targetItemKey != "All":
-            for item in self.itemDict["Armor"]:
+            for item in self.itemDict["Armor"] + self.itemDict["Weapon"]:
                 if targetItemKey in item.keyList:
                     wearItem = item
                     break
@@ -703,6 +731,12 @@ class Player:
         if targetItemKey != "All" and wearItem == None:
             console.lineList.insert(0, {"Blank": True})
             console.lineList.insert(0, {"String":"You can't find it.", "Code":"7w1y9w1y"})
+        elif targetItemKey != "All" and wearItem.pocket == "Weapon":
+            tempCount = count
+            if tempCount == "All":
+                tempCount = 2
+            self.wieldCheck(console, targetItemKey, targetGearSlotIndex, tempCount)
+            return
 
         else:
             wearCount = 0
@@ -724,6 +758,12 @@ class Player:
                                     break
                                     
                         if targetGearSlotIndex != None:
+                            if targetGearSlotIndex in ["left", "lef", "le", "l"]:
+                                targetGearSlotIndex = 0
+                            elif targetGearSlotIndex in ["right", "righ", "rig", "ri", "r"]:
+                                targetGearSlotIndex = 1
+                            elif stringIsNumber(targetGearSlotIndex):
+                                targetGearSlotIndex = int(targetGearSlotIndex)
                             if isinstance(self.gearDict[item.gearSlot], list):
                                 if targetGearSlotIndex > len(self.gearDict[item.gearSlot]) - 1:
                                     targetGearSlotIndex = len(self.gearDict[item.gearSlot]) - 1
@@ -785,6 +825,144 @@ class Player:
                 console.lineList.insert(0, {"Blank": True})
                 console.lineList.insert(0, {"String":wearString, "Code":wearCode})
 
+            # Wield Check #
+            if targetItemKey == "All" and count == "All":
+                self.wieldCheck(console, "All", None, 2, False)
+
+    def wieldCheck(self, console, targetItemKey, targetGearSlotKey, count, blankCheck=True):
+        wieldItem = None
+        checkItem = None
+        for pocket in self.itemDict:
+            for item in self.itemDict[pocket]:
+                if targetItemKey == "All" or targetItemKey in item.keyList:
+                    if item.pocket == "Weapon" and wieldItem == None:
+                        wieldItem = item
+                    if checkItem == None:
+                        checkItem = item
+
+        if targetItemKey == "All" and (wieldItem == None or wieldItem.pocket != "Weapon"):
+            if blankCheck == True : console.lineList.insert(0, {"Blank": True})
+            console.lineList.insert(0, {"String":"You don't have anything to wield.", "Code":"7w1y24w1y"})
+        elif wieldItem == None:
+            if blankCheck == True : console.lineList.insert(0, {"Blank": True})
+            console.lineList.insert(0, {"String":"You can't find it.", "Code":"7w1y9w1y"})
+        elif wieldItem.pocket != "Weapon":
+            if blankCheck == True : console.lineList.insert(0, {"Blank": True})
+            console.lineList.insert(0, {"String":"You can't wield that.", "Code":"7w1y12w1y"})
+
+        else:
+            targetGearSlot = None
+            if targetGearSlotKey != None:
+                if stringIsNumber(targetGearSlotKey) == False:
+                    if targetGearSlotKey in ["left", "lef", "le", "l"]:
+                        targetGearSlot = "Left Hand"
+                    elif targetGearSlotKey in ["right", "righ", "rig", "ri", "r"]:
+                        targetGearSlot = "Right Hand"
+                else:
+                    if int(targetGearSlotKey) == 1 : targetGearSlot = "Left Hand"
+                    else : targetGearSlot = "Right Hand"
+                if wieldItem != None and wieldItem.twoHanded and self.debugDualWield == False:
+                    targetGearSlot = self.dominantHand
+
+            wieldCount = 0
+            slotCount = 0
+            slotItem = None
+            breakCheck = False
+            for c in range(count):
+                defaultGearSlot = self.dominantHand
+                if (targetItemKey == "All" and self.gearDict[defaultGearSlot] != None and self.gearDict[defaultGearSlot].twoHanded == False and self.debugDualWield == False) or \
+                (targetItemKey != "All" and self.gearDict[defaultGearSlot] != None and self.gearDict[self.getOppositeHand(defaultGearSlot)] == None and self.gearDict[defaultGearSlot].twoHanded == False and wieldItem.twoHanded == False and count == 1) or \
+                (c == 1 and not (self.gearDict[defaultGearSlot] != None and self.gearDict[defaultGearSlot].twoHanded == True and self.debugDualWield == False)):
+                    defaultGearSlot = self.getOppositeHand(self.dominantHand)
+                if targetGearSlot != None:
+                    defaultGearSlot = targetGearSlot
+                delIndex = -1
+                for i, item in enumerate(self.itemDict["Weapon"]):
+                    if targetItemKey == "All" or targetItemKey in item.keyList:
+                        if not (targetItemKey == "All" and self.gearDict[defaultGearSlot] != None) and \
+                        not (targetItemKey == "All" and item.twoHanded == True and (self.gearDict[self.dominantHand] != None or self.gearDict[self.getOppositeHand(self.dominantHand)] != None) and self.debugDualWield == False):
+                            if self.gearDict[defaultGearSlot] != None:
+                                self.itemDict[self.gearDict[defaultGearSlot].pocket].append(self.gearDict[defaultGearSlot])
+                                slotCount += 1
+                                if slotItem == None:
+                                    slotItem = self.gearDict[defaultGearSlot]
+                                elif slotItem != "Multiple" and slotItem.num != self.gearDict[defaultGearSlot].num:
+                                    slotItem = "Multiple"
+                            self.gearDict[defaultGearSlot] = item
+                            oppositeHand = self.gearDict[self.getOppositeHand(defaultGearSlot)]
+                            if oppositeHand != None and (self.gearDict[defaultGearSlot].twoHanded == True or oppositeHand.twoHanded == True) and self.debugDualWield == False:
+                                self.itemDict[oppositeHand.pocket].append(oppositeHand)
+                                self.gearDict[self.getOppositeHand(defaultGearSlot)] = None
+                                slotCount += 1
+                                if slotItem == None:
+                                    slotItem = oppositeHand
+                                elif slotItem != "Multiple" and slotItem.num != oppositeHand.num:
+                                    slotItem = "Multiple"
+                            wieldCount += 1
+                            if wieldItem == None:
+                                wieldItem = item
+                            elif wieldItem != "Multiple" and wieldItem.num != item.num:
+                                wieldItem = "Multiple"
+                            delIndex = i
+                            break
+                if delIndex != -1:
+                    if self.itemDict["Weapon"][delIndex].twoHanded == True and self.debugDualWield == False:
+                        breakCheck = True
+                    del self.itemDict["Weapon"][delIndex]
+                if breakCheck:
+                    break
+
+            if wieldCount == 0:
+                if blankCheck == True:
+                    console.lineList.insert(0, {"Blank": True})
+                    console.lineList.insert(0, {"String":"You're already holding something.", "Code":"3w1y28w1y"})
+            elif wieldItem == "Multiple":
+                if slotItem == None:
+                    if blankCheck == True : console.lineList.insert(0, {"Blank": True})
+                    console.lineList.insert(0, {"String":"You hold some weapons in your hands.", "Code":"35w1y"})
+                else:
+                    if blankCheck == True : console.lineList.insert(0, {"Blank": True})
+                    console.lineList.insert(0, {"String":"You switch some weapons around.", "Code":"30w1y"})
+            elif slotItem == None:
+                countString = ""
+                countCode = ""
+                handsString = defaultGearSlot.lower()
+                handsCode = str(len(defaultGearSlot)) + "w"
+                if wieldCount == 2:
+                    countString = " (2)"
+                    countCode = "2r1w1r"
+                    handsString = "hands"
+                    handsCode = "5w"
+                displayString = "You hold " + wieldItem.prefix.lower() + " " + wieldItem.name["String"] + countString + " in your " + handsString + "."
+                displayCode = "9w" + str(len(wieldItem.prefix)) + "w1w" + wieldItem.name["Code"] + countCode + "9w" + handsCode + "1y"
+                if blankCheck == True : console.lineList.insert(0, {"Blank": True})
+                console.lineList.insert(0, {"String":displayString, "Code":displayCode})
+            else:
+                slotString = "some gear"
+                slotCode = "9w"
+                slotCountString = ""
+                slotCountCode = ""
+                wieldString = "some gear"
+                wieldCode = "9w"
+                wieldCountString = ""
+                wieldCountCode = ""
+                if slotItem != "Multiple":
+                    slotString = slotItem.prefix.lower() + " " + slotItem.name["String"]
+                    slotCode = str(len(slotItem.prefix)) + "w1w" + slotItem.name["Code"]
+                    if slotCount > 1:
+                        slotCountString = " (2)"
+                        slotCountCode = "2r1w1r"
+                if wieldItem != "Multiple":
+                    wieldString = wieldItem.prefix.lower() + " " + wieldItem.name["String"]
+                    wieldCode = str(len(wieldItem.prefix)) + "w1w" + wieldItem.name["Code"]
+                    if wieldCount > 1:
+                        wieldCountString = " (2)"
+                        wieldCountCode = "2r1w1r"
+                displayString = "You remove " + slotString + slotCountString + " and wield " + wieldString + wieldCountString + "."
+                displayCode = "11w" + slotCode + slotCountCode + "11w" + wieldCode + wieldCountCode + "1y"
+                if blankCheck == True : console.lineList.insert(0, {"Blank": True})
+                console.lineList.insert(0, {"String":displayString, "Code":displayCode})
+                           
     def removeCheck(self, console, targetItemKey, count, targetGearSlotIndex=None):
         removeItem = None
         if targetItemKey != "All":
@@ -843,8 +1021,8 @@ class Player:
 
             # Messages #
             if targetItemKey == "All" and count == "All":
-                displayString = "You remove all of your armor."
-                displayCode = "28w1y"
+                displayString = "You remove all of your gear."
+                displayCode = "27w1y"
                 if random.randrange(10) == 0:
                     displayString = "You strip down to your birthday suit."
                     displayCode = "36w1y"
@@ -864,7 +1042,7 @@ class Player:
                 displayCode = "11w" + str(len(removeItem.prefix)) + "w1w" + removeItem.name["Code"] + "1y" + countCode
                 console.lineList.insert(0, {"String":displayString, "Code":displayCode})
             
-    def displayGear(self, console, galaxyList):
+    def displayGear(self, console, galaxyList, currentRoom):
         gearSlotDisplayDict = {"Body Under":{"String":"(Under) Body", "Code":"1r5w2r4w"}, "Body Over":{"String":"(Over) Body", "Code":"1r4w2r4w"}, "Legs Under":{"String":"(Under) Legs", "Code":"1r5w2r4w"}, "Legs Over":{"String":"(Over) Legs", "Code":"1r4w2r4w"}, "Left Hand":{"String":"L-Hand", "Code":"1w1y4w"}, "Right Hand":{"String":"R-Hand", "Code":"1w1y4w"}}
 
         console.lineList.insert(0, {"Blank": True})
@@ -891,10 +1069,7 @@ class Player:
                 gearCode = "1r1w6ddw1r"
                 modString = ""
                 modCode = ""
-                currentRoom = Room.exists(galaxyList, self.spaceship, self.galaxy, self.system, self.planet, self.area, self.room)
-                if currentRoom == None:
-                    currentRoom = galaxyList[0].systemList[0].planetList[0].areaList[0].roomList[0]
-        
+                
                 if isinstance(self.gearDict[gearSlot], list):
                     if self.gearDict[gearSlot][slotIndex] != None:
                         if "Glowing" in self.gearDict[gearSlot][slotIndex].flags and self.gearDict[gearSlot][slotIndex].flags["Glowing"] == True:
@@ -988,6 +1163,12 @@ class Player:
 
         return False
 
+    def getOppositeHand(self, targetHand):
+        if targetHand == "Left Hand":
+            return "Right Hand"
+        else:
+            return "Left Hand"
+
     def emote(self, console, input):
         if input in ["hmm", "hm"]:
             console.lineList.insert(0, {"Blank": True})
@@ -1001,7 +1182,13 @@ class Player:
         elif input == "tap":
             console.lineList.insert(0, {"Blank": True})
             console.lineList.insert(0, {"String":"You tap your foot impatiently..", "Code":"29w2y"})
-        elif input == "cackle":
+        elif input == "boggle":
             console.lineList.insert(0, {"Blank": True})
-            console.lineList.insert(0, {"String":"You cackle with insane glee!", "Code":"27w1y"})
+            console.lineList.insert(0, {"String":"You boggle in complete incomprehension.", "Code":"38w1y"})
+        elif input == "jump":
+            console.lineList.insert(0, {"Blank": True})
+            console.lineList.insert(0, {"String":"You jump up and down.", "Code":"20w1y"})
+        elif input == "ahah":
+            console.lineList.insert(0, {"Blank": True})
+            console.lineList.insert(0, {"String":"Comprehension dawns upon you.", "Code":"28w1y"})
         

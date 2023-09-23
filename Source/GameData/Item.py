@@ -12,6 +12,7 @@ class Item:
         self.weight = 1.0
         self.pocket = "Misc"
         self.gearSlot = None
+        self.twoHanded = False
 
         self.containerList = None
         self.containerPassword = None
@@ -21,7 +22,7 @@ class Item:
 
     def loadItem(self, num):
         
-        # Armor #
+        # Armor (1 - 100) #
         if self.name["String"] == "Debug Item":
             if num == 1:
                 self.prefix = "An"
@@ -89,13 +90,30 @@ class Item:
                 self.pocket = "Armor"
                 self.gearSlot = "Feet"
 
-        # Misc. #
+        # Weapons (101 - 200) #
         if self.name["String"] == "Debug Item":
-            if num == 100:
+            if num == 101:
+                self.name = {"String":"Sword", "Code":"1w4ddw"}
+                self.pocket = "Weapon"
+            elif num == 102:
+                self.name = {"String":"Shield", "Code":"1w5ddw"}
+                self.pocket = "Weapon"
+            elif num == 103:
+                self.name = {"String":"Lance", "Code":"1w4ddw"}
+                self.pocket = "Weapon"
+            elif num == 104:
+                self.name = {"String":"Greatsword", "Code":"1w9ddw"}
+                self.keyList = ["great"]
+                self.pocket = "Weapon"
+                self.twoHanded = True
+
+        # Misc. (901 - 1000) #
+        if self.name["String"] == "Debug Item":
+            if num == 901:
                 self.name = {"String":"Silver Keycard", "Code":"1ddw1dw1w1ddw1dw1w8w"}
                 self.keyList = ["key", "card"]
                 self.flags["Password List"] = ["COTU Spaceport"]
-            elif num == 101:
+            elif num == 902:
                 self.prefix = "An"
                 self.name = {"String":"Ornate Chest", "Code":"1y1dy1ddy1dddy1ddy1dy1w1ddo4dddo"}
                 self.containerList = []

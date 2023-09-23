@@ -10,15 +10,16 @@ from GameData.SolarSystem import SolarSystem
 from GameData.Planet import Planet
 from GameData.Area import Area
 from GameData.Room import Room
+from GameData.Mob import Mob
 from GameData.Item import Item
 from GameData.Spaceship import Spaceship
 
-# mob messages
+# get surrounding room list
+# mob room messages
 # area effect messages
 # examine command
+# target command
 # fumble around in the dark when switching gear n stuff
-# wield, update remove
-# dominant hand
 
 class Game:
 
@@ -90,6 +91,7 @@ class Game:
             roomCOTU01.name = {"String":"Bridge To The Spaceport", "Code":"14w1w1dw2ddw1dw1w1dw1ddw1dw"}
             roomCOTU01.exit["North"] = [0, 0, 1, 0, 0]
             roomCOTU01.exit["South"] = [0, 0, 1, 0, 2]
+            roomCOTU01.mobList.append(Mob(1))
 
             roomCOTU02 = Room(0, 0, 1, 0, 2)
             areaCOTU.roomList.append(roomCOTU02)
@@ -109,11 +111,14 @@ class Game:
             roomCOTU04.name = {"String":"A Little Wooden Shack", "Code":"9w1do1ddo1dddo1do1ddo1dddo6w"}
             roomCOTU04.exit["East"] = [0, 0, 1, 0, 3]
             roomCOTU04.inside = True
-            itemChest = Item(101)
-            roomCOTU04.itemList.append(itemChest)
-            itemChest.containerList.append(Item(100))
+            ornateChest = Item(902)
+            roomCOTU04.itemList.append(ornateChest)
+            ornateChest.containerList.append(Item(901))
             for i in range(1, 14):
-                itemChest.containerList.append(Item(i))
+                ornateChest.containerList.append(Item(i))
+            for i in range(101, 105):
+                ornateChest.containerList.append(Item(i))
+                ornateChest.containerList.append(Item(i))
 
             roomCOTU05 = Room(0, 0, 1, 0, 5)
             areaCOTU.roomList.append(roomCOTU05)
@@ -126,7 +131,7 @@ class Game:
             roomCOTU05.spaceshipList.append(cotuTransportShip)
             systemProtoSol.spaceshipList.append(cotuTransportShip)
             cotuTransportShip.name = {"String":"COTU Transport Ship", "Code":"19w"}
-            cotuTransportShip.keyList = ["debug", "ship", "debug ship"]
+            cotuTransportShip.keyList = ["spaceship", "debug", "ship", "debug ship"]
 
             cotuTransportShipArea0 = Area()
             cotuTransportShip.areaList.append(cotuTransportShipArea0)
@@ -296,6 +301,8 @@ class Game:
                 lookTarget = ' '.join(input.lower().split()[2::])
                 self.player.lookTargetCheck(self.console, self.galaxyList, targetDir, 1, lookTarget)
 
+            # Look Item In Container #
+
             # Look Item/Mob/Spaceship/Inventory/Gear #
             elif len(input.split()) > 1:
                 lookTarget = ' '.join(input.lower().split()[1::])
@@ -308,15 +315,108 @@ class Game:
 
         # Examine #
 
-            # Examine Item/Mob/Spaceship #
+            # Examine Item In Container #
+
+            # Examine Item/Mob/Spaceship/Inventory/Gear #
 
             # Examine Item/Mob/Spaceship 'Dir' #
 
             # Examine Item/Mob/Spaceship 'Dir' '#' #
         
         # Target #
+        elif input.lower().split()[0] in ["target", "targe", "targ", "tar", "ta", "t"]:
 
-        # Movement - (North, East, South, West) #
+            # Target All Mob 'Direction' '#' #
+            if len(input.split()) > 4 and input.lower().split()[1] == "all" and input.lower().split()[-2] in ["north", "nort", "nor", "no", "n", "east", "eas", "ea", "e", "south", "sout", "sou", "so", "s", "west", "wes", "we", "w"] and stringIsNumber(input.split()[-1]) and int(input.split()[-1]) > 0:
+                targetMobKey = ' '.join(input.lower().split()[2:-2])
+                targetDirKey = input.lower().split()[-2]
+                targetDirCount = int(input.split()[-1])
+                self.player.targetCheck(self.console, self.galaxyList, currentRoom, targetMobKey, targetDirKey, "All", targetDirCount)
+
+            # Target All Mob 'Direction' #
+            elif len(input.split()) > 3 and input.lower().split()[1] == "all" and input.lower().split()[-1] in ["north", "nort", "nor", "no", "n", "east", "eas", "ea", "e", "south", "sout", "sou", "so", "s", "west", "wes", "we", "w"]:
+                targetMobKey = ' '.join(input.lower().split()[2:-1])
+                targetDirKey = input.lower().split()[-1]
+                self.player.targetCheck(self.console, self.galaxyList, currentRoom, targetMobKey, targetDirKey, "All", 1)
+
+            # Target '#' Mob 'Direction' '#' #
+            elif len(input.split()) > 4 and stringIsNumber(input.split()[1]) and int(input.split()[1]) > 0 and input.lower().split()[-2] in ["north", "nort", "nor", "no", "n", "east", "eas", "ea", "e", "south", "sout", "sou", "so", "s", "west", "wes", "we", "w"] and stringIsNumber(input.split()[-1]) and int(input.split()[-1]) > 0:
+                targetMobCount = int(input.split()[1])
+                targetMobKey = ' '.join(input.lower().split()[2:-2])
+                targetDirKey = input.lower().split()[-2]
+                targetDirCount = int(input.split()[-1])
+                self.player.targetCheck(self.console, self.galaxyList, currentRoom, targetMobKey, targetDirKey, targetMobCount, targetDirCount)
+
+            # Target '#' Mob 'Direction' #
+            elif len(input.split()) > 3 and stringIsNumber(input.split()[1]) and int(input.split()[1]) > 0 and input.lower().split()[-1] in ["north", "nort", "nor", "no", "n", "east", "eas", "ea", "e", "south", "sout", "sou", "so", "s", "west", "wes", "we", "w"]:
+                targetMobCount = int(input.split()[1])
+                targetMobKey = ' '.join(input.lower().split()[2:-1])
+                targetDirKey = input.lower().split()[-1]
+                self.player.targetCheck(self.console, self.galaxyList, currentRoom, targetMobKey, targetDirKey, targetMobCount, 1)
+
+            # Target All 'Direction' '#' #
+            elif len(input.split()) == 4 and input.lower().split()[1] == "all" and input.lower().split()[2] in ["north", "nort", "nor", "no", "n", "east", "eas", "ea", "e", "south", "sout", "sou", "so", "s", "west", "wes", "we", "w"] and stringIsNumber(input.split()[3]) and int(input.split()[3]) > 0:
+                targetDirKey = input.lower().split()[2]
+                targetDirCount = int(input.split()[3])
+                self.player.targetCheck(self.console, self.galaxyList, currentRoom, "All", targetDirKey, "All", targetDirCount)
+
+            # Target All 'Direction' #
+            elif len(input.split()) == 3 and input.lower().split()[1] == "all" and input.lower().split()[2] in ["north", "nort", "nor", "no", "n", "east", "eas", "ea", "e", "south", "sout", "sou", "so", "s", "west", "wes", "we", "w"]:
+                targetDirKey = input.lower().split()[2]
+                self.player.targetCheck(self.console, self.galaxyList, currentRoom, "All", targetDirKey, "All", 1)
+
+            # Target Mob 'Direction' '#' #
+            elif len(input.split()) > 3 and input.lower().split()[-2] in ["north", "nort", "nor", "no", "n", "east", "eas", "ea", "e", "south", "sout", "sou", "so", "s", "west", "wes", "we", "w"] and stringIsNumber(input.split()[-1]) and int(input.split()[-1]) > 0:
+                targetMobKey = ' '.join(input.lower().split()[1:-2])
+                targetDirKey = input.lower().split()[-2]
+                targetDirCount = int(input.split()[-1])
+                self.player.targetCheck(self.console, self.galaxyList, currentRoom, targetMobKey, targetDirKey, 1, targetDirCount)
+
+            # Target Mob 'Direction' #
+            elif len(input.split()) > 2 and input.lower().split()[-1] in ["north", "nort", "nor", "no", "n", "east", "eas", "ea", "e", "south", "sout", "sou", "so", "s", "west", "wes", "we", "w"]:
+                targetMobKey = ' '.join(input.lower().split()[1:-1])
+                targetDirKey = input.lower().split()[-1]
+                self.player.targetCheck(self.console, self.galaxyList, currentRoom, targetMobKey, targetDirKey, 1, 1)
+
+            # Target All #
+            elif len(input.split()) == 2 and input.lower().split()[1] == "all":
+                self.player.targetCheck(self.console, self.galaxyList, currentRoom, "All", None, "All", None)
+
+            # Target All Mob #
+            elif len(input.split()) > 2 and input.lower().split()[1] == "all":
+                targetMobKey = ' '.join(input.lower().split()[2::])
+                self.player.targetCheck(self.console, self.galaxyList, currentRoom, targetMobKey, None, "All", None)
+
+            # Target '#' Mob #
+            elif len(input.split()) > 2 and stringIsNumber(input.split()[1]) and int(input.split()[1]) > 0:
+                targetMobCount = int(input.split()[1])
+                targetMobKey = ' '.join(input.lower().split()[2::])
+                self.player.targetCheck(self.console, self.galaxyList, currentRoom, targetMobKey, None, targetMobCount, None)
+
+            # Target Mob #
+            elif len(input.split()) > 1:
+                targetMobKey = ' '.split(input.lower().split()[1::])
+                self.player.targetCheck(self.console, self.galaxyList, currentRoom, targetMobKey, None, 1, None)
+
+            else:
+                self.console.lineList.insert(0, {"Blank": True})
+                self.console.lineList.insert(0, {"String": "Target what?", "Code":"11w1y"})
+
+        # Untarget #
+
+            # Untarget All #
+
+            # Untarget All Mob #
+
+            # Untarget '#' #
+
+            # Untarget '#' Mob #
+
+            # Untarget Mob #
+
+            # Untarget #
+
+        # Movement #
         elif len(input.split()) == 1 and input.lower() in ["north", "nort", "nor", "no", "n", "east", "eas", "ea", "e", "south", "sout", "sou", "so", "s", "west", "wes", "we", "w"]:
             if input.lower() in ["north", "nort", "nor", "no", "n"] : targetDir = "North"
             elif input.lower() in ["east", "eas", "ea", "e"] : targetDir = "East"
@@ -379,62 +479,62 @@ class Game:
             if len(input.split()) > 4 and input.lower().split()[1] == "all" and "from" in input.lower().split() and input.lower().split()[2] != "from" and input.lower().split()[-1] == "all":
                 fromIndex = input.lower().split().index("from")
                 targetItemKey = ' '.join(input.lower().split()[2:fromIndex])
-                self.player.getCheck(self.console, self.galaxyList, targetItemKey, "All", "All")
+                self.player.getCheck(self.console, self.galaxyList, currentRoom, targetItemKey, "All", "All")
              
             # Get All Item From Container #
             elif len(input.split()) > 4 and input.lower().split()[1] == "all" and "from" in input.lower().split() and input.lower().split()[2] != "from" and input.lower().split()[-1] != "from":
                 fromIndex = input.lower().split().index("from")
                 targetItemKey = ' '.join(input.lower().split()[2:fromIndex])
                 targetContainerKey = ' '.join(input.lower().split()[fromIndex + 1::])
-                self.player.getCheck(self.console, self.galaxyList, targetItemKey, targetContainerKey, "All")
+                self.player.getCheck(self.console, self.galaxyList, currentRoom, targetItemKey, targetContainerKey, "All")
 
             # Get All From All #
             elif len(input.split()) == 4 and input.lower().split()[1] == "all" and input.lower().split()[2] == "from" and input.lower().split()[3] == "all":
-                self.player.getCheck(self.console, self.galaxyList, "All", "All", "All")
+                self.player.getCheck(self.console, self.galaxyList, currentRoom, "All", "All", "All")
 
             # Get All From Container #
             elif len(input.split()) > 3 and input.lower().split()[1] == "all" and input.lower().split()[2] == "from":
                 targetContainerKey = ' '.join(input.lower().split()[3::])
-                self.player.getCheck(self.console, self.galaxyList, "All", targetContainerKey, "All")
+                self.player.getCheck(self.console, self.galaxyList, currentRoom, "All", targetContainerKey, "All")
 
             # Get '#' Item From All #
             elif len(input.split()) > 4 and stringIsNumber(input.split()[1]) and int(input.split()[1]) > 0 and "from" in input.lower().split() and input.lower().split()[2] != "from" and input.lower().split()[-1] == "all":
                 fromIndex = input.lower().split().index("from")
                 targetItemKey = ' '.join(input.lower().split()[2:fromIndex])
-                self.player.getCheck(self.console, self.galaxyList, targetItemKey, "All", int(input.split()[1]))
+                self.player.getCheck(self.console, self.galaxyList, currentRoom, targetItemKey, "All", int(input.split()[1]))
 
             # Get '#' Item From Container #
             elif len(input.split()) > 4 and stringIsNumber(input.split()[1]) and int(input.split()[1]) > 0 and "from" in input.lower().split() and input.lower().split()[2] != "from" and input.lower().split()[-1] != "from":
                 fromIndex = input.lower().split().index("from")
                 targetItemKey = ' '.join(input.lower().split()[2:fromIndex])
                 targetContainerKey = ' '.join(input.lower().split()[fromIndex + 1::])
-                self.player.getCheck(self.console, self.galaxyList, targetItemKey, targetContainerKey, int(input.split()[1]))
+                self.player.getCheck(self.console, self.galaxyList, currentRoom, targetItemKey, targetContainerKey, int(input.split()[1]))
 
             # Get Item From Container #
             elif len(input.split()) > 3 and "from" in input.lower().split() and input.lower().split()[1] != "from" and input.lower().split()[-1] != "from":
                 fromIndex = input.lower().split().index("from")
                 targetItemKey = ' '.join(input.lower().split()[1:fromIndex])
                 targetContainerKey = ' '.join(input.lower().split()[fromIndex + 1::])
-                self.player.getCheck(self.console, self.galaxyList, targetItemKey, targetContainerKey, 1)
+                self.player.getCheck(self.console, self.galaxyList, currentRoom, targetItemKey, targetContainerKey, 1)
 
             # Get All #
             elif len(input.split()) == 2 and input.split()[1].lower() == "all":
-                self.player.getCheck(self.console, self.galaxyList, "All", None, "All")
+                self.player.getCheck(self.console, self.galaxyList, currentRoom, "All", None, "All")
                 
             # Get All Item #
             elif len(input.split()) > 2 and input.split()[1].lower() == "all":
                 targetItemKey = ' '.join(input.lower().split()[2::])
-                self.player.getCheck(self.console, self.galaxyList, targetItemKey, None, "All")
+                self.player.getCheck(self.console, self.galaxyList, currentRoom, targetItemKey, None, "All")
 
             # Get '#' Item #
             elif len(input.split()) > 2 and stringIsNumber(input.split()[1]) and int(input.split()[1]) > 0:
                 targetItemKey = ' '.join(input.lower().split()[2::])
-                self.player.getCheck(self.console, self.galaxyList, targetItemKey, None, int(input.split()[1]))
+                self.player.getCheck(self.console, self.galaxyList, currentRoom, targetItemKey, None, int(input.split()[1]))
 
             # Get Item #
             elif len(input.split()) > 1:
                 targetItemKey = ' '.join(input.lower().split()[1::])
-                self.player.getCheck(self.console, self.galaxyList, targetItemKey, None, 1)
+                self.player.getCheck(self.console, self.galaxyList, currentRoom, targetItemKey, None, 1)
 
             else:
                 self.console.lineList.insert(0, {"Blank": True})
@@ -445,11 +545,11 @@ class Game:
 
             # Loot All #
             if len(input.split()) == 2 and input.lower().split()[1] == "all":
-                self.player.getCheck(self.console, self.galaxyList, "All", "All", "All")
+                self.player.getCheck(self.console, self.galaxyList, currentRoom, "All", "All", "All")
 
             # Loot Container #
             elif len(input.split()) > 1:
-                self.player.getCheck(self.console, self.galaxyList, "All", ' '.join(input.lower().split()[1::]), "All")
+                self.player.getCheck(self.console, self.galaxyList, currentRoom, "All", ' '.join(input.lower().split()[1::]), "All")
 
             else:
                 self.console.lineList.insert(0, {"Blank": True})
@@ -463,26 +563,26 @@ class Game:
                 inIndex = input.lower().split().index("in")
                 targetItemKey = ' '.join(input.lower().split()[2:inIndex])
                 targetContainerKey = ' '.join(input.lower().split()[inIndex + 1::])
-                self.player.putCheck(self.console, self.galaxyList, targetItemKey, targetContainerKey, "All")
+                self.player.putCheck(self.console, self.galaxyList, currentRoom, targetItemKey, targetContainerKey, "All")
 
             # Put All In Container #
             elif len(input.split()) > 3 and input.lower().split()[1] == "all" and input.lower().split()[2] == "in":
                 targetContainerKey = ' '.join(input.lower().split()[3::])
-                self.player.putCheck(self.console, self.galaxyList, "All", targetContainerKey, "All")
+                self.player.putCheck(self.console, self.galaxyList, currentRoom, "All", targetContainerKey, "All")
 
             # Put '#' Item In Container #
             elif len(input.split()) > 4 and stringIsNumber(input.split()[1]) and int(input.split()[1]) > 0 and "in" in input.lower().split() and input.lower().split()[2] != "in" and input.lower().split()[-1] != "in":
                 inIndex = input.lower().split().index("in")
                 targetItemKey = ' '.join(input.lower().split()[2:inIndex])
                 targetContainerKey = ' '.join(input.lower().split()[inIndex + 1::])
-                self.player.putCheck(self.console, self.galaxyList, targetItemKey, targetContainerKey, int(input.split()[1]))
+                self.player.putCheck(self.console, self.galaxyList, currentRoom, targetItemKey, targetContainerKey, int(input.split()[1]))
 
             # Put Item In Container #
             elif len(input.split()) > 3 and "in" in input.lower().split() and input.lower().split()[1] != "in" and input.lower().split()[-1] != "in":
                 inIndex = input.lower().split().index("in")
                 targetItemKey = ' '.join(input.lower().split()[1:inIndex])
                 targetContainerKey = ' '.join(input.lower().split()[inIndex + 1::])
-                self.player.putCheck(self.console, self.galaxyList, targetItemKey, targetContainerKey, 1)
+                self.player.putCheck(self.console, self.galaxyList, currentRoom, targetItemKey, targetContainerKey, 1)
 
             else:
                 self.console.lineList.insert(0, {"Blank": True})
@@ -493,22 +593,22 @@ class Game:
 
             # Drop All #
             if len(input.split()) == 2 and input.split()[1].lower() == "all":
-                self.player.dropCheck(self.console, self.galaxyList, "All", "All")
+                self.player.dropCheck(self.console, self.galaxyList, currentRoom, "All", "All")
 
             # Drop All Item #
             elif len(input.split()) > 2 and input.split()[1].lower() == "all":
                 targetItemKey = ' '.join(input.lower().split()[2::])
-                self.player.dropCheck(self.console, self.galaxyList, targetItemKey, "All")
+                self.player.dropCheck(self.console, self.galaxyList, currentRoom, targetItemKey, "All")
 
             # Drop '#' Item #
             elif len(input.split()) > 2 and stringIsNumber(input.split()[1]) and int(input.split()[1]) > 0:
                 targetItemKey = ' '.join(input.lower().split()[2::])
-                self.player.dropCheck(self.console, self.galaxyList, targetItemKey, int(input.split()[1]))
+                self.player.dropCheck(self.console, self.galaxyList, currentRoom, targetItemKey, int(input.split()[1]))
 
             # Drop Item #
             elif len(input.split()) > 1:
                 targetItemKey = ' '.join(input.lower().split()[1::])
-                self.player.dropCheck(self.console, self.galaxyList, targetItemKey, 1)
+                self.player.dropCheck(self.console, self.galaxyList, currentRoom, targetItemKey, 1)
 
             else:
                 self.console.lineList.insert(0, {"Blank": True})
@@ -527,10 +627,9 @@ class Game:
                 self.player.wearCheck(self.console, targetItemKey, "All")
 
             # Wear Item 'GearSlot' #
-            elif len(input.split()) > 2 and stringIsNumber(input.split()[-1]) and int(input.split()[-1]) > 0:
-                targetGearSlotIndex = int(input.split()[-1]) - 1
+            elif len(input.split()) > 2 and ((stringIsNumber(input.split()[-1]) and int(input.split()[-1]) > 0) or input.lower().split()[-1] in ["left", "lef", "le", "l", "right", "righ", "rig", "ri", "r"]):
                 targetItemKey = ' '.join(input.lower().split()[1:-1])
-                self.player.wearCheck(self.console, targetItemKey, 1, targetGearSlotIndex)
+                self.player.wearCheck(self.console, targetItemKey, 1, input.lower().split()[-1])
 
             # Wear '#' Item #
             elif len(input.split()) > 2 and stringIsNumber(input.split()[1]) and int(input.split()[1]) > 0:
@@ -547,16 +646,43 @@ class Game:
                 self.console.lineList.insert(0, {"String": "Wear what?", "Code":"9w1y"})
         
         # Wield #
+        elif input.lower().split()[0] in ["wield", "wiel", "wie" "wi"]:
 
             # Wield All #
+            if len(input.split()) == 2 and input.lower().split()[1] == "all":
+                self.player.wieldCheck(self.console, "All", None, 2)
+
+            # Wield Item 'Slot' #
+            elif len(input.split()) > 2 and ((stringIsNumber(input.split()[-1]) and int(input.split()[-1]) > 0) or input.lower().split()[-1] in ["left", "lef", "le", "l", "right", "righ", "rig", "ri", "r"]):
+                self.player.wieldCheck(self.console, ' '.join(input.lower().split()[1:-1]), input.lower().split()[-1], 1)
 
             # Wield All Item #
+            elif len(input.split()) > 2 and input.lower().split()[1] == "all":
+                self.player.wieldCheck(self.console, ' '.join(input.lower().split()[2::]), None, 2)
 
             # Wield '#' Item #
+            elif len(input.split()) > 2 and stringIsNumber(input.split()[1]) and int(input.split()[1]) > 0:
+                self.player.wieldCheck(self.console, ' '.join(input.lower().split()[2::]), None, int(input.split()[1]))
 
             # Wield Item #
+            elif len(input.split()) > 1:
+                self.player.wieldCheck(self.console, ' '.join(input.lower().split()[1::]), None, 1)
 
-        # Sheath/Unsheath(?) #
+            else:
+                self.console.lineList.insert(0, {"Blank": True})
+                self.console.lineList.insert(0, {"String": "Wield what?", "Code":"10w1y"})
+
+        # Switch #
+
+        # Attack #
+
+        # Cast #
+
+        # Stop #
+
+        # Dodge #
+
+        # Parry #
 
         # Remove #
         elif input.lower().split()[0] in ["remove", "remov", "remo", "rem"]:
@@ -590,28 +716,48 @@ class Game:
                 self.console.lineList.insert(0, {"Blank": True})
                 self.console.lineList.insert(0, {"String": "Remove what?", "Code":"11w1y"})
 
+        # Eat/Drink #
+
+        # Fill #
+
         # Inventory #
         elif input.lower().split()[0] in ["inventory", "inventor", "invento", "invent", "inven", "inve", "inv", "in", "i"]:
-            
-            # Display Armor Pocket #
-            if len(input.split()) == 2 and input.lower().split()[1] in ["armor", "armo", "arm", "ar", "a"]:
-                self.player.displayInventory(self.console, self.galaxyList, "Armor")
-            
-            # Display Misc. Pocket #
-            elif len(input.split()) == 2 and input.lower().split()[1] in ["misc", "mis", "mi", "m"]:
-                self.player.displayInventory(self.console, self.galaxyList, "Misc")
-
-            else:
-                self.console.lineList.insert(0, {"Blank": True})
-                self.console.lineList.insert(0, {"String":"Open which bag? (Armor, Misc.)", "Code":"14w2y1r5w2y4w1y1r"})
-
+            targetPocketKey = None
+            if len(input.split()) > 1:
+                targetPocketKey = ' '.join(input.lower().split()[1::])
+            self.player.displayInventory(self.console, self.galaxyList, currentRoom, targetPocketKey)
+        
         # Gear #
         elif len(input.split()) == 1 and input.lower() in ["gear", "gea"]:
-            self.player.displayGear(self.console, self.galaxyList)
+            self.player.displayGear(self.console, self.galaxyList, currentRoom)
 
         # Reload #
 
+            # Reload AmmoType Left/Right #
+
+            # Reload AmmoType TargetWeapon #
+
+            # Reload All #
+
+            # Reload Left/Right #
+
+            # Reload TargetWeapon #
+
+            # Reload #
+
+        # Unload #
+
+            # Unload Left/Right #
+
+            # Unload All #
+
+            # Unload TargetWeapon #
+
+            # Unload #
+
         # Tame #
+
+        # Disband #
 
         # List #
 
@@ -628,9 +774,15 @@ class Game:
                 self.console.lineList.insert(0, {"Blank": True})
                 self.console.lineList.insert(0, {"String": "Board what?", "Code":"10w1y"})
 
+        # Scan #
+
         # Radar #
 
+        # Course #
+
         # Calculate #
+
+        # Throttle #
 
         # System #
 
