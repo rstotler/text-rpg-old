@@ -188,3 +188,10 @@ class Item:
             for item in self.containerList:
                 totalWeight += item.weight
         return totalWeight
+
+    def getContainerItem(self, targetItemKey):
+        if self.containerList != None:
+            for item in self.containerList:
+                if targetItemKey in item.keyList:
+                    return item
+        return None

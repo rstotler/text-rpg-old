@@ -341,13 +341,24 @@ class Room:
         return None
 
     @staticmethod
-    def getTargetRoomFromStartRoom(galaxyList, currentArea, currentRoom, targetDir, targetRoomDistance):
+    def getTargetRoomFromStartRoom(galaxyList, currentArea, currentRoom, targetDir, targetRoomDistance, ignoreDoors=False):
+        messageType = None
         for rNum in range(targetRoomDistance):
             if currentRoom.exit[targetDir] == None:
+                if messageType == None:
+                    messageType = "No Exit"
                 break
             else:
                 targetExit = currentRoom.exit[targetDir]
-                
+                if currentRoom.door[targetDir] != None and currentRoom.door[targetDir]["Status"] in ["Closed", "Locked"]:
+                    messageType = "Door Is Closed"
+                    if ignoreDoors == False:
+                        break
+                elif targetExit == "Spaceship Exit" and currentRoom.spaceshipObject.landedLocation == None:
+                    messageType = "Door Is Closed"
+                    if ignoreDoors == False:
+                        break
+                    
                 # Spaceship Exit #
                 if targetExit == "Spaceship Exit" and currentRoom.spaceshipObject != None and currentRoom.spaceshipObject.landedLocation != None:
                     landedLocation = currentRoom.spaceshipObject.landedLocation
@@ -368,7 +379,7 @@ class Room:
                     if currentArea.num != targetExit[3]:
                         currentArea = galaxyList[targetExit[0]].systemList[targetExit[1]].planetList[targetExit[2]].areaList[targetExit[3]]
                         
-        return currentArea, currentRoom
+        return currentArea, currentRoom, messageType
 
     @staticmethod
     def getSurroundingRoomData(galaxyList, startArea, startRoom, targetRange):
@@ -390,7 +401,7 @@ class Room:
                     if targetExitDir != "North":
                         viewLoc = copy.deepcopy(firstLoc)
                     if targetExitDir in targetRoom.exit:
-                        nextArea, nextRoom = Room.getTargetRoomFromStartRoom(galaxyList, targetArea, targetRoom, targetExitDir, 1)
+                        nextArea, nextRoom, message = Room.getTargetRoomFromStartRoom(galaxyList, targetArea, targetRoom, targetExitDir, 1, True)
                         if targetExitDir in ["East", "West"] : viewLoc[0] += 1
                         elif targetExitDir in ["North", "South"] : viewLoc[1] += 1
 
@@ -402,3 +413,68 @@ class Room:
 
             return examinedAreaList, examinedRoomList
         return examineRoomData(startArea, startRoom, targetRange, None, [], [], [0, 0])
+
+    @staticmethod
+    def getTargetRange(galaxyList, startRoom, targetObject, maxRange):
+        if targetObject in startRoom.mobList:
+            return 0, None, None
+
+        else:
+            targetRange = 0
+            searchDir = None
+            targetFoundCheck = False
+            messageType = None
+            sideDirList = {"North":["East", "West"],
+                        "East":["North", "South"],
+                        "South":["East", "West"],
+                        "West":["North", "South"]}
+                
+            for searchDir in ["North", "East", "South", "West"]:
+                messageMaster = None
+                currentRoom = startRoom
+                if currentRoom.spaceshipObject != None:
+                    currentArea = currentRoom.spaceshipObject.areaList[currentRoom.area]
+                else:
+                    currentArea = galaxyList[currentRoom.galaxy].systemList[currentRoom.system].planetList[currentRoom.planet].areaList[currentRoom.area]
+                for rNum in range(maxRange):
+                    messageType = messageMaster
+                    if currentRoom.exit[searchDir] == None:
+                        break
+                    else:
+                        currentArea, currentRoom, message = Room.getTargetRoomFromStartRoom(galaxyList, currentArea, currentRoom, searchDir, 1, True)
+                        if message == "Door Is Closed":
+                            messageMaster = message
+
+                        if targetObject in currentRoom.mobList:
+                            messageType = messageMaster
+                            targetFoundCheck = True
+                            targetRange = rNum + 1
+                            break
+
+                        for sideDir in sideDirList[searchDir]:
+                            messageType = messageMaster
+                            sideRoom = currentRoom
+                            sideArea = currentArea
+                            for sideNum in range(maxRange - (rNum + 1)):
+                                if sideRoom.exit[sideDir] == None:
+                                    break
+                                else:
+                                    if sideRoom.exit[sideDir] == None:
+                                        break
+                                    else:
+                                        sideArea, sideRoom, message = Room.getTargetRoomFromStartRoom(galaxyList, sideArea, sideRoom, sideDir, 1, True)
+                                        if message == "Door Is Closed" : messageType = message
+
+                                        if targetObject in sideRoom.mobList:
+                                            targetFoundCheck = True
+                                            targetRange = (rNum + 1) + (sideNum + 1)
+                                            break
+                                            
+                            if targetFoundCheck : break
+                    if targetFoundCheck : break
+                if targetFoundCheck : break
+
+        if not targetFoundCheck:
+            return -1, None, messageType
+        else:
+            return targetRange, searchDir, messageType

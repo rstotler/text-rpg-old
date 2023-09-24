@@ -2,6 +2,7 @@ class Keyboard:
 
     def __init__(self):
         self.shift = False
+        self.control = False
         self.backspace = False
         self.backspaceTick = -1
 

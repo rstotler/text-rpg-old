@@ -1,7 +1,14 @@
 class Mob:
 
-    def __init__(self, num):
+    def __init__(self, num, galaxy, system, planet, area, room, spaceship):
         self.num = num
+
+        self.galaxy = galaxy
+        self.system = system
+        self.planet = planet
+        self.area = area
+        self.room = room
+        self.spaceship = spaceship
 
         self.prefix = "A"
         self.name = {"String":"Debug Mob", "Code":"9w"}
