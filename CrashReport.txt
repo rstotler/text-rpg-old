@@ -1,3 +1,0 @@
-Input: n
-Player Loc: [0, 0, 1, 0, 1]
-Player Spaceship: 1

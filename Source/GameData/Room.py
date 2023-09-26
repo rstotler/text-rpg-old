@@ -78,12 +78,12 @@ class Room:
                 if exitRoom == None:
                     exitRoom = galaxyList[0].systemList[0].planetList[0].areaList[0].roomList[0]
                 
-                if roomIsLit == False and exitRoom.isLit(galaxyList, player) == False:
-                    exitRoomString = "( " + spaceString + exitDir + " ) - ( Black )"
-                    exitRoomCode = "2r1w4ddw2r3y2r1dw1a2da1dda2r"
-                elif self.door[exitDir] != None and self.door[exitDir]["Status"] in ["Closed", "Locked"]:
+                if self.door[exitDir] != None and self.door[exitDir]["Status"] in ["Closed", "Locked"]:
                     exitRoomString = "( " + spaceString + exitDir + " ) - [Closed]"
                     exitRoomCode = "2r1w4ddw2r3y1r6w1r"
+                elif roomIsLit == False and exitRoom.isLit(galaxyList, player) == False:
+                    exitRoomString = "( " + spaceString + exitDir + " ) - ( Black )"
+                    exitRoomCode = "2r1w4ddw2r3y2r1dw1a2da1dda2r"
                 else:
                     exitRoomString = "( " + spaceString + exitDir + " ) - " + exitRoom.name["String"]
                 
@@ -176,7 +176,10 @@ class Room:
             totalItemCount = 0
             for item in self.itemList:
                 if item.num not in itemDisplayDict:
-                    itemDisplayDict[item.num] = {"Count":1, "ItemData":item}
+                    itemCount = 1
+                    if item.quantity != None:
+                        itemCount = item.quantity
+                    itemDisplayDict[item.num] = {"Count":itemCount, "ItemData":item}
                     totalItemCount += 1
                 else:
                     itemDisplayDict[item.num]["Count"] += 1
@@ -318,7 +321,8 @@ class Room:
 
         for objectList in objectCheckList:
             for tempObject in objectList:
-                if targetObjectKey in tempObject.keyList:
+                if (isinstance(targetObjectKey, str) and targetObjectKey in tempObject.keyList) or \
+                (isinstance(targetObjectKey, int) and targetObjectKey == tempObject.num):
                     return tempObject
         return None
         

@@ -1,7 +1,8 @@
 class Item:
 
-    def __init__(self, num):
+    def __init__(self, num, quantity=None):
         self.num = num
+        self.quantity = quantity
         self.flags = {}
 
         self.prefix = "A"
@@ -13,6 +14,10 @@ class Item:
         self.pocket = "Misc"
         self.gearSlot = None
         self.twoHanded = False
+
+        self.ranged = False
+        self.ammoType = None
+        self.magazine = None
 
         self.containerList = None
         self.containerPassword = None
@@ -94,6 +99,7 @@ class Item:
                 self.pocket = "Armor"
                 self.gearSlot = "About Body"
                 self.containerList = []
+                self.containerMaxLimit = 50.0
 
         # Weapons (101 - 200) #
         if self.name["String"] == "Debug Item":
@@ -111,6 +117,45 @@ class Item:
                 self.keyList = ["great"]
                 self.pocket = "Weapon"
                 self.twoHanded = True
+            elif num == 105:
+                self.prefix = "An"
+                self.name = {"String":"Ebony Pistol", "Code":"1w5ddw1w5ddw"}
+                self.pocket = "Weapon"
+                self.ranged = True
+                self.magazine = "Empty"
+            elif num == 106:
+                self.prefix = "An"
+                self.name = {"String":"Ivory Pistol", "Code":"1w5ddw1w5ddw"}
+                self.pocket = "Weapon"
+                self.ranged = True
+                self.magazine = "Empty"
+            elif num == 107:
+                self.name = {"String":"Sniper Rifle", "Code":"1w6ddw1w4ddw"}
+                self.pocket = "Weapon"
+                self.twoHanded = True
+                self.ranged = True
+                self.magazine = "Empty"
+            elif num == 108:
+                self.name = {"String":"Rocket Launcher", "Code":"15w"}
+                self.pocket = "Weapon"
+                self.twoHanded = True
+                self.ranged = True
+
+        # Ammo (201 - 300) #
+        if self.name["String"] == "Debug Item":
+            if num == 201:
+                self.name = {"String":".45 Round", "Code":"1y8w"}
+                self.pocket = "Ammo"
+                self.ammoType = ".45"
+            if num == 202:
+                self.name = {"String":".45 8 Round Magazine", "Code":"1y19w"}
+                self.pocket = "Ammo"
+                self.ammoType = ".45"
+                self.magazine = True
+            if num == 203:
+                self.name = {"String":".45 AP Round", "Code":"1y11w"}
+                self.pocket = "Ammo"
+                self.ammoType = ".45"
 
         # Misc. (901 - 1000) #
         if self.name["String"] == "Debug Item":
@@ -121,19 +166,53 @@ class Item:
             elif num == 902:
                 self.prefix = "An"
                 self.name = {"String":"Ornate Chest", "Code":"1y1dy1ddy1dddy1ddy1dy1w1ddo4dddo"}
-                self.flags['No Get'] = True
+                self.roomDescription = {"String":"sits on the ground.", "Code":"18w1y"}
+                self.flags["No Get"] = True
                 self.containerList = []
+            elif num == 903:
+                self.name = {"String":"Weapon Cabinet", "Code":"1w6ddw1w6ddw"}
+                self.roomDescription = {"String":"is sitting here.", "Code":"15w1y"}
+                self.flags["No Get"] = True
+                self.containerList = []
+            elif num == 904:
+                self.name = {"String":"Lamp", "Code":"4w"}
+                self.roomDescription = {"String":"is sitting in the corner.", "Code":"24w1y"}
+                self.flags["Glowing"] = True
+                self.flags["No Get"] = True
+
+        # Quantity Item Setup #
+        if self.quantity == None:
+            if self.pocket == "Ammo" and self.magazine == False:
+                self.quantity = 1
 
         # Container Setup #
         if self.containerList != None:
             if self.containerMaxLimit == None:
-                self.containerMaxLimit = 500.0
+                self.containerMaxLimit = 150.0
         
         # Create Key List #
-        for word in self.name["String"].split():
+        for index, word in enumerate(self.name["String"].split()):
             if word.lower() not in self.keyList:
                 self.keyList.append(word.lower())
+            if word[0] == '.':
+                self.keyList.append(word.lower()[1::])
+            if index < len(self.name["String"].split()) - 1:
+                self.keyList.append(' '.join(self.name["String"].lower().split()[index:index + 2]))
         self.keyList.append(self.name["String"].lower())
+
+        # Ammo Key List Setup #
+        if self.pocket == "Ammo":
+            if self.ammoType[0] == '.':
+                self.keyList.append(self.ammoType[1::])
+            if self.magazine == True:
+                self.keyList.append("mag")
+                self.keyList.append(self.ammoType + " mag")
+                self.keyList.append(self.ammoType + " magazine")
+                if self.ammoType[0] == '.':
+                    self.keyList.append(self.ammoType[1::] + " mag")
+                    self.keyList.append(self.ammoType[1::] + " magazine")
+                if "round" in self.keyList:
+                    del self.keyList[self.keyList.index("round")]
 
         if "Code" not in self.name:
             self.name["Code"] = str(len(self.name["String"])) + "w"
@@ -159,7 +238,10 @@ class Item:
                 containerItemData = {}
                 for item in self.containerList:
                     if item.num not in containerItemData:
-                        containerItemData[item.num] = {"Count":1, "Item":item}
+                        itemCount = 1
+                        if item.quantity != None:
+                            itemCount = item.quantity
+                        containerItemData[item.num] = {"Count":itemCount, "Item":item}
                     else:
                         containerItemData[item.num]["Count"] += 1
 
@@ -187,19 +269,25 @@ class Item:
 
         return False
 
-    def getWeight(self):
-        return self.weight + self.getContainerWeight()
+    def getWeight(self, multiplyQuantity=True):
+        if self.quantity == None:
+            return self.weight + self.getContainerWeight()
+        else:
+            if multiplyQuantity == True:
+                return self.weight * self.quantity
+            else:
+                return self.weight
 
     def getContainerWeight(self):
         weight = 0
         if self.containerList != None:
             for item in self.containerList:
-                weight += item.weight
+                weight += item.getWeight()
         return weight
 
     def getContainerItem(self, targetItemKey):
         if self.containerList != None:
             for item in self.containerList:
-                if targetItemKey in item.keyList:
+                if (isinstance(targetItemKey, str) and targetItemKey in item.keyList) or (isinstance(targetItemKey, int) and targetItemKey == item.num):
                     return item
         return None

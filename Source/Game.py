@@ -14,12 +14,16 @@ from GameData.Mob import Mob
 from GameData.Item import Item
 from GameData.Spaceship import Spaceship
 
-# mob room messages
-# base combat
-# implement wordwrap into functions
-# combine more get/loot commands "from" / container
-# area effect messages
-# fumble around in the dark when switching gear
+# To Do List:
+    # Mob room messages
+    # Base combat
+    # Implement wordwrap into functions
+    # Combine more get/loot commands "from" / container
+    # Area effect messages
+    # Fumble around in the dark when switching gear(?)
+    # Two-handed ranged weapons can't be dual-wielded no matter what
+    # Reload/unload
+    # Update item getWeight() for weapons with magazines
 
 class Game:
 
@@ -86,7 +90,6 @@ class Game:
                                     {"String":"Universe. Billions of multi-colored stars twinkle and flash", "Code":"1w2dw2ddw1da2ddw2y13w1dc1c1ddc1w1y1r1dr1do1o1y1dy1ddy7w1c1dc1ddc2dc1c1ddc5w1c1dc1ddc1dc1c"},
                                     {"String":"from ages past. You see a bridge leading to the Spaceport", "Code":"14w2y32w1w1dw2ddw1dw1w1dw1ddw1dw"},
                                     {"String":"to the South and a garden to the North.", "Code":"7w1w5ddw6w1g1dg1ddg1g1dg1ddg8w1w4ddw1y"}]
-            roomCOTU00.itemList.append(Item(14))
             
             roomCOTU01 = Room(0, 0, 1, 0, 1)
             areaCOTU.roomList.append(roomCOTU01)
@@ -113,15 +116,25 @@ class Game:
             roomCOTU04.name = {"String":"A Little Wooden Shack", "Code":"9w1do1ddo1dddo1do1ddo1dddo6w"}
             roomCOTU04.exit["East"] = [0, 0, 1, 0, 3]
             roomCOTU04.inside = True
+            roomCOTU04.itemList.append(Item(904))
             ornateChest = Item(902)
             roomCOTU04.itemList.append(ornateChest)
             ornateChest.containerList.append(Item(901))
             for i in range(1, 14):
                 ornateChest.containerList.append(Item(i))
-                ornateChest.containerList.append(Item(i))
-            for i in range(101, 105):
-                ornateChest.containerList.append(Item(i))
-                ornateChest.containerList.append(Item(i))
+            ornateChest.containerList.append(Item(14))
+            weaponsCabinet = Item(903)
+            roomCOTU04.itemList.append(weaponsCabinet)
+            for i in range(101, 109):
+                weaponsCabinet.containerList.append(Item(i))
+                weaponsCabinet.containerList.append(Item(i))
+            weaponsCabinet.containerList.append(Item(202))
+            weaponsCabinet.containerList.append(Item(201, 50))
+            roomCOTU04.itemList.append(Item(201, 51))
+            roomCOTU04.itemList.append(Item(203, 50))
+            b = Item(14)
+            # b.containerList.append(Item(203, 10))
+            roomCOTU04.itemList.append(b)
 
             roomCOTU05 = Room(0, 0, 1, 0, 5)
             areaCOTU.roomList.append(roomCOTU05)
@@ -689,6 +702,8 @@ class Game:
             if len(input.split()) == 2 and input.split()[1].lower() == "all":
                 self.player.dropCheck(self.console, self.galaxyList, currentRoom, "All", "All")
 
+            # Drop All Pocket #
+
             # Drop All Item #
             elif len(input.split()) > 2 and input.split()[1].lower() == "all":
                 targetItemKey = ' '.join(input.lower().split()[2::])
@@ -799,9 +814,21 @@ class Game:
                 self.console.lineList.insert(0, {"String": "Remove what?", "Code":"11w1y"})
 
         ## Combat Commands ##
-        # Player Skill #
+        # Skill #
+        elif len(input.split()) == 1 and input.lower() in ["skill", "skil", "ski", "sk"]:
+            self.player.displaySkills(self.console)
 
         # Attack #
+        elif input.lower().split()[0] in ["attack", "attac", "atta", "att", "at", "a"]:
+            pass
+        
+            # Attack Mob Direction '#' #
+
+            # Attack Mob Direction #
+
+            # Attack Mob #
+
+            # Attack #
 
         # Cast #
 
@@ -816,32 +843,69 @@ class Game:
             self.player.switchCheck(self.console)
 
         # Reload #
+        elif input.lower().split()[0] in ["reload", "reloa", "relo", "rel", "re"]:
 
-            # Reload AmmoType Left/Right #
+            # Reload Left/Right Ammo #
+            if len(input.split()) > 2 and (input.lower().split()[1] in ["left", "lef", "le", "l", "right", "righ", "rig", "ri", "r"] or (stringIsNumber(input.split()[1]) and int(input.split()[1] > 0))):
+                reloadSlot = input.lower().split()[1]
+                ammoKey = ' '.join(input.lower().split()[2::])
+                self.player.reloadCheck(self.console, None, reloadSlot, ammoKey)
 
-            # Reload AmmoType TargetWeapon #
+            # Reload All Ammo #
+            elif len(input.split()) > 2 and input.lower().split()[1] == "all":
+                ammoKey = ' '.join(input.lower().split()[2::])
+                self.player.reloadCheck(self.console, "All", None, ammoKey)
+
+            # Reload Weapon Ammo #
+            elif len(input.split()) > 2:
+                reloadKey = input.lower().split()[1]
+                ammoKey = ' '.join(input.lower().split()[2::])
+                self.player.reloadCheck(self.console, reloadKey, None, ammoKey)
 
             # Reload All #
+            elif len(input.split()) == 2 and input.lower().split()[1] == "all":
+                self.player.reloadCheck(self.console, "All", None, None)
 
             # Reload Left/Right #
+            elif len(input.split()) == 2 and (input.lower().split()[1] in ["left", "lef", "le", "l", "right", "righ", "rig", "ri", "r"] or (stringIsNumber(input.split()[1]) and int(input.split()[1] > 0))):
+                reloadSlot = input.lower().split()[1]
+                self.player.reloadCheck(self.console, None, reloadSlot, None)
 
-            # Reload TargetWeapon #
+            # Reload Weapon #
+            elif len(input.split()) == 2:
+                reloadKey = input.lower().split()[1]
+                self.player.reloadCheck(self.console, reloadKey, None, None)
 
             # Reload #
+            else:
+                self.player.reloadCheck(self.console, "All", None, None)
 
         # Unload #
-
-            # Unload Left/Right #
+        elif input.lower().split()[0] in ["unload", "unloa", "unlo", "unl", "un"]:
 
             # Unload All #
+            if len(input.split()) == 2 and input.lower().split()[1] == "all":
+                self.player.unloadCheck(self.console, "All")
 
-            # Unload TargetWeapon #
+            # Unload Left/Right #
+            elif len(input.split()) == 2 and (input.lower().split()[1] in ["left", "lef", "le", "l", "right", "righ", "rig", "ri", "r"] or (stringIsNumber(input.split()[1]) and int(input.split()[1]) > 0)):
+                targetUnloadKey = input.lower().split()[1]
+                self.player.unloadCheck(self.console, targetUnloadKey)
 
-            # Unload #
+            # Unload Weapon #
+            elif len(input.split()) > 1:
+                targetUnloadKey = ' '.join(input.lower().split()[1::])
+                self.player.unloadCheck(self.console, targetUnloadKey)
+
+            else:
+                self.console.lineList.insert(0, {"Blank": True})
+                self.console.lineList.insert(0, {"String": "Unload what?", "Code":"11w1y"})
 
         # Tame/Recruit #
 
         # Disband #
+
+        # Skills #
 
         ## Status Commands ##
         # Inventory #
@@ -856,6 +920,8 @@ class Game:
             self.player.displayGear(self.console, self.galaxyList, currentRoom)
 
         # Character/Status #
+        elif len(input.split()) == 1 and input.lower() in ["status", "statu", "stat", "sta", "st"]:
+            pass
 
         # Time #
         elif len(input.split()) == 1 and input.lower() in ["time", "tim", "ti"]:
