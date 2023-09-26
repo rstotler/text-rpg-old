@@ -15,10 +15,11 @@ from GameData.Item import Item
 from GameData.Spaceship import Spaceship
 
 # mob room messages
+# base combat
+# implement wordwrap into functions
+# combine more get/loot commands "from" / container
 # area effect messages
-# fumble around in the dark when switching gear n stuff
-# limit player max int() inputs
-# wordwrap
+# fumble around in the dark when switching gear
 
 class Game:
 
@@ -31,6 +32,7 @@ class Game:
         self.galaxyList = []
 
         self.frameTick = 0
+        self.crashReport = False
 
         self.loadGame()
 
@@ -84,6 +86,7 @@ class Game:
                                     {"String":"Universe. Billions of multi-colored stars twinkle and flash", "Code":"1w2dw2ddw1da2ddw2y13w1dc1c1ddc1w1y1r1dr1do1o1y1dy1ddy7w1c1dc1ddc2dc1c1ddc5w1c1dc1ddc1dc1c"},
                                     {"String":"from ages past. You see a bridge leading to the Spaceport", "Code":"14w2y32w1w1dw2ddw1dw1w1dw1ddw1dw"},
                                     {"String":"to the South and a garden to the North.", "Code":"7w1w5ddw6w1g1dg1ddg1g1dg1ddg8w1w4ddw1y"}]
+            roomCOTU00.itemList.append(Item(14))
             
             roomCOTU01 = Room(0, 0, 1, 0, 1)
             areaCOTU.roomList.append(roomCOTU01)
@@ -570,11 +573,11 @@ class Game:
                 targetContainerKey = ' '.join(input.lower().split()[fromIndex + 1::])
                 self.player.getCheck(self.console, self.galaxyList, currentRoom, targetItemKey, targetContainerKey, "All")
 
-            # Get All From All #
+            # Get All From All (Loot All) #
             elif len(input.split()) == 4 and input.lower().split()[1] == "all" and input.lower().split()[2] == "from" and input.lower().split()[3] == "all":
                 self.player.getCheck(self.console, self.galaxyList, currentRoom, "All", "All", "All")
 
-            # Get All From Container #
+            # Get All From Container (Loot Container) #
             elif len(input.split()) > 3 and input.lower().split()[1] == "all" and input.lower().split()[2] == "from":
                 targetContainerKey = ' '.join(input.lower().split()[3::])
                 self.player.getCheck(self.console, self.galaxyList, currentRoom, "All", targetContainerKey, "All")
@@ -595,7 +598,7 @@ class Game:
             # Get Item From All #
             elif len(input.split()) > 3 and input.lower().split()[-2] == "from" and input.lower().split()[-1] == "all":
                 targetItemKey = ' '.join(input.lower().split()[1:-2])
-                self.player.getCheck(self.console, self.galaxyList, currentRoom, targetItemKey, "All", "All")
+                self.player.getCheck(self.console, self.galaxyList, currentRoom, targetItemKey, "All", 1)
 
             # Get Item From Container #
             elif len(input.split()) > 3 and "from" in input.lower().split() and input.lower().split()[1] != "from" and input.lower().split()[-1] != "from":
@@ -641,6 +644,10 @@ class Game:
             else:
                 self.console.lineList.insert(0, {"Blank": True})
                 self.console.lineList.insert(0, {"String": "Loot what?", "Code":"9w1y"})
+
+        # Empty #
+
+            # Empty Container/Drink #
 
         # Put #
         elif input.lower().split()[0] in ["put", "pu", "p"]:
@@ -792,6 +799,8 @@ class Game:
                 self.console.lineList.insert(0, {"String": "Remove what?", "Code":"11w1y"})
 
         ## Combat Commands ##
+        # Player Skill #
+
         # Attack #
 
         # Cast #
@@ -803,6 +812,8 @@ class Game:
         # Parry #
 
         # Switch #
+        elif len(input.split()) == 1 and input.lower() in ["switch", "switc", "swit", "swi", "sw"]:
+            self.player.switchCheck(self.console)
 
         # Reload #
 
@@ -922,3 +933,12 @@ class Game:
 
         self.console.draw(window)
         self.inputBar.draw(window)
+
+    def writeCrashReport(self, input):
+        with open("../CrashReport.txt", "w") as f:
+            f.write("Input: " + input + "\n")
+            f.write("Player Loc: [" + str(self.player.galaxy) + ", " + str(self.player.system) + ", " + str(self.player.planet) + ", " + str(self.player.area) + ", " + str(self.player.room) + "]" + "\n")
+            f.write("Player Spaceship: " + str(self.player.spaceship) + "\n")
+            f.write("Player Targets: " + str(len(self.player.targetList)) + "\n")
+            f.write("Player Inventory: " + str(len(self.player.getAllItemList(["Inventory"]))) + "\n")
+            f.write("Player Gear: " + str(len(self.player.getAllItemList(["Gear"]))) + "\n")

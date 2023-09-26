@@ -39,12 +39,14 @@ class InputBar:
             if len(self.input) > 0:
                 self.input = self.input.strip()
                 if len(self.input) > 0:
+                    if game.crashReport == True:
+                        game.writeCrashReport(self.input)
                     if len(self.previousInputList) == 0 or self.input != self.previousInputList[0]:
                         self.previousInputList.insert(0, self.input)
                         if len(self.previousInputList) > 20:
                             self.previousInputList = self.previousInputList[0:20]
                     game.processInputBarCommand(self.input)
-
+                    
                 self.input = ""
                 self.previousInputIndex = -1
 

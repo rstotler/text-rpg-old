@@ -55,3 +55,48 @@ def stringIsNumber(string):
 		return True
 	except ValueError:
 		return False
+
+def wordWrap(displayString, displayCode, maxWidth):
+    def getNextColorLength(code):
+        nextColorLengthString = ""
+        start = False
+        for c in code:
+            if stringIsNumber(c):
+                start = True
+                nextColorLengthString = nextColorLengthString + c
+            elif start:
+                return int(nextColorLengthString)
+        return ""
+
+    def getNextColor(code):
+        nextColorString = ""
+        start = False
+        for index, c in enumerate(code):
+            if stringIsNumber(c) == False:
+                start = True
+                nextColorString = nextColorString + c
+            elif start:
+                return code[index::], nextColorString
+            if start and index == len(code) - 1:
+                return code[index-1::]
+        return "", ""
+
+    stringList = [{"String":""}]
+    for word in displayString.split():
+        if len(word) + len(stringList[-1]["String"]) > maxWidth:
+            stringList.append({"String":""})
+        stringList[-1]["String"] = stringList[-1]["String"] + word + " "
+
+    currentColorLength = getNextColorLength(displayCode)
+    code, currentColor = getNextColor(displayCode)
+    currentCount = 0
+    for displayLine in stringList:
+        displayLine["Code"] = ""
+        for i in range(len(displayLine["String"])):
+            displayLine["Code"] += "1" + currentColor
+            currentCount += 1
+            if currentCount == currentColorLength:
+                currentColorLength = getNextColorLength(code)
+                code, currentColor = getNextColor(code)
+                currentCount = 0
+    return stringList

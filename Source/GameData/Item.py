@@ -89,6 +89,11 @@ class Item:
                 self.roomDescription = {"String":"are laying on the ground.", "Code":"24w1y"}
                 self.pocket = "Armor"
                 self.gearSlot = "Feet"
+            elif num == 14:
+                self.name = {"String":"Backpack", "Code":"8w"}
+                self.pocket = "Armor"
+                self.gearSlot = "About Body"
+                self.containerList = []
 
         # Weapons (101 - 200) #
         if self.name["String"] == "Debug Item":
@@ -116,13 +121,13 @@ class Item:
             elif num == 902:
                 self.prefix = "An"
                 self.name = {"String":"Ornate Chest", "Code":"1y1dy1ddy1dddy1ddy1dy1w1ddo4dddo"}
+                self.flags['No Get'] = True
                 self.containerList = []
 
-        # All Containers Are Automatically NO GET #
+        # Container Setup #
         if self.containerList != None:
-            self.flags['No Get'] = True
             if self.containerMaxLimit == None:
-                self.containerMaxLimit = 100.0
+                self.containerMaxLimit = 500.0
         
         # Create Key List #
         for word in self.name["String"].split():
@@ -182,12 +187,15 @@ class Item:
 
         return False
 
+    def getWeight(self):
+        return self.weight + self.getContainerWeight()
+
     def getContainerWeight(self):
-        totalWeight = 0
+        weight = 0
         if self.containerList != None:
             for item in self.containerList:
-                totalWeight += item.weight
-        return totalWeight
+                weight += item.weight
+        return weight
 
     def getContainerItem(self, targetItemKey):
         if self.containerList != None:
