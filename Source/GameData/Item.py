@@ -17,7 +17,8 @@ class Item:
 
         self.ranged = False
         self.ammoType = None
-        self.magazine = None
+        self.magazine = None # (Object) Magazine Item OR (Object) Ammo
+        self.shellCapacity = None
 
         self.containerList = None
         self.containerPassword = None
@@ -122,38 +123,68 @@ class Item:
                 self.name = {"String":"Ebony Pistol", "Code":"1w5ddw1w5ddw"}
                 self.pocket = "Weapon"
                 self.ranged = True
-                self.magazine = "Empty"
+                self.ammoType = ".45"
             elif num == 106:
                 self.prefix = "An"
                 self.name = {"String":"Ivory Pistol", "Code":"1w5ddw1w5ddw"}
                 self.pocket = "Weapon"
                 self.ranged = True
-                self.magazine = "Empty"
+                self.ammoType = ".45"
             elif num == 107:
                 self.name = {"String":"Sniper Rifle", "Code":"1w6ddw1w4ddw"}
                 self.pocket = "Weapon"
                 self.twoHanded = True
                 self.ranged = True
-                self.magazine = "Empty"
+                self.ammoType = "5.56"
             elif num == 108:
                 self.name = {"String":"Rocket Launcher", "Code":"15w"}
                 self.pocket = "Weapon"
+                # self.twoHanded = True
+                self.ranged = True
+                self.shellCapacity = 1
+                self.ammoType = "Missile"
+            elif num == 109:
+                self.name = {"String":"Shotgun", "Code":"7w"}
+                self.pocket = "Weapon"
                 self.twoHanded = True
                 self.ranged = True
+                self.shellCapacity = 5
+                self.ammoType = "12 Gauge"
 
-        # Ammo (201 - 300) #
+        # Ammo & Magazines (201 - 300) #
         if self.name["String"] == "Debug Item":
             if num == 201:
+                self.name = {"String":".45 8-Round Magazine", "Code":"1y4w1y14w"}
+                self.pocket = "Ammo"
+                self.ammoType = ".45"
+                self.shellCapacity = 8
+            if num == 202:
+                self.name = {"String":".45 12-Round Magazine", "Code":"1y5w1y14w"}
+                self.pocket = "Ammo"
+                self.ammoType = ".45"
+                self.shellCapacity = 12
+            if num == 203:
                 self.name = {"String":".45 Round", "Code":"1y8w"}
                 self.pocket = "Ammo"
                 self.ammoType = ".45"
-            if num == 202:
-                self.name = {"String":".45 8 Round Magazine", "Code":"1y19w"}
+            if num == 204:
+                self.name = {"String":".45 AP Round", "Code":"1y11w"}
                 self.pocket = "Ammo"
                 self.ammoType = ".45"
-                self.magazine = True
-            if num == 203:
-                self.name = {"String":".45 AP Round", "Code":"1y11w"}
+            if num == 205:
+                self.name = {"String":"Missile", "Code":"7w"}
+                self.pocket = "Ammo"
+                self.ammoType = "Missile"
+            if num == 206:
+                self.name = {"String":"12 Gauge Shell", "Code":"14w"}
+                self.pocket = "Ammo"
+                self.ammoType = "12 Gauge"
+            if num == 207:
+                self.name = {"String":"AP Missile", "Code":"10w"}
+                self.pocket = "Ammo"
+                self.ammoType = "Missile"
+            if num == 208:
+                self.name = {"String":".45 HP Round", "Code":"1y11w"}
                 self.pocket = "Ammo"
                 self.ammoType = ".45"
 
@@ -174,6 +205,7 @@ class Item:
                 self.roomDescription = {"String":"is sitting here.", "Code":"15w1y"}
                 self.flags["No Get"] = True
                 self.containerList = []
+                self.containerMaxLimit = 500.0
             elif num == 904:
                 self.name = {"String":"Lamp", "Code":"4w"}
                 self.roomDescription = {"String":"is sitting in the corner.", "Code":"24w1y"}
@@ -188,7 +220,7 @@ class Item:
         # Container Setup #
         if self.containerList != None:
             if self.containerMaxLimit == None:
-                self.containerMaxLimit = 150.0
+                self.containerMaxLimit = 100.0
         
         # Create Key List #
         for index, word in enumerate(self.name["String"].split()):
@@ -198,13 +230,22 @@ class Item:
                 self.keyList.append(word.lower()[1::])
             if index < len(self.name["String"].split()) - 1:
                 self.keyList.append(' '.join(self.name["String"].lower().split()[index:index + 2]))
+            if len(word) > 2 and '-' in word:
+                for subWord in word.split('-'):
+                    self.keyList.append(subWord.lower())
+            for i in range(4):
+                if len(word) > i + 3:
+                    self.keyList.append(word.lower()[0:3 + i])
         self.keyList.append(self.name["String"].lower())
 
-        # Ammo Key List Setup #
+        # Ammo & Magazine Setup #
         if self.pocket == "Ammo":
+            if self.shellCapacity != None:
+                self.flags["Ammo"] = None
+
             if self.ammoType[0] == '.':
                 self.keyList.append(self.ammoType[1::])
-            if self.magazine == True:
+            if self.shellCapacity != None:
                 self.keyList.append("mag")
                 self.keyList.append(self.ammoType + " mag")
                 self.keyList.append(self.ammoType + " magazine")
@@ -235,31 +276,39 @@ class Item:
                 console.lineList.insert(0, {"String": "It's empty.", "Code":"2w1y7w1y"})
             else:
                 console.lineList.insert(0, {"String": "It contains:", "Code":"11w1y"})
-                containerItemData = {}
+                displayList = []
                 for item in self.containerList:
-                    if item.num not in containerItemData:
-                        itemCount = 1
-                        if item.quantity != None:
-                            itemCount = item.quantity
-                        containerItemData[item.num] = {"Count":itemCount, "Item":item}
+                    if item.ranged == True:
+                        displayList.append({"ItemData":item})
                     else:
-                        containerItemData[item.num]["Count"] += 1
+                        displayData = None
+                        for data in displayList:
+                            if "Num" in data and data["Num"] == item.num:
+                                displayData = data
+                                break
+                        if displayData == None:
+                            itemCount = 1
+                            if item.quantity != None:
+                                itemCount = item.quantity
+                            displayList.append({"Num":item.num, "Count":itemCount, "ItemData":item})
+                        else:
+                            displayData["Count"] += 1
 
-                for itemData in containerItemData:
-                    itemData = containerItemData[itemData]
-                    displayString = itemData["Item"].prefix + " " + itemData["Item"].name["String"]
-                    displayCode = str(len(itemData["Item"].prefix)) + "w1w" + itemData["Item"].name["Code"]
+                for itemData in displayList:
+                    displayString = itemData["ItemData"].prefix + " " + itemData["ItemData"].name["String"]
+                    displayCode = str(len(itemData["ItemData"].prefix)) + "w1w" + itemData["ItemData"].name["Code"]
                     modString = ""
                     modCode = ""
-                    if "Glowing" in itemData["Item"].flags and itemData["Item"].flags["Glowing"] == True:
+                    if "Glowing" in itemData["ItemData"].flags and itemData["ItemData"].flags["Glowing"] == True:
                         modString = " (Glowing)"
                         modCode = "2y1w1dw1ddw1w2dw1ddw1y"
                     countString = ""
                     countCode = ""
-                    if itemData["Count"] > 1:
+                    if "Count" in itemData and itemData["Count"] > 1:
                         countString = " (" + str(itemData["Count"]) + ")"
                         countCode = "2r" + str(len(str(itemData["Count"]))) + "w1r"
-                    console.lineList.insert(0, {"String":displayString + modString + countString, "Code":displayCode + modCode + countCode})
+                    weaponStatusString, weaponStatusCode = itemData["ItemData"].getWeaponStatusString()
+                    console.lineList.insert(0, {"String":displayString + weaponStatusString + modString + countString, "Code":displayCode + weaponStatusCode + modCode + countCode})
             
     def lightInContainerCheck(self):
         if self.containerList != None:
@@ -271,7 +320,16 @@ class Item:
 
     def getWeight(self, multiplyQuantity=True):
         if self.quantity == None:
-            return self.weight + self.getContainerWeight()
+            weight = self.weight + self.getContainerWeight()
+            if self.ranged == True and self.magazine != None:
+                if self.magazine.shellCapacity == None and self.magazine.quantity != None:
+                    weight += self.magazine.weight * self.magazine.quantity
+                else:
+                    weight += self.magazine.weight
+                    if self.magazine.flags["Ammo"] != None:
+                        weight += self.magazine.flags["Ammo"].weight * self.magazine.flags["Ammo"].quantity
+
+            return weight
         else:
             if multiplyQuantity == True:
                 return self.weight * self.quantity
@@ -291,3 +349,42 @@ class Item:
                 if (isinstance(targetItemKey, str) and targetItemKey in item.keyList) or (isinstance(targetItemKey, int) and targetItemKey == item.num):
                     return item
         return None
+
+    def isLoaded(self, ammoList=[]):
+        maxInventoryMagCapacity = -1
+        if len(ammoList) > 0:
+            maxInventoryMagCapacity = 0
+            for item in ammoList:
+                if item.shellCapacity != None and item.ammoType == self.ammoType:
+                    if item.shellCapacity > maxInventoryMagCapacity:
+                        maxInventoryMagCapacity = item.shellCapacity
+        
+        if self.pocket == "Weapon" and self.ranged == True:
+            if self.shellCapacity != None and self.magazine != None and self.shellCapacity >= self.magazine.quantity:
+                return True
+            elif self.shellCapacity == None and self.magazine != None and maxInventoryMagCapacity <= self.magazine.shellCapacity and "Ammo" in self.magazine.flags and self.magazine.flags["Ammo"] != None and self.magazine.flags["Ammo"].quantity >= self.magazine.shellCapacity:
+                return True
+        return False
+
+    def getWeaponStatusString(self):
+        statusString = ""
+        statusCode = ""
+        if self.ranged == True:
+            if self.shellCapacity == None and self.magazine == None:
+                statusString = " [Empty]"
+                statusCode = "2y5w1y"
+            else:
+                if self.shellCapacity != None:
+                    currentRounds = 0
+                    if self.magazine != None:
+                        currentRounds = self.magazine.quantity
+                    maxRounds = self.shellCapacity
+                else:
+                    currentRounds = 0
+                    if self.magazine.flags["Ammo"] != None:
+                        currentRounds = self.magazine.flags["Ammo"].quantity
+                    maxRounds = self.magazine.shellCapacity
+                statusString += " [" + str(currentRounds) + "/" + str(maxRounds) + "]"
+                statusCode += "2y" + str(len(str(currentRounds))) + "w1y" + str(len(str(maxRounds))) + "w1y"
+
+        return statusString, statusCode

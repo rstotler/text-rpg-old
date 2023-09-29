@@ -19,11 +19,11 @@ from GameData.Spaceship import Spaceship
     # Base combat
     # Implement wordwrap into functions
     # Combine more get/loot commands "from" / container
+    # Combine hold command w wear(?)
     # Area effect messages
     # Fumble around in the dark when switching gear(?)
-    # Two-handed ranged weapons can't be dual-wielded no matter what
-    # Reload/unload
-    # Update item getWeight() for weapons with magazines
+    # Unload
+    # 2 handed weapons more clear in gear
 
 class Game:
 
@@ -125,16 +125,24 @@ class Game:
             ornateChest.containerList.append(Item(14))
             weaponsCabinet = Item(903)
             roomCOTU04.itemList.append(weaponsCabinet)
-            for i in range(101, 109):
+            for i in range(101, 105):
                 weaponsCabinet.containerList.append(Item(i))
                 weaponsCabinet.containerList.append(Item(i))
+            weaponsCabinet.containerList.append(Item(105))
+            weaponsCabinet.containerList.append(Item(106))
+            weaponsCabinet.containerList.append(Item(107))
+            weaponsCabinet.containerList.append(Item(108))
+            weaponsCabinet.containerList.append(Item(108))
+            weaponsCabinet.containerList.append(Item(109))
+            weaponsCabinet.containerList.append(Item(201))
             weaponsCabinet.containerList.append(Item(202))
-            weaponsCabinet.containerList.append(Item(201, 50))
-            roomCOTU04.itemList.append(Item(201, 51))
-            roomCOTU04.itemList.append(Item(203, 50))
-            b = Item(14)
-            # b.containerList.append(Item(203, 10))
-            roomCOTU04.itemList.append(b)
+            weaponsCabinet.containerList.append(Item(201))
+            weaponsCabinet.containerList.append(Item(202))
+            weaponsCabinet.containerList.append(Item(203, 50))
+            weaponsCabinet.containerList.append(Item(204, 50))
+            weaponsCabinet.containerList.append(Item(205, 25))
+            weaponsCabinet.containerList.append(Item(207, 25))
+            weaponsCabinet.containerList.append(Item(208, 25))
 
             roomCOTU05 = Room(0, 0, 1, 0, 5)
             areaCOTU.roomList.append(roomCOTU05)
@@ -784,27 +792,27 @@ class Game:
         # Remove #
         elif input.lower().split()[0] in ["remove", "remov", "remo", "rem"]:
 
-            # Remove All[<--Needs Code] #
+            # Remove All #
             if len(input.split()) == 2 and input.lower().split()[1] == "all":
                 self.player.removeCheck(self.console, "All", "All")
 
-            # Remove All Gear/Held[<--Needs Code] #
+            # Remove All Gear/Weapon #
             elif len(input.split()) > 2 and input.lower().split()[1] == "all":
                 targetItemKey = ' '.join(input.lower().split()[2::])
                 self.player.removeCheck(self.console, targetItemKey, "All")
 
-            # Remove Gear/Held[<--Needs Code] 'GearSlot' #
+            # Remove Gear/Weapon 'GearSlot' #
             elif len(input.split()) > 2 and stringIsNumber(input.split()[-1]) and int(input.split()[-1]) > 0:
                 targetGearSlotIndex = int(input.split()[-1]) - 1
                 targetItemKey = ' '.join(input.lower().split()[1:-1])
                 self.player.removeCheck(self.console, targetItemKey, 1, targetGearSlotIndex)
 
-            # Remove '#' Gear/Held[<--Needs Code] #
+            # Remove '#' Gear/Weapon #
             elif len(input.split()) > 2 and stringIsNumber(input.split()[1]) and int(input.split()[1]) > 0:
                 targetItemKey = ' '.join(input.lower().split()[2::])
                 self.player.removeCheck(self.console, targetItemKey, int(input.split()[1]))
 
-            # Remove Gear/Held[<--Needs Code] #
+            # Remove Gear/Weapon #
             elif len(input.split()) > 1:
                 targetItemKey = ' '.join(input.lower().split()[1::])
                 self.player.removeCheck(self.console, targetItemKey, 1)
@@ -854,7 +862,7 @@ class Game:
             # Reload All Ammo #
             elif len(input.split()) > 2 and input.lower().split()[1] == "all":
                 ammoKey = ' '.join(input.lower().split()[2::])
-                self.player.reloadCheck(self.console, "All", None, ammoKey)
+                self.player.reloadCheck(self.console, "All", "All", ammoKey)
 
             # Reload Weapon Ammo #
             elif len(input.split()) > 2:
@@ -864,14 +872,14 @@ class Game:
 
             # Reload All #
             elif len(input.split()) == 2 and input.lower().split()[1] == "all":
-                self.player.reloadCheck(self.console, "All", None, None)
+                self.player.reloadCheck(self.console, "All", "All", None)
 
             # Reload Left/Right #
             elif len(input.split()) == 2 and (input.lower().split()[1] in ["left", "lef", "le", "l", "right", "righ", "rig", "ri", "r"] or (stringIsNumber(input.split()[1]) and int(input.split()[1] > 0))):
                 reloadSlot = input.lower().split()[1]
                 self.player.reloadCheck(self.console, None, reloadSlot, None)
 
-            # Reload Weapon #
+            # Reload Weapon/Ammo #
             elif len(input.split()) == 2:
                 reloadKey = input.lower().split()[1]
                 self.player.reloadCheck(self.console, reloadKey, None, None)
