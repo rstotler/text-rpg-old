@@ -1,9 +1,8 @@
 import pygame, random
 from pygame import *
-from Components.Utility import stringIsNumber
-from Components.Keyboard import Keyboard
 from Screen.Console import Console
 from Screen.InputBar import InputBar
+from Components.Keyboard import Keyboard
 from GameData.Player import Player
 from GameData.Galaxy import Galaxy
 from GameData.SolarSystem import SolarSystem
@@ -13,17 +12,15 @@ from GameData.Room import Room
 from GameData.Mob import Mob
 from GameData.Item import Item
 from GameData.Spaceship import Spaceship
+from Components.Utility import stringIsNumber
 
 # To Do List:
     # Mob room messages
     # Base combat
     # Implement wordwrap into functions
     # Combine more get/loot commands "from" / container
-    # Combine hold command w wear(?)
-    # Area effect messages
-    # Fumble around in the dark when switching gear(?)
-    # Unload
-    # 2 handed weapons more clear in gear
+    # Combine hold command w wear (weapons only) (?)
+    # Split target mobs from non-target mobs in room.display()
 
 class Game:
 
@@ -36,7 +33,6 @@ class Game:
         self.galaxyList = []
 
         self.frameTick = 0
-        self.crashReport = False
 
         self.loadGame()
 
@@ -140,9 +136,10 @@ class Game:
             weaponsCabinet.containerList.append(Item(202))
             weaponsCabinet.containerList.append(Item(203, 50))
             weaponsCabinet.containerList.append(Item(204, 50))
-            weaponsCabinet.containerList.append(Item(205, 25))
-            weaponsCabinet.containerList.append(Item(207, 25))
             weaponsCabinet.containerList.append(Item(208, 25))
+            weaponsCabinet.containerList.append(Item(205, 25))
+            weaponsCabinet.containerList.append(Item(207, 10))
+            weaponsCabinet.containerList.append(Item(206, 40))
 
             roomCOTU05 = Room(0, 0, 1, 0, 5)
             areaCOTU.roomList.append(roomCOTU05)
@@ -249,6 +246,8 @@ class Game:
         self.processInput()
         self.inputBar.update(self.keyboard)
 
+        if self.frameTick == 0:
+            self.galaxyList[self.player.galaxy].systemList[self.player.system].update(self.galaxyList, self.player, self.console)
         if self.frameTick in [0, 30]:
             playerRoom = Room.exists(self.galaxyList, self.player.spaceship, self.player.galaxy, self.player.system, self.player.planet, self.player.area, self.player.room)
             if playerRoom != None:
@@ -257,10 +256,10 @@ class Game:
                 else:
                     playerArea = playerRoom.spaceshipObject.areaList[playerRoom.area]
                 updateAreaList, updateRoomList = Room.getSurroundingRoomData(self.galaxyList, playerArea, playerRoom, 4)
+            self.player.update(self.console)
                 
         self.frameTick += 1
         if self.frameTick >= 60:
-            self.galaxyList[self.player.galaxy].systemList[self.player.system].update(self.galaxyList, self.player, self.console)
             self.frameTick = 0
 
         self.draw(window)
@@ -545,7 +544,6 @@ class Game:
                 elif input.lower().split()[1] in ["east", "eas", "ea", "e"] : targetDir = "East"
                 elif input.lower().split()[1] in ["south", "sout", "sou", "so", "s"] : targetDir = "South"
                 else : targetDir = "West"
-                
                 self.player.openCloseDoorCheck(self.console, self.galaxyList, currentRoom, targetAction, targetDir)
 
             # Open/Close Target #
@@ -557,7 +555,7 @@ class Game:
                 self.console.lineList.insert(0, {"String": targetAction + " what?", "Code":str(len(targetAction)) + "w5w1y"})
 
         # Lock/Unlock #
-        elif input.lower().split()[0] in ["lock", "loc", "unlock", "unloc", "unlo", "unl", "un"]:
+        elif input.lower().split()[0] in ["lock", "loc", "unlock", "unloc", "unlo"]:
             if input.lower().split()[0] in ["lock", "loc"] : targetAction = "Lock"
             else : targetAction = "Unlock"
 
@@ -567,7 +565,6 @@ class Game:
                 elif input.lower().split()[1] in ["east", "eas", "ea", "e"] : targetDir = "East"
                 elif input.lower().split()[1] in ["south", "sout", "sou", "so", "s"] : targetDir = "South"
                 else : targetDir = "West"
-                
                 self.player.lockUnlockDoorCheck(self.console, self.galaxyList, currentRoom, targetAction, targetDir)
 
             # Lock/Unlock Target #
@@ -711,6 +708,9 @@ class Game:
                 self.player.dropCheck(self.console, self.galaxyList, currentRoom, "All", "All")
 
             # Drop All Pocket #
+            elif len(input.split()) == 3 and input.lower().split()[1] == "all" and input.lower().split()[2] in self.player.getPocketList(True):
+                pocketKey = ' '.join(input.lower().split()[2::])
+                self.player.dropCheck(self.console, self.galaxyList, currentRoom, "All", "All", pocketKey)
 
             # Drop All Item #
             elif len(input.split()) > 2 and input.split()[1].lower() == "all":
@@ -822,10 +822,6 @@ class Game:
                 self.console.lineList.insert(0, {"String": "Remove what?", "Code":"11w1y"})
 
         ## Combat Commands ##
-        # Skill #
-        elif len(input.split()) == 1 and input.lower() in ["skill", "skil", "ski", "sk"]:
-            self.player.displaySkills(self.console)
-
         # Attack #
         elif input.lower().split()[0] in ["attack", "attac", "atta", "att", "at", "a"]:
             pass
@@ -838,9 +834,23 @@ class Game:
 
             # Attack #
 
+        # Skill #
+
         # Cast #
 
-        # Stop #
+            # Cast Spell All/Self Direction/Num #
+
+            # Cast Spell Direction/Num #
+
+            # Cast Spell Mob Direction/Num #
+
+            # Cast Spell All/Self #
+
+            # Cast Spell #
+
+            # Cast Spell Mob #
+
+            # Cast #
 
         # Dodge #
 
@@ -850,70 +860,75 @@ class Game:
         elif len(input.split()) == 1 and input.lower() in ["switch", "switc", "swit", "swi", "sw"]:
             self.player.switchCheck(self.console)
 
-        # Reload #
-        elif input.lower().split()[0] in ["reload", "reloa", "relo", "rel", "re"]:
+        # Reload/Load #
+        elif input.lower().split()[0] in ["reload", "reloa", "relo", "rel", "re", "load", "loa"]:
 
             # Reload Left/Right Ammo #
             if len(input.split()) > 2 and (input.lower().split()[1] in ["left", "lef", "le", "l", "right", "righ", "rig", "ri", "r"] or (stringIsNumber(input.split()[1]) and int(input.split()[1] > 0))):
                 reloadSlot = input.lower().split()[1]
                 ammoKey = ' '.join(input.lower().split()[2::])
-                self.player.reloadCheck(self.console, None, reloadSlot, ammoKey)
+                self.player.reloadCheck(self.console, self.galaxyList, self.player, currentRoom, None, reloadSlot, ammoKey)
 
             # Reload All Ammo #
             elif len(input.split()) > 2 and input.lower().split()[1] == "all":
                 ammoKey = ' '.join(input.lower().split()[2::])
-                self.player.reloadCheck(self.console, "All", "All", ammoKey)
+                self.player.reloadCheck(self.console, self.galaxyList, self.player, currentRoom, "All", "All", ammoKey)
 
             # Reload Weapon Ammo #
             elif len(input.split()) > 2:
                 reloadKey = input.lower().split()[1]
                 ammoKey = ' '.join(input.lower().split()[2::])
-                self.player.reloadCheck(self.console, reloadKey, None, ammoKey)
+                self.player.reloadCheck(self.console, self.galaxyList, self.player, currentRoom, reloadKey, None, ammoKey)
 
             # Reload All #
             elif len(input.split()) == 2 and input.lower().split()[1] == "all":
-                self.player.reloadCheck(self.console, "All", "All", None)
+                self.player.reloadCheck(self.console, self.galaxyList, self.player, currentRoom, "All", "All", None)
 
             # Reload Left/Right #
             elif len(input.split()) == 2 and (input.lower().split()[1] in ["left", "lef", "le", "l", "right", "righ", "rig", "ri", "r"] or (stringIsNumber(input.split()[1]) and int(input.split()[1] > 0))):
                 reloadSlot = input.lower().split()[1]
-                self.player.reloadCheck(self.console, None, reloadSlot, None)
+                self.player.reloadCheck(self.console, self.galaxyList, self.player, currentRoom, None, reloadSlot, None)
 
             # Reload Weapon/Ammo #
             elif len(input.split()) == 2:
                 reloadKey = input.lower().split()[1]
-                self.player.reloadCheck(self.console, reloadKey, None, None)
+                self.player.reloadCheck(self.console, self.galaxyList, self.player, currentRoom, reloadKey, None, None)
 
             # Reload #
             else:
-                self.player.reloadCheck(self.console, "All", None, None)
+                self.player.reloadCheck(self.console, self.galaxyList, self.player, currentRoom, "All", None, None)
 
         # Unload #
-        elif input.lower().split()[0] in ["unload", "unloa", "unlo", "unl", "un"]:
+        elif input.lower().split()[0] in ["unload", "unloa", "unlo", "unl"]:
+
+            # Unload All Ammo #
+            if len(input.split()) > 2 and input.lower().split()[1] == "all":
+                ammoKey = ' '.join(input.lower().split()[2::])
+                self.player.unloadCheck(self.console, self.galaxyList, self.player, currentRoom, "All", None, ammoKey)
 
             # Unload All #
-            if len(input.split()) == 2 and input.lower().split()[1] == "all":
-                self.player.unloadCheck(self.console, "All")
+            elif len(input.split()) == 2 and input.lower().split()[1] == "all":
+                self.player.unloadCheck(self.console, self.galaxyList, self.player, currentRoom, "All", None, None)
 
             # Unload Left/Right #
             elif len(input.split()) == 2 and (input.lower().split()[1] in ["left", "lef", "le", "l", "right", "righ", "rig", "ri", "r"] or (stringIsNumber(input.split()[1]) and int(input.split()[1]) > 0)):
-                targetUnloadKey = input.lower().split()[1]
-                self.player.unloadCheck(self.console, targetUnloadKey)
+                unloadSlotKey = input.lower().split()[1]
+                self.player.unloadCheck(self.console, self.galaxyList, self.player, currentRoom, None, unloadSlotKey, None)
 
             # Unload Weapon #
             elif len(input.split()) > 1:
-                targetUnloadKey = ' '.join(input.lower().split()[1::])
-                self.player.unloadCheck(self.console, targetUnloadKey)
+                unloadKey = ' '.join(input.lower().split()[1::])
+                self.player.unloadCheck(self.console, self.galaxyList, self.player, currentRoom, unloadKey, None, None)
 
+            # Unload #
             else:
-                self.console.lineList.insert(0, {"Blank": True})
-                self.console.lineList.insert(0, {"String": "Unload what?", "Code":"11w1y"})
+                self.player.unloadCheck(self.console, self.galaxyList, self.player, currentRoom, "All", "All", None)
 
         # Tame/Recruit #
 
         # Disband #
 
-        # Skills #
+        # Stop #
 
         ## Status Commands ##
         # Inventory #
@@ -926,6 +941,10 @@ class Game:
         # Gear #
         elif len(input.split()) == 1 and input.lower() in ["gear", "gea"]:
             self.player.displayGear(self.console, self.galaxyList, currentRoom)
+
+        # Skills #
+        elif len(input.split()) == 1 and input.lower() in ["skills", "skill", "skil", "ski", "sk"]:
+            self.player.displaySkills(self.console)
 
         # Character/Status #
         elif len(input.split()) == 1 and input.lower() in ["status", "statu", "stat", "sta", "st"]:
@@ -978,6 +997,8 @@ class Game:
         # Land #
 
         ## Crafting Commands ##
+        # Inspect #
+        
         # Prospect #
 
         # Plant #
@@ -1008,8 +1029,9 @@ class Game:
         self.console.draw(window)
         self.inputBar.draw(window)
 
-    def writeCrashReport(self, input):
+    def writeCrashReport(self, errorString, input):
         with open("../CrashReport.txt", "w") as f:
+            f.write(errorString + "\n")
             f.write("Input: " + input + "\n")
             f.write("Player Loc: [" + str(self.player.galaxy) + ", " + str(self.player.system) + ", " + str(self.player.planet) + ", " + str(self.player.area) + ", " + str(self.player.room) + "]" + "\n")
             f.write("Player Spaceship: " + str(self.player.spaceship) + "\n")

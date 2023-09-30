@@ -1,4 +1,4 @@
-import pygame
+import pygame, traceback
 from pygame import *
 from Components.Utility import writeColor
 
@@ -39,13 +39,16 @@ class InputBar:
             if len(self.input) > 0:
                 self.input = self.input.strip()
                 if len(self.input) > 0:
-                    if game.crashReport == True:
-                        game.writeCrashReport(self.input)
-                    if len(self.previousInputList) == 0 or self.input != self.previousInputList[0]:
-                        self.previousInputList.insert(0, self.input)
-                        if len(self.previousInputList) > 20:
-                            self.previousInputList = self.previousInputList[0:20]
-                    game.processInputBarCommand(self.input)
+                    try:
+                        if len(self.previousInputList) == 0 or self.input != self.previousInputList[0]:
+                            self.previousInputList.insert(0, self.input)
+                            if len(self.previousInputList) > 20:
+                                self.previousInputList = self.previousInputList[0:20]
+                        game.processInputBarCommand(self.input)
+                    except Exception as error:
+                        game.writeCrashReport(traceback.format_exc(), self.input)
+                        print(traceback.format_exc())
+                        raise SystemExit
                     
                 self.input = ""
                 self.previousInputIndex = -1

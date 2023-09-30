@@ -1,9 +1,10 @@
 import copy, random
-from Components.Utility import stringIsNumber
 from GameData.Room import Room
 from GameData.Mob import Mob
 from GameData.Item import Item
 from GameData.Spaceship import Spaceship
+from GameData.Action import Action
+from Components.Utility import stringIsNumber
 
 class Player:
 
@@ -15,7 +16,7 @@ class Player:
         self.room = 0
         self.spaceship = None
 
-        self.currentAction = None
+        self.actionList = []
 
         self.maxLookDistance = 5
         self.maxTargetDistance = 3
@@ -25,9 +26,22 @@ class Player:
         self.gearDict = {"Head":None, "Face":None, "Neck":[None, None], "Body Under":None, "Body Over":None, "About Body":None, "Hands":None, "Finger":[None, None], "Legs Under":None, "Legs Over":None, "Feet":None, "Left Hand":None, "Right Hand":None}
         self.dominantHand = "Right Hand"
 
+        self.areaMessageTimer = random.randrange(250) + 200
         self.emoteList = ["hmm", "hm", "nod", "nodnod", "tap", "boggle", "ahah", "jump", "gasp", "haha", "lol", "cheer", "smile", "swear", "sigh"]
 
         self.debugDualWield = False
+
+    def update(self, console):
+        if len(self.actionList) > 0:
+            self.actionList[0].update(console, self)
+            if self.actionList[0].currentTick >= self.actionList[0].maxTick:
+                del self.actionList[0]
+
+        self.areaMessageTimer -= 1
+        if self.areaMessageTimer <= 0:
+            self.areaMessageTimer = random.randrange(250) + 200
+            console.lineList.insert(0, {"Blank": True})
+            console.lineList.insert(0, {"String": "You hear some squeaking noises.", "Code":"30w1y"})
 
     def lookDirection(self, console, galaxyList, currentRoom, lookDir, count):
         if isinstance(count, int) and count > 50:
@@ -475,6 +489,11 @@ class Player:
                     console.lineList.insert(0, {"String":displayString + dirString + dirCountString, "Code":displayCode + dirCode + dirCountCode})
 
     def moveCheck(self, console, galaxyList, currentRoom, targetDir):
+        if len(self.actionList) > 0:
+            self.actionList = []
+            console.lineList.insert(0, {"Blank": True})
+            console.lineList.insert(0, {"String": "You stop what you're doing and move.", "Code":"17w1y17w1y"})
+
         if currentRoom.exit[targetDir] != None:
             if currentRoom.door[targetDir] != None and currentRoom.door[targetDir]["Type"] == "Manual" and currentRoom.door[targetDir]["Status"] in ["Closed", "Locked"]:
                 console.lineList.insert(0, {"Blank": True})
@@ -533,38 +552,46 @@ class Player:
         elif currentRoom.door[targetDir]["Status"] == targetDoorAction or (targetDoorAction == "Closed" and currentRoom.door[targetDir]["Status"] == "Locked"):
             console.lineList.insert(0, {"Blank": True})
             console.lineList.insert(0, {"String":"It's already " + targetDoorAction.lower() + ".", "Code":"2w1y10w" + str(len(targetDoorAction)) + "w1y"})
-        elif targetDoorAction == "Open" and currentRoom.door[targetDir]["Status"] == "Locked" and self.hasKey(currentRoom.door[targetDir]["Password"]) == False:
-            console.lineList.insert(0, {"Blank": True})
-            console.lineList.insert(0, {"String":"It's locked.", "Code":"2w1y8w1y"})
         
         else:
-            unlockString = ""
-            unlockCode = ""
-            if currentRoom.door[targetDir]["Status"] == "Locked" and targetDoorAction == "Open":
-                unlockString = "unlock and "
-                unlockCode = "11w"
+            blankCheck = False
+            if len(self.actionList) > 0:
+                self.actionList = []
+                blankCheck = True
+                console.lineList.insert(0, {"Blank": True})
+                console.lineList.insert(0, {"String": "You stop what you're doing.", "Code":"17w1y8w1y"})
 
-            currentRoom.door[targetDir]["Status"] = targetDoorAction
+            if targetDoorAction == "Open" and currentRoom.door[targetDir]["Status"] == "Locked" and self.hasKey(currentRoom.door[targetDir]["Password"]) == False:
+                if blankCheck == False : console.lineList.insert(0, {"Blank": True})
+                console.lineList.insert(0, {"String":"It's locked.", "Code":"2w1y8w1y"})
+            else:
+                unlockString = ""
+                unlockCode = ""
+                if currentRoom.door[targetDir]["Status"] == "Locked" and targetDoorAction == "Open":
+                    unlockString = "unlock and "
+                    unlockCode = "11w"
 
-            if currentRoom.exit[targetDir] != None:
-                otherRoom = None
-                if len(currentRoom.exit[targetDir]) == 3 and currentRoom.spaceshipObject != None:
-                    otherRoom = currentRoom.spaceshipObject.areaList[currentRoom.exit[targetDir][1]].roomList[currentRoom.exit[targetDir][2]]
-                elif len(currentRoom.exit[targetDir]) == 5:
-                    otherRoom = Room.exists(galaxyList, None, currentRoom.exit[targetDir][0], currentRoom.exit[targetDir][1], currentRoom.exit[targetDir][2], currentRoom.exit[targetDir][3], currentRoom.exit[targetDir][4])
-                if otherRoom != None:
-                    otherRoomExitDir = None
-                    for exitDir in otherRoom.exit:
-                        exitData = otherRoom.exit[exitDir]
-                        if exitData != None and currentRoom.sameRoomCheck(exitData):
-                            otherRoomExitDir = exitDir
-                            break
+                currentRoom.door[targetDir]["Status"] = targetDoorAction
 
-                    if otherRoomExitDir != None:
-                        otherRoom.door[otherRoomExitDir]["Status"] = targetDoorAction
+                if currentRoom.exit[targetDir] != None:
+                    otherRoom = None
+                    if len(currentRoom.exit[targetDir]) == 3 and currentRoom.spaceshipObject != None:
+                        otherRoom = currentRoom.spaceshipObject.areaList[currentRoom.exit[targetDir][1]].roomList[currentRoom.exit[targetDir][2]]
+                    elif len(currentRoom.exit[targetDir]) == 5:
+                        otherRoom = Room.exists(galaxyList, None, currentRoom.exit[targetDir][0], currentRoom.exit[targetDir][1], currentRoom.exit[targetDir][2], currentRoom.exit[targetDir][3], currentRoom.exit[targetDir][4])
+                    if otherRoom != None:
+                        otherRoomExitDir = None
+                        for exitDir in otherRoom.exit:
+                            exitData = otherRoom.exit[exitDir]
+                            if exitData != None and currentRoom.sameRoomCheck(exitData):
+                                otherRoomExitDir = exitDir
+                                break
 
-            console.lineList.insert(0, {"Blank": True})
-            console.lineList.insert(0, {"String":"You " + unlockString + targetAction.lower() + " the door to the " + targetDir + ".", "Code":"4w" + unlockCode + str(len(targetAction)) + "w17w" + str(len(targetDir)) + "w1y"})
+                        if otherRoomExitDir != None:
+                            otherRoom.door[otherRoomExitDir]["Status"] = targetDoorAction
+
+                if blankCheck == False : console.lineList.insert(0, {"Blank": True})
+                console.lineList.insert(0, {"String":"You " + unlockString + targetAction.lower() + " the door to the " + targetDir + ".", "Code":"4w" + unlockCode + str(len(targetAction)) + "w17w" + str(len(targetDir)) + "w1y"})
 
     def lockUnlockDoorCheck(self, console, galaxyList, currentRoom, targetAction, targetDir):
         if targetAction == "Lock":
@@ -587,38 +614,46 @@ class Player:
         elif currentRoom.door[targetDir]["Status"] == targetActionStatus:
             console.lineList.insert(0, {"Blank": True})
             console.lineList.insert(0, {"String":"It's already " + targetAction.lower() + "ed.", "Code":"2w1y10w" + str(len(targetAction)) + "w2w1y"})
-        elif self.hasKey(currentRoom.door[targetDir]["Password"]) == False:
-            console.lineList.insert(0, {"Blank": True})
-            console.lineList.insert(0, {"String":"You lack the key.", "Code":"16w1y"})
         
         else:
-            closeString = ""
-            closeCode = ""
-            if targetRoom.door[targetDir]["Status"] == "Open" and targetActionStatus == "Locked":
-                closeString = "close and "
-                closeCode = "10w"
+            blankCheck = False
+            if len(self.actionList) > 0:
+                self.actionList = []
+                blankCheck = True
+                console.lineList.insert(0, {"Blank": True})
+                console.lineList.insert(0, {"String": "You stop what you're doing.", "Code":"17w1y8w1y"})
 
-            targetRoom.door[targetDir]["Status"] = targetActionStatus
-            
-            if targetRoom.exit[targetDir] != None:
-                otherRoom = None
-                if len(targetRoom.exit[targetDir]) == 3 and targetRoom.spaceshipObject != None:
-                    otherRoom = targetRoom.spaceshipObject.areaList[targetRoom.exit[targetDir][1]].roomList[targetRoom.exit[targetDir][2]]
-                elif len(targetRoom.exit[targetDir]) == 5:
-                    otherRoom = Room.exists(galaxyList, None, targetRoom.exit[targetDir][0], targetRoom.exit[targetDir][1], targetRoom.exit[targetDir][2], targetRoom.exit[targetDir][3], targetRoom.exit[targetDir][4])
-                if otherRoom != None:
-                    otherRoomExitDir = None
-                    for exitDir in otherRoom.exit:
-                        exitData = otherRoom.exit[exitDir]
-                        if exitData != None and targetRoom.sameRoomCheck(exitData):
-                            otherRoomExitDir = exitDir
-                            break
+            if self.hasKey(currentRoom.door[targetDir]["Password"]) == False:
+                if blankCheck == False : console.lineList.insert(0, {"Blank": True})
+                console.lineList.insert(0, {"String":"You lack the key.", "Code":"16w1y"})
+            else:
+                closeString = ""
+                closeCode = ""
+                if targetRoom.door[targetDir]["Status"] == "Open" and targetActionStatus == "Locked":
+                    closeString = "close and "
+                    closeCode = "10w"
 
-                    if otherRoomExitDir != None:
-                        otherRoom.door[otherRoomExitDir]["Status"] = targetActionStatus
-                    
-            console.lineList.insert(0, {"Blank": True})
-            console.lineList.insert(0, {"String":"You " + closeString + targetAction.lower() + " the door to the " + targetDir + ".", "Code":"4w" + closeCode + str(len(targetAction)) + "w17w" + str(len(targetDir)) + "w1y"})
+                targetRoom.door[targetDir]["Status"] = targetActionStatus
+                
+                if targetRoom.exit[targetDir] != None:
+                    otherRoom = None
+                    if len(targetRoom.exit[targetDir]) == 3 and targetRoom.spaceshipObject != None:
+                        otherRoom = targetRoom.spaceshipObject.areaList[targetRoom.exit[targetDir][1]].roomList[targetRoom.exit[targetDir][2]]
+                    elif len(targetRoom.exit[targetDir]) == 5:
+                        otherRoom = Room.exists(galaxyList, None, targetRoom.exit[targetDir][0], targetRoom.exit[targetDir][1], targetRoom.exit[targetDir][2], targetRoom.exit[targetDir][3], targetRoom.exit[targetDir][4])
+                    if otherRoom != None:
+                        otherRoomExitDir = None
+                        for exitDir in otherRoom.exit:
+                            exitData = otherRoom.exit[exitDir]
+                            if exitData != None and targetRoom.sameRoomCheck(exitData):
+                                otherRoomExitDir = exitDir
+                                break
+
+                        if otherRoomExitDir != None:
+                            otherRoom.door[otherRoomExitDir]["Status"] = targetActionStatus
+                        
+                if blankCheck == False : console.lineList.insert(0, {"Blank": True})
+                console.lineList.insert(0, {"String":"You " + closeString + targetAction.lower() + " the door to the " + targetDir + ".", "Code":"4w" + closeCode + str(len(targetAction)) + "w17w" + str(len(targetDir)) + "w1y"})
 
     def openCloseTargetCheck(self, console, galaxyList, currentRoom, targetAction, targetObjectKey):
         targetObject = currentRoom.getTargetObject(targetObjectKey)
@@ -685,6 +720,13 @@ class Player:
                 console.lineList.insert(0, {"String":"There is no need to " + targetAction.lower() + " it.", "Code":"20w" + str(len(targetAction)) + "w3w1y"})
 
     def getCheck(self, console, galaxyList, currentRoom, targetItemKey, targetContainerKey, count):
+        blankCheck = False
+        if len(self.actionList) > 0:
+            self.actionList = []
+            blankCheck = True
+            console.lineList.insert(0, {"Blank": True})
+            console.lineList.insert(0, {"String": "You stop what you're doing.", "Code":"17w1y8w1y"})
+
         itemList = currentRoom.itemList
         playerItemLocation = None
         if targetContainerKey != None:
@@ -696,7 +738,7 @@ class Player:
                     itemList = currentRoom.getTargetObject(targetContainerKey)
 
         if targetContainerKey not in [None, "All"] and itemList != None and (isinstance(itemList, Item) == False or itemList.containerList == None):
-            console.lineList.insert(0, {"Blank": True})
+            if blankCheck == False : console.lineList.insert(0, {"Blank": True})
             console.lineList.insert(0, {"String":"That's not a container!", "Code":"4w1y17w1y"})
         else:
             if targetItemKey == "All" and (targetContainerKey in ["All", None]) and count == "All":
@@ -727,7 +769,7 @@ class Player:
                                 break
             
             if itemList == None or (targetItemKey != "All" and getItem == None):
-                console.lineList.insert(0, {"Blank": True})
+                if blankCheck == False : console.lineList.insert(0, {"Blank": True})
                 console.lineList.insert(0, {"String":"You can't find it.", "Code":"7w1y9w1y"})
 
             else:
@@ -740,7 +782,7 @@ class Player:
                     itemCount = len(itemList)
 
                 if targetContainerKey == "All" and itemCount == 0:
-                    console.lineList.insert(0, {"Blank": True})
+                    if blankCheck == False : console.lineList.insert(0, {"Blank": True})
                     console.lineList.insert(0, {"String":"There is nothing to loot.", "Code":"24w1y"})
                 
                 else:
@@ -829,16 +871,16 @@ class Player:
                         
                     if getCount == 0:
                         if tooMuchWeightCheck == True:
-                            console.lineList.insert(0, {"Blank": True})
+                            if blankCheck == False : console.lineList.insert(0, {"Blank": True})
                             console.lineList.insert(0, {"String":"You can't carry that much weight.", "Code":"7w1y24w1y"})
                         elif noGetCheck == True:
-                            console.lineList.insert(0, {"Blank": True})
+                            if blankCheck == False : console.lineList.insert(0, {"Blank": True})
                             console.lineList.insert(0, {"String":"You can't pick that up.", "Code":"7w1y14w1y"})
                         elif itemCount == 0:
-                            console.lineList.insert(0, {"Blank": True})
+                            if blankCheck == False : console.lineList.insert(0, {"Blank": True})
                             console.lineList.insert(0, {"String":"There is nothing to get.", "Code":"23w1y"})
                         else:
-                            console.lineList.insert(0, {"Blank": True})
+                            if blankCheck == False : console.lineList.insert(0, {"Blank": True})
                             console.lineList.insert(0, {"String":"You can't pick anything up.", "Code":"7w1y18w1y"})
                     else:
                         if targetContainerKey == "All" and getCount > 1 and (count == "All" or len(getContainerIndexList) > 1):
@@ -847,10 +889,10 @@ class Player:
                             if tooMuchWeightCheck == False and targetItemKey == "All":
                                 modString = "every corner of "
                                 modCode = "16w"
-                            console.lineList.insert(0, {"Blank": True})
+                            if blankCheck == False : console.lineList.insert(0, {"Blank": True})
                             console.lineList.insert(0, {"String":"You loot " + modString + "the place.", "Code":"9w" + modCode + "9w1y"})
                         elif targetContainerKey == None and getItem == "Multiple" and getCount > 1 and getCount == itemCount:
-                            console.lineList.insert(0, {"Blank": True})
+                            if blankCheck == False : console.lineList.insert(0, {"Blank": True})
                             console.lineList.insert(0, {"String":"You pick everything up.", "Code":"22w1y"})
                         elif getItem == "Multiple":
                             if targetContainerKey == "All" : totalContainerCount = len(combinedItemList)
@@ -858,10 +900,10 @@ class Player:
                                 if playerItemLocation != None : totalContainerCount = len(self.getAllItemList([playerItemLocation]))
                                 else : totalContainerCount = len(currentRoom.itemList)
                             if targetContainerKey != None and getContainerIndexList[-1] < totalContainerCount:
-                                console.lineList.insert(0, {"Blank": True})
+                                if blankCheck == False : console.lineList.insert(0, {"Blank": True})
                                 console.lineList.insert(0, {"String":"You get some things out of " + targetContainer.prefix.lower() + " " + targetContainer.name["String"] + ".", "Code":"27w" + str(len(targetContainer.prefix)) + "w1w" + targetContainer.name["Code"] + "1y"})
                             else:
-                                console.lineList.insert(0, {"Blank": True})
+                                if blankCheck == False : console.lineList.insert(0, {"Blank": True})
                                 console.lineList.insert(0, {"String":"You pick some things up.", "Code":"23w1y"})
                         elif getItem != "Multiple":
                             countString = ""
@@ -890,19 +932,26 @@ class Player:
                                 pickUpCode = "4w"
                             getString = "You " + pickUpString + getItem.prefix.lower() + " " + getItem.name["String"] + countString + fromString + "."
                             getCode = "4w" + pickUpCode + str(len(getItem.prefix)) + "w1w" + getItem.name["Code"] + countCode + fromCode + "1y"
-                            console.lineList.insert(0, {"Blank": True})
+                            if blankCheck == False : console.lineList.insert(0, {"Blank": True})
                             console.lineList.insert(0, {"String":getString, "Code":getCode})
          
     def putCheck(self, console, galaxyList, currentRoom, targetItemKey, targetContainerKey, count):
+        blankCheck = False
+        if len(self.actionList) > 0:
+            self.actionList = []
+            blankCheck = True
+            console.lineList.insert(0, {"Blank": True})
+            console.lineList.insert(0, {"String": "You stop what you're doing.", "Code":"17w1y8w1y"})
+
         targetContainer, playerItemLocation = self.getTargetItem(targetContainerKey)
         if targetContainer == None:
             targetContainer = currentRoom.getTargetObject(targetContainerKey, ["Mobs", "Items", "Spaceships"])
     
         if targetContainer == None:
-            console.lineList.insert(0, {"Blank": True})
+            if blankCheck == False : console.lineList.insert(0, {"Blank": True})
             console.lineList.insert(0, {"String":"You can't find it.", "Code":"7w1y9w1y"})
         elif isinstance(targetContainer, Item) == False or targetContainer.containerList == None:
-            console.lineList.insert(0, {"Blank": True})
+            if blankCheck == False : console.lineList.insert(0, {"Blank": True})
             console.lineList.insert(0, {"String":"That's not a container!", "Code":"4w1y17w1y"})
         
         else:
@@ -917,13 +966,13 @@ class Player:
                             putItem = item
 
             if targetItemKey != "All" and putItem == None:
-                console.lineList.insert(0, {"Blank": True})
+                if blankCheck == False : console.lineList.insert(0, {"Blank": True})
                 console.lineList.insert(0, {"String":"You can't find it.", "Code":"7w1y9w1y"})
             elif targetItemKey != "All" and putItem == targetContainer:
-                console.lineList.insert(0, {"Blank": True})
+                if blankCheck == False : console.lineList.insert(0, {"Blank": True})
                 console.lineList.insert(0, {"String":"You can't put something inside itself.", "Code":"7w1y29w1y"})
             elif inventorySize == 0:
-                console.lineList.insert(0, {"Blank": True})
+                if blankCheck == False : console.lineList.insert(0, {"Blank": True})
                 console.lineList.insert(0, {"String":"You don't have anything to put in.", "Code":"7w1y25w1y"})
 
             else:
@@ -979,10 +1028,10 @@ class Player:
                         break
 
                 if putCount == 0 and len(self.getAllItemList(["Inventory"])) > 0 and targetItemKey != "All":
-                    console.lineList.insert(0, {"Blank": True})
+                    if blankCheck == False : console.lineList.insert(0, {"Blank": True})
                     console.lineList.insert(0, {"String":"It won't fit.", "Code":"6w1y5w1y"})
                 elif putCount == 0:
-                    console.lineList.insert(0, {"Blank": True})
+                    if blankCheck == False : console.lineList.insert(0, {"Blank": True})
                     console.lineList.insert(0, {"String":"You don't have anything to put in.", "Code":"7w1y25w1y"})
                 elif putItem == "Multiple":
                     targetContainerString = targetContainer.prefix.lower() + " " + targetContainer.name["String"]
@@ -992,7 +1041,7 @@ class Player:
                         targetContainerCode = "9w"
                     displayString = "You put some things in " + targetContainerString + "."
                     displayCode = "23w" + targetContainerCode + "1y"
-                    console.lineList.insert(0, {"Blank": True})
+                    if blankCheck == False : console.lineList.insert(0, {"Blank": True})
                     console.lineList.insert(0, {"String":displayString, "Code":displayCode})
                 else:
                     countString = ""
@@ -1007,10 +1056,20 @@ class Player:
                         targetContainerCode = "9w"
                     displayString = "You put " + putItem.prefix.lower() + " " + putItem.name["String"] + countString + " in " + targetContainerString + "."
                     displayCode = "8w" + str(len(putItem.prefix)) + "w1w" + putItem.name["Code"] + countCode + "4w" + targetContainerCode + "1y"
-                    console.lineList.insert(0, {"Blank": True})
+                    if blankCheck == False : console.lineList.insert(0, {"Blank": True})
                     console.lineList.insert(0, {"String":displayString, "Code":displayCode})
                 
-    def dropCheck(self, console, galaxyList, currentRoom, targetItemKey, count):
+    def dropCheck(self, console, galaxyList, currentRoom, targetItemKey, count, pocketKey=None):
+        blankCheck = False
+        if len(self.actionList) > 0:
+            self.actionList = []
+            blankCheck = True
+            console.lineList.insert(0, {"Blank": True})
+            console.lineList.insert(0, {"String": "You stop what you're doing.", "Code":"17w1y8w1y"})
+
+        if pocketKey != None:
+            pocketKey = pocketKey[0].upper() + pocketKey[1::].lower()
+
         dropItem = None
         breakCheck = False
         if targetItemKey != "All":
@@ -1024,7 +1083,7 @@ class Player:
                     break
 
         if targetItemKey != "All" and dropItem == None:
-            console.lineList.insert(0, {"Blank": True})
+            if blankCheck == False : console.lineList.insert(0, {"Blank": True})
             console.lineList.insert(0, {"String":"You can't find it.", "Code":"7w1y9w1y"})
 
         else:
@@ -1035,7 +1094,7 @@ class Player:
             for pocket in self.itemDict:
                 delDict[pocket] = []
                 for i, item in enumerate(self.itemDict[pocket]):
-                    if targetItemKey == "All" or targetItemKey in item.keyList:
+                    if (targetItemKey == "All" or targetItemKey in item.keyList) and not (pocketKey != None and pocket != pocketKey):
                         if item.quantity != None:
                             if quantityCount != "All" : dropQuantity = quantityCount
                             else : dropQuantity = item.quantity
@@ -1082,13 +1141,13 @@ class Player:
                     del self.itemDict[pocket][i]
 
             if dropCount == 0:
-                console.lineList.insert(0, {"Blank": True})
+                if blankCheck == False : console.lineList.insert(0, {"Blank": True})
                 console.lineList.insert(0, {"String":"You aren't carrying anything.", "Code":"8w1y19w1y"})
             elif dropCount > 1 and dropCount == inventoryCount:
-                console.lineList.insert(0, {"Blank": True})
+                if blankCheck == False : console.lineList.insert(0, {"Blank": True})
                 console.lineList.insert(0, {"String":"You drop everything on the ground.", "Code":"33w1y"})    
             elif dropItem == "Multiple":
-                console.lineList.insert(0, {"Blank": True})
+                if blankCheck == False : console.lineList.insert(0, {"Blank": True})
                 console.lineList.insert(0, {"String":"You drop some things on the ground.", "Code":"34w1y"})
             elif dropItem != None:
                 countString = ""
@@ -1098,10 +1157,17 @@ class Player:
                     countCode = "2r" + str(len(str(dropCount))) + "w1r"
                 dropString = "You drop " + dropItem.prefix.lower() + " " + dropItem.name["String"] + " on the ground." + countString
                 dropCode = "9w" + str(len(dropItem.prefix.lower())) + "w1w" + dropItem.name["Code"] + "14w1y" + countCode
-                console.lineList.insert(0, {"Blank": True})
+                if blankCheck == False : console.lineList.insert(0, {"Blank": True})
                 console.lineList.insert(0, {"String":dropString, "Code":dropCode})
 
     def switchCheck(self, console):
+        blankCheck = False
+        if len(self.actionList) > 0:
+            self.actionList = []
+            blankCheck = True
+            console.lineList.insert(0, {"Blank": True})
+            console.lineList.insert(0, {"String": "You stop what you're doing.", "Code":"17w1y8w1y"})
+
         oldHand = self.dominantHand
         if self.dominantHand == "Left Hand":
             newHand = "Right Hand"
@@ -1111,276 +1177,516 @@ class Player:
 
         targetWeapon = None
         if self.gearDict[oldHand] != None and self.gearDict[oldHand].twoHanded == True and self.debugDualWield == False:
-            targetWeapon = self.gearDict[oldHand]
+            self.gearDict[newHand] = self.gearDict[oldHand]
+            self.gearDict[oldHand] = None
 
         if targetWeapon != None:
             displayString = "You switch " + targetWeapon.prefix.lower() + " " + targetWeapon.name["String"] + " to your " + newHand.lower() + "."
             displayCode = "11w" + str(len(targetWeapon.prefix)) + "w1w" + targetWeapon.name["Code"] + "9w" + str(len(newHand)) + "w1y"
-            console.lineList.insert(0, {"Blank": True})
+            if blankCheck == False : console.lineList.insert(0, {"Blank": True})
             console.lineList.insert(0, {"String":displayString, "Code":displayCode})
         else:
-            console.lineList.insert(0, {"Blank": True})
+            if blankCheck == False : console.lineList.insert(0, {"Blank": True})
             console.lineList.insert(0, {"String":"You switch up your handedness.", "Code":"29w1y"})
 
-    def reloadCheck(self, console, reloadKey, reloadSlotKey, ammoKey):
-        reloadSlot = None
-        if reloadSlotKey not in ["All", None]:
-            if reloadSlotKey in ["left", "lef", "le", "l", 1] : reloadSlot = "Left Hand"
-            else : reloadSlot = "Right Hand"
-            if reloadSlot != self.dominantHand and self.gearDict[reloadSlot] == None and self.gearDict[self.dominantHand] != None and self.gearDict[self.dominantHand].twoHanded == True:
-                reloadSlot = self.getOppositeHand(reloadSlot)
-
-        reloadList = []
-        targetItem = None
-        searchAmmo = None
-        gunInventoryCount = 0
-        if reloadSlot != None:
-            if self.gearDict[reloadSlot] != None:
-                if self.gearDict[reloadSlot].pocket == "Weapon" and self.gearDict[reloadSlot].ranged == True:
-                    reloadList.append(self.gearDict[reloadSlot])
-                else:
-                    targetItem = self.gearDict[reloadSlot]
-        elif reloadKey == "All":
-            if self.gearDict[self.dominantHand] != None and self.gearDict[self.dominantHand].pocket == "Weapon" and self.gearDict[self.dominantHand].ranged == True:
-                reloadList.append(self.gearDict[self.dominantHand])
-            if self.gearDict[self.getOppositeHand(self.dominantHand)] != None and self.gearDict[self.getOppositeHand(self.dominantHand)].pocket == "Weapon" and self.gearDict[self.getOppositeHand(self.dominantHand)].ranged == True:
-                reloadList.append(self.gearDict[self.getOppositeHand(self.dominantHand)])
-            if reloadSlotKey == "All":
-                for pocket in self.itemDict:
-                    for item in self.itemDict[pocket]:
-                        if pocket == "Weapon" and item.ranged == True:
-                            reloadList.append(item)
-                            gunInventoryCount += 1
-        else:
-            if self.gearDict["Left Hand"] != None and reloadKey in self.gearDict["Left Hand"].keyList:
-                if self.gearDict["Left Hand"].ranged == True:
-                    reloadList.append(self.gearDict["Left Hand"])
-                else:
-                    targetItem = self.gearDict["Left Hand"]
-            elif self.gearDict["Right Hand"] != None and reloadKey in self.gearDict["Right Hand"].keyList:
-                if self.gearDict["Right Hand"].ranged == True:
-                    reloadList.append(self.gearDict["Right Hand"])
-                else:
-                    targetItem = self.gearDict["Right Hand"]
-            else:
-                for item in self.getAllItemList(["Inventory"]):
-                    if reloadKey in item.keyList:
-                        if item.pocket == "Weapon" and item.ranged == True:
-                            reloadList.append(item)
-                            targetItem = None
-                            break
-                        else:
-                            targetItem = item
-
-        reloadTargetShiftCheck = False
-        if reloadKey not in ["All", None] and reloadSlotKey == None and ammoKey == None:
-            if len(reloadList) == 0:
-                reloadTargetShiftCheck = True
-                if self.gearDict[self.dominantHand] != None and self.gearDict[self.dominantHand].ranged == True:
-                    reloadList.append(self.gearDict[self.dominantHand])
-                if self.gearDict[self.getOppositeHand(self.dominantHand)] != None and self.gearDict[self.getOppositeHand(self.dominantHand)].ranged == True:
-                    reloadList.append(self.gearDict[self.getOppositeHand(self.dominantHand)])
-                        
-        alreadyReloadedCheck = False
-        if reloadKey == "All" and len(reloadList) > 0 and ammoKey == None:
-            alreadyReloadedCheck = True
-            for weapon in reloadList:
-                if weapon.isLoaded(self.itemDict["Ammo"]) == False:
-                    alreadyReloadedCheck = False
-                    break 
-
-        if alreadyReloadedCheck == True:
-            displayString = "It's already loaded."
-            displayCode = "2w1y16w1y"
-            if len(reloadList) > 1:
-                displayString = "Your weapons are already loaded."
-                displayCode = "31w1y"
+    def reloadCheck(self, console, galaxyList, player, currentRoom, reloadKey, reloadSlotKey, ammoKey):
+        if currentRoom.isLit(galaxyList, player) == False:
             console.lineList.insert(0, {"Blank": True})
-            console.lineList.insert(0, {"String":displayString, "Code":displayCode})
-        elif reloadKey == "All" and len(reloadList) == 0:
-            console.lineList.insert(0, {"Blank": True})
-            console.lineList.insert(0, {"String":"You don't have anything to reload.", "Code":"7w1y25w1y"})
-        elif reloadKey not in ["All", None] and len(reloadList) == 0 and targetItem == None:
-            console.lineList.insert(0, {"Blank": True})
-            console.lineList.insert(0, {"String":"You can't find it.", "Code":"7w1y9w1y"})
-        elif (reloadSlot != None or reloadKey not in ["All", None]) and len(reloadList) == 0 and targetItem != None and not (reloadKey not in ["All", None] and reloadSlotKey == None and ammoKey == None):
-            console.lineList.insert(0, {"Blank": True})
-            console.lineList.insert(0, {"String":"You can't reload that.", "Code":"7w1y13w1y"})
-        elif reloadSlot != None and len(reloadList) == 0 and targetItem == None:
-            console.lineList.insert(0, {"Blank": True})
-            console.lineList.insert(0, {"String":"You aren't holding anything.", "Code":"8w1y18w1y"})
+            console.lineList.insert(0, {"String": "It's too dark to see.", "Code":"2w1y17w1y"})
 
         else:
-            magazineCheck = False
-            reloadCount = 0
-            reloadWeapon = None
-            requireWeapon = None
-            for weaponIndex, weapon in enumerate(reloadList):
-                ammoCheck = False
-                targetAmmo = None
-                targetMagazine = None
-                ammoIndex = -1
-                reloadQuantity = 0
-                targetMagazine = None
-                heldMagazineCheck = False
+            blankCheck = False
+            if len(self.actionList) > 0:
+                self.actionList = []
+                blankCheck = True
+                console.lineList.insert(0, {"Blank": True})
+                console.lineList.insert(0, {"String": "You stop what you're doing.", "Code":"17w1y8w1y"})
 
-                # Non-Magazine Weapons #
-                if weapon.shellCapacity != None:
-                    targetAmmo, ammoIndex = self.ammoCheck(weapon.ammoType)
-                    if ammoKey != None:
-                        targetAmmo, ammoIndex = self.ammoCheck(weapon.ammoType, ammoKey)
-                    elif reloadTargetShiftCheck == True:
-                        targetAmmo, ammoIndex = self.ammoCheck(weapon.ammoType, reloadKey)
+            reloadSlot = None
+            if reloadSlotKey not in ["All", None]:
+                if reloadSlotKey in ["left", "lef", "le", "l", "1"] : reloadSlot = "Left Hand"
+                else : reloadSlot = "Right Hand"
+                if reloadSlot != self.dominantHand and self.gearDict[reloadSlot] == None and self.gearDict[self.dominantHand] != None and self.gearDict[self.dominantHand].twoHanded == True:
+                    reloadSlot = self.getOppositeHand(reloadSlot)
 
-                    if weapon.magazine == None or weapon.magazine.quantity < weapon.shellCapacity or (targetAmmo != None and weapon.magazine.num != targetAmmo.num):
-                        if ammoIndex != -1 and not (reloadKey == "All" and ammoKey == None and weapon.magazine != None and weapon.magazine.num != targetAmmo.num):
-                            if weapon.magazine != None and weapon.magazine.num != targetAmmo.num:
-                                inventoryAmmo, unused = self.getTargetItem(weapon.magazine.num, ["Inventory"])
-                                if inventoryAmmo != None:
-                                    inventoryAmmo.quantity += weapon.magazine.quantity
-                                else:
-                                    self.itemDict["Ammo"].append(weapon.magazine)
-                                weapon.magazine = None
-
-                            alreadyLoadedCount = 0
-                            if weapon.magazine != None:
-                                alreadyLoadedCount = weapon.magazine.quantity
-                            reloadQuantity = weapon.shellCapacity - alreadyLoadedCount
-                            if reloadQuantity > targetAmmo.quantity:
-                                reloadQuantity = targetAmmo.quantity
-                            if weapon.magazine == None:
-                                splitItem = copy.deepcopy(targetAmmo)
-                                splitItem.quantity = reloadQuantity
-                                weapon.magazine = splitItem
-                            else:
-                                weapon.magazine.quantity += reloadQuantity
-                            ammoCheck = True
-                            magazineCheck = None
-                            reloadCount += 1
-                            if reloadWeapon == None:
-                                reloadWeapon = weapon
-                            elif reloadWeapon != "Multiple" and reloadWeapon.num != weapon.num:
-                                reloadWeapon = "Multiple"
-
-                # Magazine Weapons #
-                else:
-                    targetMagazine, magazineIndex = self.ammoCheck(weapon.ammoType, None, True)
-                    if magazineIndex != -1:
-                        magazineCheck = True
+            reloadList = []
+            targetItem = None
+            gunInventoryCount = 0
+            if reloadSlot != None:
+                if self.gearDict[reloadSlot] != None:
+                    if self.gearDict[reloadSlot].pocket == "Weapon" and self.gearDict[reloadSlot].ranged == True:
+                        reloadList.append(self.gearDict[reloadSlot])
                     else:
-                        requireWeapon = weapon
-                    if weapon.magazine != None or magazineIndex != -1:
-                        targetAmmo, ammoIndex = self.ammoCheck(weapon.ammoType)
+                        targetItem = self.gearDict[reloadSlot]
+            elif reloadKey == "All":
+                if self.gearDict[self.dominantHand] != None and self.gearDict[self.dominantHand].pocket == "Weapon" and self.gearDict[self.dominantHand].ranged == True:
+                    reloadList.append(self.gearDict[self.dominantHand])
+                if self.gearDict[self.getOppositeHand(self.dominantHand)] != None and self.gearDict[self.getOppositeHand(self.dominantHand)].pocket == "Weapon" and self.gearDict[self.getOppositeHand(self.dominantHand)].ranged == True:
+                    reloadList.append(self.gearDict[self.getOppositeHand(self.dominantHand)])
+                if reloadSlotKey == "All":
+                    for pocket in self.itemDict:
+                        for item in self.itemDict[pocket]:
+                            if pocket == "Weapon" and item.ranged == True:
+                                reloadList.append(item)
+                                gunInventoryCount += 1
+            else:
+                if self.gearDict["Left Hand"] != None and reloadKey in self.gearDict["Left Hand"].keyList:
+                    if self.gearDict["Left Hand"].ranged == True:
+                        reloadList.append(self.gearDict["Left Hand"])
+                    else:
+                        targetItem = self.gearDict["Left Hand"]
+                elif self.gearDict["Right Hand"] != None and reloadKey in self.gearDict["Right Hand"].keyList:
+                    if self.gearDict["Right Hand"].ranged == True:
+                        reloadList.append(self.gearDict["Right Hand"])
+                    else:
+                        targetItem = self.gearDict["Right Hand"]
+                else:
+                    for item in self.getAllItemList(["Inventory"]):
+                        if reloadKey in item.keyList:
+                            if item.pocket == "Weapon" and item.ranged == True:
+                                reloadList.append(item)
+                                targetItem = None
+                                break
+                            else:
+                                targetItem = item
+
+            reloadTargetShiftCheck = False
+            if reloadKey not in ["All", None] and reloadSlotKey == None and ammoKey == None:
+                if len(reloadList) == 0:
+                    reloadTargetShiftCheck = True
+                    if self.gearDict[self.dominantHand] != None and self.gearDict[self.dominantHand].ranged == True:
+                        reloadList.append(self.gearDict[self.dominantHand])
+                    if self.gearDict[self.getOppositeHand(self.dominantHand)] != None and self.gearDict[self.getOppositeHand(self.dominantHand)].ranged == True:
+                        reloadList.append(self.gearDict[self.getOppositeHand(self.dominantHand)])
+                            
+            alreadyReloadedCheck = False
+            if reloadKey == "All" and len(reloadList) > 0 and ammoKey == None:
+                alreadyReloadedCheck = True
+                for weapon in reloadList:
+                    if weapon.isLoaded(self.itemDict["Ammo"]) == False:
+                        alreadyReloadedCheck = False
+                        break 
+
+            if reloadKey not in ["All", None] and len(reloadList) == 0 and targetItem != None and targetItem.ranged == False:
+                if blankCheck == False : console.lineList.insert(0, {"Blank": True})
+                console.lineList.insert(0, {"String":"You can't reload that.", "Code":"7w1y13w1y"})
+            elif alreadyReloadedCheck == True:
+                displayString = "It's already loaded."
+                displayCode = "2w1y16w1y"
+                if len(reloadList) > 1:
+                    displayString = "Your weapons are already loaded."
+                    displayCode = "31w1y"
+                if blankCheck == False : console.lineList.insert(0, {"Blank": True})
+                console.lineList.insert(0, {"String":displayString, "Code":displayCode})
+            elif reloadKey == "All" and len(reloadList) == 0:
+                if blankCheck == False : console.lineList.insert(0, {"Blank": True})
+                console.lineList.insert(0, {"String":"You don't have anything to reload.", "Code":"7w1y25w1y"})
+            elif reloadKey not in ["All", None] and len(reloadList) == 0 and targetItem == None:
+                if blankCheck == False : console.lineList.insert(0, {"Blank": True})
+                console.lineList.insert(0, {"String":"You can't find it.", "Code":"7w1y9w1y"})
+            elif (reloadSlot != None or reloadKey not in ["All", None]) and len(reloadList) == 0 and targetItem != None and not (reloadKey not in ["All", None] and reloadSlotKey == None and ammoKey == None):
+                if blankCheck == False : console.lineList.insert(0, {"Blank": True})
+                console.lineList.insert(0, {"String":"You can't reload that.", "Code":"7w1y13w1y"})
+            elif reloadSlot != None and len(reloadList) == 0 and targetItem == None:
+                if blankCheck == False : console.lineList.insert(0, {"Blank": True})
+                console.lineList.insert(0, {"String":"You aren't holding anything.", "Code":"8w1y18w1y"})
+
+            else:
+                playerCopy = copy.deepcopy(self)
+                magazineCheck = False
+                reloadCount = 0
+                reloadWeapon = None
+                requireWeapon = None
+                for weaponIndex, weapon in enumerate(reloadList):
+                    weapon = copy.deepcopy(weapon)
+                    ammoCheck = False
+                    targetAmmo = None
+                    targetMagazine = None
+                    ammoIndex = -1
+                    reloadQuantity = 0
+                    targetMagazine = None
+                    heldMagazineCheck = False
+
+                    # Non-Magazine Weapons #
+                    if weapon.shellCapacity != None:
+                        targetAmmo, ammoIndex = playerCopy.ammoCheck(weapon.ammoType)
                         if ammoKey != None:
-                            targetAmmo, ammoIndex = self.ammoCheck(weapon.ammoType, ammoKey)
+                            targetAmmo, ammoIndex = playerCopy.ammoCheck(weapon.ammoType, ammoKey)
                         elif reloadTargetShiftCheck == True:
-                            targetAmmo, ammoIndex = self.ammoCheck(weapon.ammoType, reloadKey)
+                            targetAmmo, ammoIndex = playerCopy.ammoCheck(weapon.ammoType, reloadKey)
 
-                        if ammoIndex != -1 and not (reloadKey == "All" and ammoKey == None and weapon.magazine != None and weapon.magazine.flags["Ammo"] != None and weapon.magazine.flags["Ammo"].num != targetAmmo.num):
-                            if weapon.magazine == None or weapon.magazine.flags["Ammo"].quantity < weapon.magazine.shellCapacity or weapon.isLoaded(self.itemDict["Ammo"]) == False or (targetAmmo != None and weapon.magazine != None and targetAmmo.num != weapon.magazine.flags["Ammo"].num):
-                                weaponMagazine = weapon.magazine
-                                if weaponMagazine == None:
-                                    weaponMagazine = targetMagazine
-                                    heldMagazineCheck = True
-                                elif weaponMagazine != None and targetMagazine != None and weaponMagazine.shellCapacity < targetMagazine.shellCapacity:
-                                    self.itemDict["Ammo"].append(weaponMagazine)
-                                    if weaponMagazine.flags["Ammo"] != None:
-                                        heldAmmo, unused = self.getTargetItem(weaponMagazine.flags["Ammo"].num, ["Inventory"])
-                                        if heldAmmo != None:
-                                            heldAmmo.quantity += weaponMagazine.flags["Ammo"].quantity
-                                        else:
-                                            self.itemDict["Ammo"].append(weaponMagazine.flags["Ammo"])
-                                        weaponMagazine.flags["Ammo"] = None
-                                    weaponMagazine = targetMagazine
-
-                                if weapon.magazine != None and weapon.magazine.flags["Ammo"] != None and weapon.magazine.flags["Ammo"].num != targetAmmo.num:
-                                    inventoryAmmo, unused = self.getTargetItem(weapon.magazine.flags["Ammo"].num, ["Inventory"])
+                        if weapon.magazine == None or weapon.magazine.quantity < weapon.shellCapacity or (targetAmmo != None and weapon.magazine.num != targetAmmo.num):
+                            if ammoIndex != -1 and not (reloadKey == "All" and ammoKey == None and weapon.magazine != None and weapon.magazine.num != targetAmmo.num):
+                                if weapon.magazine != None and weapon.magazine.num != targetAmmo.num:
+                                    inventoryAmmo, unused = playerCopy.getTargetItem(weapon.magazine.num, ["Inventory"])
                                     if inventoryAmmo != None:
-                                        inventoryAmmo.quantity += weapon.magazine.flags["Ammo"].quantity
+                                        inventoryAmmo.quantity += weapon.magazine.quantity
                                     else:
-                                        self.itemDict["Ammo"].append(weapon.magazine.flags["Ammo"])
-                                    weapon.magazine.flags["Ammo"] = None
-                                    
+                                        playerCopy.itemDict["Ammo"].append(weapon.magazine)
+                                    weapon.magazine = None
+
                                 alreadyLoadedCount = 0
-                                if weaponMagazine.flags["Ammo"] != None:
-                                    alreadyLoadedCount = weaponMagazine.flags["Ammo"].quantity
-                                reloadQuantity = weaponMagazine.shellCapacity - alreadyLoadedCount
+                                if weapon.magazine != None:
+                                    alreadyLoadedCount = weapon.magazine.quantity
+                                reloadQuantity = weapon.shellCapacity - alreadyLoadedCount
                                 if reloadQuantity > targetAmmo.quantity:
                                     reloadQuantity = targetAmmo.quantity
-                                if weaponMagazine.flags["Ammo"] == None:
+                                if weapon.magazine == None:
                                     splitItem = copy.deepcopy(targetAmmo)
                                     splitItem.quantity = reloadQuantity
-                                    weaponMagazine.flags["Ammo"] = splitItem
+                                    weapon.magazine = splitItem
                                 else:
-                                    weaponMagazine.flags["Ammo"].quantity += reloadQuantity
-                                    
-                                weapon.magazine = weaponMagazine
+                                    weapon.magazine.quantity += reloadQuantity
                                 ammoCheck = True
+                                magazineCheck = None
                                 reloadCount += 1
                                 if reloadWeapon == None:
                                     reloadWeapon = weapon
-                                elif reloadWeapon.num != weapon.num:
+                                elif reloadWeapon != "Multiple" and reloadWeapon.num != weapon.num:
                                     reloadWeapon = "Multiple"
 
-                if targetAmmo != None:
-                    if reloadQuantity >= targetAmmo.quantity:
-                        del self.itemDict["Ammo"][ammoIndex]
+                    # Magazine Weapons #
                     else:
-                        targetAmmo.quantity -= reloadQuantity
-                if targetMagazine != None and ammoCheck == True and heldMagazineCheck == True:
-                    if targetMagazine in self.itemDict["Ammo"]:
-                        magazineIndex = self.itemDict["Ammo"].index(targetMagazine)
-                        del self.itemDict["Ammo"][magazineIndex] 
-            
-            if requireWeapon != None and magazineCheck == False and reloadCount == 0 and not (requireWeapon.shellCapacity == None and requireWeapon.magazine != None):
-                displayString = "It requires a " + requireWeapon.ammoType + "."
-                displayCode = "14w" + str(len(requireWeapon.ammoType)) + "w1y"
-                if requireWeapon.shellCapacity == None:
-                    displayString = "You don't have a " + requireWeapon.ammoType + " magazine."
-                    displayCode = "7w1y9w" + str(len(requireWeapon.ammoType)) + "w9w1y"
+                        targetMagazine, magazineIndex = playerCopy.ammoCheck(weapon.ammoType, None, True)
+                        if magazineIndex != -1:
+                            magazineCheck = True
+                        else:
+                            requireWeapon = weapon
+                        if weapon.magazine != None or magazineIndex != -1:
+                            targetAmmo, ammoIndex = playerCopy.ammoCheck(weapon.ammoType)
+                            if ammoKey != None:
+                                targetAmmo, ammoIndex = playerCopy.ammoCheck(weapon.ammoType, ammoKey)
+                            elif reloadTargetShiftCheck == True:
+                                targetAmmo, ammoIndex = playerCopy.ammoCheck(weapon.ammoType, reloadKey)
+
+                            if ammoIndex != -1 and not (reloadKey == "All" and ammoKey == None and weapon.magazine != None and weapon.magazine.flags["Ammo"] != None and weapon.magazine.flags["Ammo"].num != targetAmmo.num):
+                                if weapon.magazine == None or weapon.magazine.flags["Ammo"].quantity < weapon.magazine.shellCapacity or weapon.isLoaded(playerCopy.itemDict["Ammo"]) == False or (targetAmmo != None and weapon.magazine != None and targetAmmo.num != weapon.magazine.flags["Ammo"].num):
+                                    weaponMagazine = weapon.magazine
+                                    if weaponMagazine == None:
+                                        weaponMagazine = targetMagazine
+                                        heldMagazineCheck = True
+                                    elif weaponMagazine != None and targetMagazine != None and weaponMagazine.shellCapacity < targetMagazine.shellCapacity:
+                                        playerCopy.itemDict["Ammo"].append(weaponMagazine)
+                                        if weaponMagazine.flags["Ammo"] != None:
+                                            heldAmmo, unused = playerCopy.getTargetItem(weaponMagazine.flags["Ammo"].num, ["Inventory"])
+                                            if heldAmmo != None:
+                                                heldAmmo.quantity += weaponMagazine.flags["Ammo"].quantity
+                                            else:
+                                                playerCopy.itemDict["Ammo"].append(weaponMagazine.flags["Ammo"])
+                                            weaponMagazine.flags["Ammo"] = None
+                                        weaponMagazine = targetMagazine
+
+                                    if weapon.magazine != None and weapon.magazine.flags["Ammo"] != None and weapon.magazine.flags["Ammo"].num != targetAmmo.num:
+                                        inventoryAmmo, unused = playerCopy.getTargetItem(weapon.magazine.flags["Ammo"].num, ["Inventory"])
+                                        if inventoryAmmo != None:
+                                            inventoryAmmo.quantity += weapon.magazine.flags["Ammo"].quantity
+                                        else:
+                                            playerCopy.itemDict["Ammo"].append(weapon.magazine.flags["Ammo"])
+                                        weapon.magazine.flags["Ammo"] = None
+                                        
+                                    alreadyLoadedCount = 0
+                                    if weaponMagazine.flags["Ammo"] != None:
+                                        alreadyLoadedCount = weaponMagazine.flags["Ammo"].quantity
+                                    reloadQuantity = weaponMagazine.shellCapacity - alreadyLoadedCount
+                                    if reloadQuantity > targetAmmo.quantity:
+                                        reloadQuantity = targetAmmo.quantity
+                                    if weaponMagazine.flags["Ammo"] == None:
+                                        splitItem = copy.deepcopy(targetAmmo)
+                                        splitItem.quantity = reloadQuantity
+                                        weaponMagazine.flags["Ammo"] = splitItem
+                                    else:
+                                        weaponMagazine.flags["Ammo"].quantity += reloadQuantity
+                                        
+                                    weapon.magazine = weaponMagazine
+                                    ammoCheck = True
+                                    reloadCount += 1
+                                    if reloadWeapon == None:
+                                        reloadWeapon = weapon
+                                    elif reloadWeapon.num != weapon.num:
+                                        reloadWeapon = "Multiple"
+
+                    if targetAmmo != None:
+                        if reloadQuantity >= targetAmmo.quantity:
+                            del playerCopy.itemDict["Ammo"][ammoIndex]
+                        else:
+                            targetAmmo.quantity -= reloadQuantity
+                    if targetMagazine != None and ammoCheck == True and heldMagazineCheck == True:
+                        if targetMagazine in playerCopy.itemDict["Ammo"]:
+                            magazineIndex = playerCopy.itemDict["Ammo"].index(targetMagazine)
+                            del playerCopy.itemDict["Ammo"][magazineIndex] 
+                
+                if requireWeapon != None and magazineCheck == False and reloadCount == 0 and not (requireWeapon.shellCapacity == None and requireWeapon.magazine != None):
+                    displayString = "It requires a " + requireWeapon.ammoType + "."
+                    displayCode = "14w" + str(len(requireWeapon.ammoType)) + "w1y"
+                    if requireWeapon.shellCapacity == None:
+                        displayString = "You don't have a " + requireWeapon.ammoType + " magazine."
+                        displayCode = "7w1y9w" + str(len(requireWeapon.ammoType)) + "w9w1y"
+                    if blankCheck == False : console.lineList.insert(0, {"Blank": True})
+                    console.lineList.insert(0, {"String":displayString, "Code":displayCode})
+                elif reloadCount == 0 and reloadKey != "All":
+                    if ammoKey != None and targetAmmo == None:
+                        if blankCheck == False : console.lineList.insert(0, {"Blank": True})
+                        console.lineList.insert(0, {"String":"You don't have that ammo.", "Code":"7w1y16w1y"})
+                    elif ammoKey == None and targetAmmo == None:
+                        if blankCheck == False : console.lineList.insert(0, {"Blank": True})
+                        console.lineList.insert(0, {"String":"You don't have any ammo.", "Code":"7w1y15w1y"})
+                    else:
+                        if blankCheck == False : console.lineList.insert(0, {"Blank": True})
+                        console.lineList.insert(0, {"String":"It's already loaded.", "Code":"2w1y16w1y"})
+                elif reloadCount == 0 and reloadKey == "All":
+                    if ammoKey != None and targetAmmo == None:
+                        if blankCheck == False : console.lineList.insert(0, {"Blank": True})
+                        console.lineList.insert(0, {"String":"You don't have that ammo.", "Code":"7w1y16w1y"})
+                    elif ammoKey == None and targetAmmo == None:
+                        if blankCheck == False : console.lineList.insert(0, {"Blank": True})
+                        console.lineList.insert(0, {"String":"You don't have any ammo.", "Code":"7w1y15w1y"})
+                    elif gunInventoryCount == 1:
+                        if blankCheck == False : console.lineList.insert(0, {"Blank": True})
+                        console.lineList.insert(0, {"String":"It's already loaded.", "Code":"2w1y16w1y"})
+                    else:
+                        if blankCheck == False : console.lineList.insert(0, {"Blank": True})
+                        console.lineList.insert(0, {"String":"Your weapons are already loaded.", "Code":"31w1y"})
+                elif reloadCount == 0 and ammoCheck == False:
+                    thatString = "any"
+                    if ammoKey != None:
+                        thatString = "that"
+                    if blankCheck == False : console.lineList.insert(0, {"Blank": True})
+                    console.lineList.insert(0, {"String":"You don't have " + thatString + " ammo.", "Code":"7w1y7w" + str(len(thatString)) + "w5w1y"})
+                elif reloadWeapon == "Multiple":
+                    actionFlags = {"Reload List":reloadList, "Reload Key":reloadKey, "Ammo Key":ammoKey, "Reload Target Shift Check":reloadTargetShiftCheck}
+                    self.actionList.append(Action("Reload", actionFlags))
+                    
+                    if blankCheck == False : console.lineList.insert(0, {"Blank": True})
+                    console.lineList.insert(0, {"String":"You start reloading some weapons..", "Code":"32w2y"})
+                elif reloadWeapon != None:
+                    actionFlags = {"Reload List":reloadList, "Reload Key":reloadKey, "Ammo Key":ammoKey, "Reload Target Shift Check":reloadTargetShiftCheck}
+                    self.actionList.append(Action("Reload", actionFlags))
+
+                    countString = ""
+                    countCode = ""
+                    if reloadWeapon != "Multiple" and reloadCount > 1:
+                        countString = " (" + str(reloadCount) + ")"
+                        countCode = "2r" + str(len(str(reloadCount))) + "w1r"
+                    if blankCheck == False : console.lineList.insert(0, {"Blank": True})
+                    console.lineList.insert(0, {"String":"You start reloading " + reloadWeapon.prefix.lower() + " " + reloadWeapon.name["String"] + ".." + countString, "Code":"20w" + str(len(reloadWeapon.prefix)) + "w1w" + reloadWeapon.name["Code"] + "2y" + countCode})
+
+    def unloadCheck(self, console, galaxyList, player, currentRoom, unloadKey, unloadSlotKey, ammoKey):
+        if currentRoom.isLit(galaxyList, player) == False:
+            console.lineList.insert(0, {"Blank": True})
+            console.lineList.insert(0, {"String": "It's too dark to see.", "Code":"2w1y17w1y"})
+
+        else:
+            blankCheck = False
+            if len(self.actionList) > 0:
+                self.actionList = []
+                blankCheck = True
                 console.lineList.insert(0, {"Blank": True})
+                console.lineList.insert(0, {"String": "You stop what you're doing.", "Code":"17w1y8w1y"})
+
+            unloadSlot = None
+            if unloadSlotKey != None:
+                if unloadSlotKey in ["left", "lef", "le", "l", "1"] : unloadSlot = "Left Hand"
+                else : unloadSlot = "Right Hand"
+                if unloadSlot != self.dominantHand and self.gearDict[unloadSlot] == None and self.gearDict[self.dominantHand] != None and self.gearDict[self.dominantHand].twoHanded == True:
+                    unloadSlot = self.getOppositeHand(unloadSlot)
+
+            unloadList = []
+            targetItem = None
+            roomItem = None
+            if unloadSlot != None:
+                if self.gearDict[unloadSlot] != None:
+                    if self.gearDict[unloadSlot].pocket == "Weapon" and self.gearDict[unloadSlot].ranged == True:
+                        unloadList.append(self.gearDict[unloadSlot])
+                    else:
+                        targetItem = self.gearDict[unloadSlot]
+            elif unloadKey == "All":
+                if self.gearDict[self.dominantHand] != None and self.gearDict[self.dominantHand].pocket == "Weapon" and self.gearDict[self.dominantHand].ranged == True:
+                    unloadList.append(self.gearDict[self.dominantHand])
+                if self.gearDict[self.getOppositeHand(self.dominantHand)] != None and self.gearDict[self.getOppositeHand(self.dominantHand)].pocket == "Weapon" and self.gearDict[self.getOppositeHand(self.dominantHand)].ranged == True:
+                    unloadList.append(self.gearDict[self.getOppositeHand(self.dominantHand)])
+                for item in self.itemDict["Weapon"]:
+                    if item.ranged == True:
+                        unloadList.append(item)
+            elif unloadKey == None:
+                if self.gearDict[self.dominantHand] != None:
+                    if self.gearDict[self.dominantHand].pocket == "Weapon" and self.gearDict[self.dominantHand].ranged == True:
+                        unloadList.append(self.gearDict[self.dominantHand])
+                if self.gearDict[self.getOppositeHand(self.dominantHand)] != None:
+                    if self.gearDict[self.getOppositeHand(self.dominantHand)].pocket == "Weapon" and self.gearDict[self.getOppositeHand(self.dominantHand)].ranged == True:
+                        unloadList.append(self.gearDict[self.getOppositeHand(self.dominantHand)])
+            else:
+                if self.gearDict[self.dominantHand] != None and unloadKey in self.gearDict[self.dominantHand].keyList:
+                    if self.gearDict[self.dominantHand].pocket == "Weapon" and self.gearDict[self.dominantHand].ranged == True:
+                        unloadList.append(self.gearDict[self.dominantHand])
+                    else:
+                        targetItem = self.gearDict[self.dominantHand]
+                elif self.gearDict[self.getOppositeHand(self.dominantHand)] != None and unloadKey in self.gearDict[self.getOppositeHand(self.dominantHand)].keyList:
+                    if self.gearDict[self.getOppositeHand(self.dominantHand)].pocket == "Weapon" and self.gearDict[self.getOppositeHand(self.dominantHand)].ranged == True:
+                        unloadList.append(self.gearDict[self.getOppositeHand(self.dominantHand)])
+                    else:
+                        targetItem = self.gearDict[self.getOppositeHand(self.dominantHand)]
+                elif self.getTargetItem(unloadKey, ["Gear"])[0] != None and unloadKey in self.getTargetItem(unloadKey, ["Gear"])[0].keyList:
+                    searchItem = self.getTargetItem(unloadKey, ["Gear"])[0]
+                    if searchItem.pocket == "Weapon" and searchItem.ranged == True:
+                        unloadList.append(searchItem)
+                    else:
+                        targetItem = searchItem
+                elif self.getTargetItem(unloadKey, ["Inventory"])[0] != None:
+                    searchItem = self.getTargetItem(unloadKey, ["Inventory"])[0]
+                    if searchItem.pocket == "Weapon" and searchItem.ranged == True:
+                        unloadList.append(searchItem)
+                    else:
+                        targetItem = searchItem
+                elif currentRoom.getTargetObject(unloadKey, ["Items"]) != None:
+                    searchItem = currentRoom.getTargetObject(unloadKey, ["Items"])
+                    if searchItem.pocket == "Weapon" and searchItem.ranged == True:
+                        unloadList.append(searchItem)
+                    else:
+                        targetItem = searchItem
+                    roomItem = searchItem
+
+            alreadyUnloadedCheck = False
+            if unloadKey == "All" and len(unloadList) > 0 and ammoKey == None:
+                alreadyUnloadedCheck = True
+                for weapon in unloadList:
+                    if weapon.isEmpty() == False:
+                        alreadyUnloadedCheck = False
+                        break
+
+            if unloadKey not in ["All", None] and len(unloadList) == 0 and targetItem != None and targetItem.ranged == False:
+                if blankCheck == False : console.lineList.insert(0, {"Blank": True})
+                console.lineList.insert(0, {"String":"You can't unload that.", "Code":"7w1y13w1y"})
+            elif alreadyUnloadedCheck == True:
+                displayString = "It's already unloaded."
+                displayCode = "2w1y18w1y"
+                if len(unloadList) > 1:
+                    displayString = "Your weapons are already unloaded."
+                    displayCode = "33w1y"
+                if blankCheck == False : console.lineList.insert(0, {"Blank": True})
                 console.lineList.insert(0, {"String":displayString, "Code":displayCode})
-            elif reloadCount == 0 and reloadKey != "All":
-                if ammoKey != None and targetAmmo == None:
-                    console.lineList.insert(0, {"Blank": True})
-                    console.lineList.insert(0, {"String":"You don't have that ammo.", "Code":"7w1y16w1y"})
-                else:
-                    console.lineList.insert(0, {"Blank": True})
-                    console.lineList.insert(0, {"String":"It's already loaded.", "Code":"2w1y16w1y"})
-            elif reloadCount == 0 and reloadKey == "All":
-                if ammoKey != None and targetAmmo == None:
-                    console.lineList.insert(0, {"Blank": True})
-                    console.lineList.insert(0, {"String":"You don't have that ammo.", "Code":"7w1y16w1y"})
-                elif gunInventoryCount == 1:
-                    console.lineList.insert(0, {"Blank": True})
-                    console.lineList.insert(0, {"String":"It's already loaded.", "Code":"2w1y16w1y"})
-                else:
-                    console.lineList.insert(0, {"Blank": True})
-                    console.lineList.insert(0, {"String":"Your weapons are already loaded.", "Code":"31w1y"})
-            elif reloadCount == 0 and ammoCheck == False:
-                thatString = "any"
-                if ammoKey != None:
-                    thatString = "that"
-                console.lineList.insert(0, {"Blank": True})
-                console.lineList.insert(0, {"String":"You don't have " + thatString + " ammo.", "Code":"7w1y7w" + str(len(thatString)) + "w5w1y"})
-            elif reloadWeapon == "Multiple":
-                console.lineList.insert(0, {"Blank": True})
-                console.lineList.insert(0, {"String":"You reload some weapons.", "Code":"23w1y"})
-            elif reloadWeapon != None:
-                countString = ""
-                countCode = ""
-                if reloadWeapon != "Multiple" and reloadCount > 1:
-                    countString = " (" + str(reloadCount) + ")"
-                    countCode = "2r" + str(len(str(reloadCount))) + "w1r"
-                console.lineList.insert(0, {"Blank": True})
-                console.lineList.insert(0, {"String":"You reload " + reloadWeapon.prefix.lower() + " " + reloadWeapon.name["String"] + "." + countString, "Code":"11w" + str(len(reloadWeapon.prefix)) + "w1w" + reloadWeapon.name["Code"] + "1y" + countCode})
+            elif unloadKey == "All" and len(unloadList) == 0:
+                if blankCheck == False : console.lineList.insert(0, {"Blank": True})
+                console.lineList.insert(0, {"String":"You don't have anything to unload.", "Code":"7w1y25w1y"})
+            elif unloadKey not in ["All", None] and len(unloadList) == 0 and targetItem == None:
+                if blankCheck == False : console.lineList.insert(0, {"Blank": True})
+                console.lineList.insert(0, {"String":"You can't find it.", "Code":"7w1y9w1y"})
+            elif (unloadSlot != None or unloadKey not in ["All", None]) and len(unloadList) == 0 and targetItem != None and not (unloadKey not in ["All", None] and unloadSlotKey == None and ammoKey == None):
+                if blankCheck == False : console.lineList.insert(0, {"Blank": True})
+                console.lineList.insert(0, {"String":"You can't unload that.", "Code":"7w1y13w1y"})
+            elif unloadSlot != None and len(unloadList) == 0 and targetItem == None:
+                if blankCheck == False : console.lineList.insert(0, {"Blank": True})
+                console.lineList.insert(0, {"String":"You aren't holding anything.", "Code":"8w1y18w1y"})
 
-    def unloadCheck(self, console, unloadKey):
-        pass
-        # unload held guns
-        # unload guns in inventory
-        # unload guns on ground
+            else:
+                player = copy.deepcopy(self)
+                unloadWeapon = None
+                unloadCount = 0
+                tooMuchWeightCheck = False
+                for weaponIndex, weapon in enumerate(unloadList):
+                    weapon = copy.deepcopy(weapon)
+                    
+                    # Non-Magazine Weapons #
+                    if weapon.shellCapacity != None and weapon.magazine != None:
+                        if not (ammoKey != None and ammoKey not in weapon.magazine.keyList):
+                            getQuantity = weapon.magazine.quantity
+                            if roomItem != None and player.getWeight() + roomItem.getWeight() > player.getMaxWeight():
+                                getQuantity = 0
+                                tooMuchWeightCheck = True
+                                if player.getWeight() + roomItem.getWeight(False) <= player.getMaxWeight():
+                                    getQuantity = int((player.getMaxWeight() - player.getWeight()) / roomItem.getWeight(False))
 
+                            if getQuantity > 0:
+                                inventoryAmmo, unused = player.getTargetItem(weapon.magazine.num, ["Inventory"])
+                                if inventoryAmmo != None:
+                                    inventoryAmmo.quantity += getQuantity
+                                else:
+                                    splitItem = copy.deepcopy(weapon.magazine)
+                                    splitItem.quantity = getQuantity
+                                    player.itemDict["Ammo"].append(splitItem)
+                                if getQuantity == weapon.magazine.quantity:
+                                    weapon.magazine = None
+                                else:
+                                    weapon.magazine.quantity -= getQuantity
+
+                                if unloadWeapon == None:
+                                    unloadWeapon = weapon
+                                elif unloadWeapon != "Multiple" and unloadWeapon.num != weapon.num:
+                                    unloadWeapon = "Multiple"
+                                unloadCount += 1
+
+                    # Magazine Weapons #
+                    elif weapon.magazine != None:
+                        if not (ammoKey != None and weapon.magazine.flags["Ammo"] != None and ammoKey not in weapon.magazine.flags["Ammo"].keyList):
+                            getQuantity = 0
+                            if weapon.magazine.flags["Ammo"] != None:
+                                getQuantity = weapon.magazine.flags["Ammo"].quantity
+                            if roomItem != None and weapon.magazine.flags["Ammo"] != None and player.getWeight() + weapon.magazine.flags["Ammo"].getWeight() > player.getMaxWeight():
+                                getQuantity = 0
+                                tooMuchWeightCheck = True
+                                if player.getWeight() + weapon.magazine.flags["Ammo"].getWeight(False) <= player.getMaxWeight():
+                                    getQuantity = int((player.getMaxWeight() - player.getWeight()) / weapon.magazine.flags["Ammo"].getWeight(False))
+
+                            if getQuantity > 0:
+                                inventoryAmmo, unused = player.getTargetItem(weapon.magazine.flags["Ammo"].num, ["Inventory"])
+                                if inventoryAmmo != None:
+                                    inventoryAmmo.quantity += getQuantity
+                                else:
+                                    splitItem = copy.deepcopy(weapon.magazine.flags["Ammo"])
+                                    splitItem.quantity = getQuantity
+                                    player.itemDict["Ammo"].append(splitItem)
+                                if getQuantity == weapon.magazine.flags["Ammo"].quantity:
+                                    weapon.magazine.flags["Ammo"] = None
+                                else:
+                                    weapon.magazine.flags["Ammo"].quantity -= getQuantity
+
+                            magazineCheck = False
+                            if roomItem != None and player.getWeight() + weapon.magazine.getWeight() > player.getMaxWeight():
+                                tooMuchWeightCheck = True
+                            else:
+                                player.itemDict["Ammo"].append(weapon.magazine)
+                                weapon.magazine = None
+                                magazineCheck = True
+                            
+                            if getQuantity > 0 or magazineCheck == True:
+                                if unloadWeapon == None:
+                                    unloadWeapon = weapon
+                                elif unloadWeapon != "Multiple" and unloadWeapon.num != weapon.num:
+                                    unloadWeapon = "Multiple"
+                                unloadCount += 1
+
+                if ammoKey != None and unloadCount == 0:
+                    if blankCheck == False : console.lineList.insert(0, {"Blank": True})
+                    console.lineList.insert(0, {"String":"You can't find that ammo.", "Code":"7w1y16w1y"})
+                elif unloadCount == 0 and tooMuchWeightCheck == True:
+                    if blankCheck == False : console.lineList.insert(0, {"Blank": True})
+                    console.lineList.insert(0, {"String":"You can't carry that much weight.", "Code":"7w1y24w1y"})
+                elif unloadKey not in ["All", None] and unloadCount == 0 and len(unloadList) == 0:
+                    if blankCheck == False : console.lineList.insert(0, {"Blank": True})
+                    console.lineList.insert(0, {"String":"You can't unload that.", "Code":"7w1y13w1y"})
+                elif unloadKey not in ["All", None] and unloadCount == 0 and unloadList[0].isEmpty():
+                    if blankCheck == False : console.lineList.insert(0, {"Blank": True})
+                    console.lineList.insert(0, {"String":"It's already unloaded.", "Code":"2w1y18w1y"})
+                elif unloadKey == "All" and unloadCount == 0 and unloadList[0].isEmpty():
+                    if blankCheck == False : console.lineList.insert(0, {"Blank": True})
+                    console.lineList.insert(0, {"String":"Your weapons are already unloaded.", "Code":"33w1y"})
+                elif unloadWeapon == "Multiple":
+                    actionFlags = {"Unload List":unloadList, "Ammo Key":ammoKey, "Room Item":roomItem}
+                    self.actionList.append(Action("Unload", actionFlags))
+
+                    if blankCheck == False : console.lineList.insert(0, {"Blank": True})
+                    console.lineList.insert(0, {"String":"You start unloading some weapons..", "Code":"32w2y"})
+                elif unloadWeapon != None:
+                    actionFlags = {"Unload List":unloadList, "Ammo Key":ammoKey, "Room Item":roomItem}
+                    self.actionList.append(Action("Unload", actionFlags))
+
+                    countString = ""
+                    countCode = ""
+                    if unloadWeapon != "Multiple" and unloadCount > 1:
+                        countString = " (" + str(unloadCount) + ")"
+                        countCode = "2r" + str(len(str(unloadCount))) + "w1r"
+                    if blankCheck == False : console.lineList.insert(0, {"Blank": True})
+                    console.lineList.insert(0, {"String":"You start unloading " + unloadWeapon.prefix.lower() + " " + unloadWeapon.name["String"] + ".." + countString, "Code":"20w" + str(len(unloadWeapon.prefix)) + "w1w" + unloadWeapon.name["Code"] + "2y" + countCode})
+                    
     def displayInventory(self, console, galaxyList, currentRoom, targetPocketKey):
         targetPocket = None
         if targetPocketKey in ["gear", "gea", "ge", "g"]:
@@ -1475,6 +1781,13 @@ class Player:
                     console.lineList.insert(0, {"String":itemDisplayString + weaponStatusString + countString + modString, "Code":itemDisplayCode + weaponStatusCode + countCode + modCode})
                     
     def wearCheck(self, console, targetItemKey, count, targetGearSlotIndex=None):
+        blankCheck = False
+        if len(self.actionList) > 0:
+            self.actionList = []
+            blankCheck = True
+            console.lineList.insert(0, {"Blank": True})
+            console.lineList.insert(0, {"String": "You stop what you're doing.", "Code":"17w1y8w1y"})
+
         wearItem = None
         otherItem = None
         if targetItemKey != "All":
@@ -1489,10 +1802,10 @@ class Player:
                         break
         
         if targetItemKey != "All" and otherItem != None:
-            console.lineList.insert(0, {"Blank": True})
+            if blankCheck == False : console.lineList.insert(0, {"Blank": True})
             console.lineList.insert(0, {"String":"You can't wear that.", "Code":"7w1y11w1y"})
         elif targetItemKey != "All" and wearItem == None:
-            console.lineList.insert(0, {"Blank": True})
+            if blankCheck == False : console.lineList.insert(0, {"Blank": True})
             console.lineList.insert(0, {"String":"You can't find it.", "Code":"7w1y9w1y"})
         elif targetItemKey != "All" and wearItem.pocket == "Weapon":
             tempCount = count
@@ -1574,21 +1887,21 @@ class Player:
 
             # Messages #
             if wearCount == 0 and len(self.itemDict["Armor"]) == 0:
-                console.lineList.insert(0, {"Blank": True})
+                if blankCheck == False : console.lineList.insert(0, {"Blank": True})
                 console.lineList.insert(0, {"String":"You don't have any gear to wear.", "Code":"7w1y23w1y"})    
             elif wearCount == 0:
-                console.lineList.insert(0, {"Blank": True})
+                if blankCheck == False : console.lineList.insert(0, {"Blank": True})
                 console.lineList.insert(0, {"String":"You are already wearing something.", "Code":"33w1y"})    
             elif len(previousWornItemList) > 0 and wearCount > 1:
-                console.lineList.insert(0, {"Blank": True})
+                if blankCheck == False : console.lineList.insert(0, {"Blank": True})
                 console.lineList.insert(0, {"String":"You switch around some of your gear.", "Code":"35w1y"})
             elif len(previousWornItemList) == 0 and wearCount > 1 and wearItem == "Multiple":
-                console.lineList.insert(0, {"Blank": True})
+                if blankCheck == False : console.lineList.insert(0, {"Blank": True})
                 console.lineList.insert(0, {"String":"You put on some armor.", "Code":"21w1y"})
             elif len(previousWornItemList) == 1 and isinstance(wearItem, Item):
                 wearString = "You remove " + previousWornItemList[0].prefix.lower() + " " + previousWornItemList[0].name["String"] + " and wear " + wearItem.prefix.lower() + " " + wearItem.name["String"] + "."
                 wearCode = "11w" + str(len(previousWornItemList[0].prefix)) + "w1w" + previousWornItemList[0].name["Code"] + "10w" + str(len(wearItem.prefix)) + "w1w" + wearItem.name["Code"] + "1y"
-                console.lineList.insert(0, {"Blank": True})
+                if blankCheck == False : console.lineList.insert(0, {"Blank": True})
                 console.lineList.insert(0, {"String":wearString, "Code":wearCode})
             elif len(previousWornItemList) == 0 and isinstance(wearItem, Item):
                 wearString = "You wear " + wearItem.prefix.lower() + " " + wearItem.name["String"] + " on your " + wearItem.gearSlot.lower() + "."
@@ -1598,7 +1911,7 @@ class Player:
                 if wearItem != "Multiple" and wearCount > 1:
                     countString = " (" + str(wearCount) + ")"
                     countCode = "2r" + str(len(str(wearCount))) + "w1r"
-                console.lineList.insert(0, {"Blank": True})
+                if blankCheck == False : console.lineList.insert(0, {"Blank": True})
                 console.lineList.insert(0, {"String":wearString + countString, "Code":wearCode + countCode})
 
             # Wield Check #
@@ -1606,6 +1919,13 @@ class Player:
                 self.wieldCheck(console, "All", None, 2, False)
 
     def wieldCheck(self, console, targetItemKey, targetGearSlotKey, count, blankCheck=True):
+        actionBlankCheck = False
+        if len(self.actionList) > 0:
+            self.actionList = []
+            actionBlankCheck = True
+            console.lineList.insert(0, {"Blank": True})
+            console.lineList.insert(0, {"String": "You stop what you're doing.", "Code":"17w1y8w1y"})
+
         wieldItem = None
         checkItem = None
         for pocket in self.itemDict:
@@ -1618,13 +1938,13 @@ class Player:
 
         if targetItemKey == "All" and (wieldItem == None or wieldItem.pocket != "Weapon"):
             if blankCheck == True:
-                console.lineList.insert(0, {"Blank": True})
+                if actionBlankCheck == False : console.lineList.insert(0, {"Blank": True})
                 console.lineList.insert(0, {"String":"You don't have anything to wield.", "Code":"7w1y24w1y"})
         elif wieldItem == None:
-            if blankCheck == True : console.lineList.insert(0, {"Blank": True})
+            if blankCheck == True and actionBlankCheck == False : console.lineList.insert(0, {"Blank": True})
             console.lineList.insert(0, {"String":"You can't find it.", "Code":"7w1y9w1y"})
         elif wieldItem.pocket != "Weapon":
-            if blankCheck == True : console.lineList.insert(0, {"Blank": True})
+            if blankCheck == True and actionBlankCheck == False : console.lineList.insert(0, {"Blank": True})
             console.lineList.insert(0, {"String":"You can't wield that.", "Code":"7w1y12w1y"})
 
         else:
@@ -1692,14 +2012,14 @@ class Player:
 
             if wieldCount == 0:
                 if blankCheck == True:
-                    console.lineList.insert(0, {"Blank": True})
+                    if actionBlankCheck == False : console.lineList.insert(0, {"Blank": True})
                     console.lineList.insert(0, {"String":"You're already holding something.", "Code":"3w1y28w1y"})
             elif wieldItem == "Multiple":
                 if slotItem == None:
-                    if blankCheck == True : console.lineList.insert(0, {"Blank": True})
+                    if blankCheck == True and actionBlankCheck == False : console.lineList.insert(0, {"Blank": True})
                     console.lineList.insert(0, {"String":"You hold some weapons in your hands.", "Code":"35w1y"})
                 else:
-                    if blankCheck == True : console.lineList.insert(0, {"Blank": True})
+                    if blankCheck == True and actionBlankCheck == False : console.lineList.insert(0, {"Blank": True})
                     console.lineList.insert(0, {"String":"You switch some weapons around.", "Code":"30w1y"})
             elif slotItem == None:
                 countString = ""
@@ -1715,7 +2035,7 @@ class Player:
                         handsCode = "5w"
                 displayString = "You hold " + wieldItem.prefix.lower() + " " + wieldItem.name["String"] + countString + " in your " + handsString + "."
                 displayCode = "9w" + str(len(wieldItem.prefix)) + "w1w" + wieldItem.name["Code"] + countCode + "9w" + handsCode + "1y"
-                if blankCheck == True : console.lineList.insert(0, {"Blank": True})
+                if blankCheck == True and actionBlankCheck == False : console.lineList.insert(0, {"Blank": True})
                 console.lineList.insert(0, {"String":displayString, "Code":displayCode})
             else:
                 slotString = "some gear"
@@ -1743,10 +2063,17 @@ class Player:
                         wieldCountCode = "2r1w1r"
                 displayString = "You remove " + slotString + slotCountString + " and wield " + wieldString + "." + wieldCountString
                 displayCode = "11w" + slotCode + slotCountCode + "11w" + wieldCode + "1y" + wieldCountCode
-                if blankCheck == True : console.lineList.insert(0, {"Blank": True})
+                if blankCheck == True and actionBlankCheck == False : console.lineList.insert(0, {"Blank": True})
                 console.lineList.insert(0, {"String":displayString, "Code":displayCode})
                            
     def removeCheck(self, console, targetItemKey, count, targetGearSlotIndex=None):
+        blankCheck = False
+        if len(self.actionList) > 0:
+            self.actionList = []
+            blankCheck = True
+            console.lineList.insert(0, {"Blank": True})
+            console.lineList.insert(0, {"String": "You stop what you're doing.", "Code":"17w1y8w1y"})
+
         removeItem = None
         if targetItemKey != "All":
             for gearSlot in self.gearDict:
@@ -1763,7 +2090,7 @@ class Player:
                             break
         
         if targetItemKey != "All" and removeItem == None:
-            console.lineList.insert(0, {"Blank": True})
+            if blankCheck == False : console.lineList.insert(0, {"Blank": True})
             console.lineList.insert(0, {"String":"You can't find it.", "Code":"7w1y9w1y"})
 
         else:
@@ -1806,7 +2133,7 @@ class Player:
             if removeCount == 0:
                 displayMessage = "You have nothing to remove."
                 displayCode = "26w1y"
-                console.lineList.insert(0, {"Blank": True})
+                if blankCheck == False : console.lineList.insert(0, {"Blank": True})
                 console.lineList.insert(0, {"String":displayMessage, "Code":displayCode})
             elif targetItemKey == "All" and count == "All":
                 displayString = "You remove all of your gear."
@@ -1814,10 +2141,10 @@ class Player:
                 if random.randrange(10) == 0:
                     displayString = "You strip down to your birthday suit."
                     displayCode = "36w1y"
-                console.lineList.insert(0, {"Blank": True})
+                if blankCheck == False : console.lineList.insert(0, {"Blank": True})
                 console.lineList.insert(0, {"String":displayString, "Code":displayCode})
             elif removeItem == "Multiple":
-                console.lineList.insert(0, {"Blank": True})
+                if blankCheck == False : console.lineList.insert(0, {"Blank": True})
                 console.lineList.insert(0, {"String":"You remove some gear.", "Code":"20w1y"})
             elif isinstance(removeItem, Item):
                 countString = ""
@@ -1825,7 +2152,7 @@ class Player:
                 if removeCount > 1:
                     countString = " (" + str(removeCount) + ")"
                     countCode = "2r" + str(len(str(removeCount))) + "w1r"
-                console.lineList.insert(0, {"Blank": True})
+                if blankCheck == False : console.lineList.insert(0, {"Blank": True})
                 displayString = "You remove " + removeItem.prefix + " " + removeItem.name["String"] + "." + countString
                 displayCode = "11w" + str(len(removeItem.prefix)) + "w1w" + removeItem.name["Code"] + "1y" + countCode
                 console.lineList.insert(0, {"String":displayString, "Code":displayCode})
@@ -1867,7 +2194,11 @@ class Player:
                     targetSlot = self.gearDict[gearSlot][slotIndex]
                 else:
                     targetSlot = self.gearDict[gearSlot]
-                if targetSlot != None:
+                if targetSlot == None:
+                    if self.debugDualWield == False and gearSlot == self.getOppositeHand(self.dominantHand) and self.gearDict[self.dominantHand] != None and self.gearDict[self.dominantHand].twoHanded == True:
+                        gearString = "[Two-Handed]"
+                        gearCode = "1r3ddw1y6ddw1r"
+                else:
                     if "Glowing" in targetSlot.flags and targetSlot.flags["Glowing"] == True:
                         modString = " (Glowing)"
                         modCode = "2y1w1dw1ddw1w2dw1ddw1y"
@@ -1883,6 +2214,13 @@ class Player:
                 console.lineList.insert(0, {"String":gearSlotString + ": " + gearString + weaponStatusString + modString, "Code":gearSlotCode + "2y" + gearCode + weaponStatusCode + modCode})
 
     def boardCheck(self, console, galaxyList, currentRoom, targetSpaceshipKey):
+        blankCheck = False
+        if len(self.actionList) > 0:
+            self.actionList = []
+            blankCheck = True
+            console.lineList.insert(0, {"Blank": True})
+            console.lineList.insert(0, {"String": "You stop what you're doing.", "Code":"17w1y8w1y"})
+
         targetSpaceship = None
         for spaceship in currentRoom.spaceshipList:
             if targetSpaceshipKey in spaceship.keyList:
@@ -1890,13 +2228,13 @@ class Player:
                 break
 
         if self.spaceship != None:
-            console.lineList.insert(0, {"Blank": True})
+            if blankCheck == False : console.lineList.insert(0, {"Blank": True})
             console.lineList.insert(0, {"String":"You are already inside.", "Code":"22w1y"})
         elif targetSpaceship == None:
-            console.lineList.insert(0, {"Blank": True})
+            if blankCheck == False : console.lineList.insert(0, {"Blank": True})
             console.lineList.insert(0, {"String":"You don't see anything like that.", "Code":"7w1y24w1y"})
         elif targetSpaceship.hatchPassword != None and self.hasKey(targetSpaceship.hatchPassword) == False:
-            console.lineList.insert(0, {"Blank": True})
+            if blankCheck == False : console.lineList.insert(0, {"Blank": True})
             console.lineList.insert(0, {"String":"You lack the proper key.", "Code":"23w1y"})
         
         else:
@@ -1904,7 +2242,7 @@ class Player:
             self.area = targetSpaceship.hatchLocation[0]
             self.room = targetSpaceship.hatchLocation[1]
 
-            console.lineList.insert(0, {"Blank": True})
+            if blankCheck == False : console.lineList.insert(0, {"Blank": True})
             console.lineList.insert(0, {"String":"The hatch opens and closes as you step inside.", "Code":"45w1y"})
             console.lineList.insert(0, {"Blank": True})
 
@@ -1948,6 +2286,15 @@ class Player:
                 elif self.gearDict[gearSlot] != None:
                     itemList.append(self.gearDict[gearSlot])
         return itemList
+
+    def getPocketList(self, lowerCheck=False):
+        pocketList = []
+        for pocket in self.itemDict:
+            if lowerCheck == True:
+                pocketList.append(pocket.lower())
+            else:
+                pocketList.append(pocket)
+        return pocketList
 
     def getWeight(self):
         currentWeight = 0.0

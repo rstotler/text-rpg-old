@@ -17,7 +17,7 @@ class Item:
 
         self.ranged = False
         self.ammoType = None
-        self.magazine = None # (Object) Magazine Item OR (Object) Ammo
+        self.magazine = None  # Guns with no magazine - Ammo Item Object, Guns with a magazine - Magazine Item Object
         self.shellCapacity = None
 
         self.containerList = None
@@ -139,7 +139,7 @@ class Item:
             elif num == 108:
                 self.name = {"String":"Rocket Launcher", "Code":"15w"}
                 self.pocket = "Weapon"
-                # self.twoHanded = True
+                self.twoHanded = True
                 self.ranged = True
                 self.shellCapacity = 1
                 self.ammoType = "Missile"
@@ -164,7 +164,7 @@ class Item:
                 self.ammoType = ".45"
                 self.shellCapacity = 12
             if num == 203:
-                self.name = {"String":".45 Round", "Code":"1y8w"}
+                self.name = {"String":".45 Standard Round", "Code":"1y17w"}
                 self.pocket = "Ammo"
                 self.ammoType = ".45"
             if num == 204:
@@ -310,6 +310,10 @@ class Item:
                     weaponStatusString, weaponStatusCode = itemData["ItemData"].getWeaponStatusString()
                     console.lineList.insert(0, {"String":displayString + weaponStatusString + modString + countString, "Code":displayCode + weaponStatusCode + modCode + countCode})
             
+        elif self.ranged == True:
+            displayString, displayCode = self.getWeaponStatusString()
+            console.lineList.insert(0, {"String": "Rounds:" + displayString, "Code":"6w1y" + displayCode})
+
     def lightInContainerCheck(self):
         if self.containerList != None:
             for item in self.containerList:
@@ -321,7 +325,7 @@ class Item:
     def getWeight(self, multiplyQuantity=True):
         if self.quantity == None:
             weight = self.weight + self.getContainerWeight()
-            if self.ranged == True and self.magazine != None:
+            if self.pocket == "Weapon" and self.ranged == True and self.magazine != None:
                 if self.magazine.shellCapacity == None and self.magazine.quantity != None:
                     weight += self.magazine.weight * self.magazine.quantity
                 else:
@@ -363,6 +367,15 @@ class Item:
             if self.shellCapacity != None and self.magazine != None and self.shellCapacity >= self.magazine.quantity:
                 return True
             elif self.shellCapacity == None and self.magazine != None and maxInventoryMagCapacity <= self.magazine.shellCapacity and "Ammo" in self.magazine.flags and self.magazine.flags["Ammo"] != None and self.magazine.flags["Ammo"].quantity >= self.magazine.shellCapacity:
+                return True
+        return False
+
+    def isEmpty(self):
+        if self.shellCapacity != None:
+            if self.magazine == None:
+                return True
+        else:
+            if self.magazine == None:
                 return True
         return False
 
