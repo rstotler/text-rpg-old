@@ -21,13 +21,13 @@ class InputBar:
 
     def processInput(self, keyName, game):
         if keyName == "up":
-            if self.previousInputIndex < len(self.previousInputList) - 1:
+            if game.keyboard.control == False and self.previousInputIndex < len(self.previousInputList) - 1:
                 self.previousInputIndex += 1
                 self.input = self.previousInputList[self.previousInputIndex]
                 self.inputBlinkerTimer = 0
 
         elif keyName == "down":
-            if self.previousInputIndex > -1:
+            if game.keyboard.control == False and self.previousInputIndex > -1:
                 self.previousInputIndex -= 1
                 self.inputBlinkerTimer = 0
                 if self.previousInputIndex > -1:

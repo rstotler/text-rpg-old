@@ -1,3 +1,6 @@
+from Components.Utility import appendKeyList
+from Components.Utility import getCountString
+
 class Item:
 
     def __init__(self, num, quantity=None):
@@ -115,7 +118,7 @@ class Item:
                 self.pocket = "Weapon"
             elif num == 104:
                 self.name = {"String":"Greatsword", "Code":"1w9ddw"}
-                self.keyList = ["great"]
+                appendKeyList(self.keyList, "great")
                 self.pocket = "Weapon"
                 self.twoHanded = True
             elif num == 105:
@@ -192,7 +195,7 @@ class Item:
         if self.name["String"] == "Debug Item":
             if num == 901:
                 self.name = {"String":"Silver Keycard", "Code":"1ddw1dw1w1ddw1dw1w8w"}
-                self.keyList = ["key", "card"]
+                appendKeyList(self.keyList, "card")
                 self.flags["Password List"] = ["COTU Spaceport"]
             elif num == 902:
                 self.prefix = "An"
@@ -222,22 +225,6 @@ class Item:
             if self.containerMaxLimit == None:
                 self.containerMaxLimit = 100.0
         
-        # Create Key List #
-        for index, word in enumerate(self.name["String"].split()):
-            if word.lower() not in self.keyList:
-                self.keyList.append(word.lower())
-            if word[0] == '.':
-                self.keyList.append(word.lower()[1::])
-            if index < len(self.name["String"].split()) - 1:
-                self.keyList.append(' '.join(self.name["String"].lower().split()[index:index + 2]))
-            if len(word) > 2 and '-' in word:
-                for subWord in word.split('-'):
-                    self.keyList.append(subWord.lower())
-            for i in range(4):
-                if len(word) > i + 3:
-                    self.keyList.append(word.lower()[0:3 + i])
-        self.keyList.append(self.name["String"].lower())
-
         # Ammo & Magazine Setup #
         if self.pocket == "Ammo":
             if self.shellCapacity != None:
@@ -254,6 +241,9 @@ class Item:
                     self.keyList.append(self.ammoType[1::] + " magazine")
                 if "round" in self.keyList:
                     del self.keyList[self.keyList.index("round")]
+
+        # Create Key List #
+        appendKeyList(self.keyList, self.name["String"].lower())
 
         if "Code" not in self.name:
             self.name["Code"] = str(len(self.name["String"])) + "w"
@@ -302,11 +292,9 @@ class Item:
                     if "Glowing" in itemData["ItemData"].flags and itemData["ItemData"].flags["Glowing"] == True:
                         modString = " (Glowing)"
                         modCode = "2y1w1dw1ddw1w2dw1ddw1y"
-                    countString = ""
-                    countCode = ""
-                    if "Count" in itemData and itemData["Count"] > 1:
-                        countString = " (" + str(itemData["Count"]) + ")"
-                        countCode = "2r" + str(len(str(itemData["Count"]))) + "w1r"
+                    countNum = 0
+                    if "Count" in itemData : countNum = itemData["Count"]
+                    countString, countNum = getCountString(countNum)
                     weaponStatusString, weaponStatusCode = itemData["ItemData"].getWeaponStatusString()
                     console.lineList.insert(0, {"String":displayString + weaponStatusString + modString + countString, "Code":displayCode + weaponStatusCode + modCode + countCode})
             

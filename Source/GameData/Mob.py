@@ -1,3 +1,5 @@
+from Components.Utility import appendKeyList
+
 class Mob:
 
     def __init__(self, num, galaxy, system, planet, area, room, spaceship):
@@ -28,10 +30,7 @@ class Mob:
             self.name = {"String":"Tall Droid", "Code":"10w"}
 
         # Create Key List #
-        for word in self.name["String"].split():
-            if word.lower() not in self.keyList:
-                self.keyList.append(word.lower())
-        self.keyList.append(self.name["String"].lower())
+        appendKeyList(self.keyList, self.name["String"].lower())
 
     def lookDescription(self, console):
         console.lineList.insert(0, {"Blank": True})

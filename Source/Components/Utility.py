@@ -100,3 +100,34 @@ def wordWrap(displayString, displayCode, maxWidth):
                 code, currentColor = getNextColor(code)
                 currentCount = 0
     return stringList
+
+def appendKeyList(targetKeyList, targetString):
+    newKeyList = targetString.split()
+    for i in range(len(targetString.split())):
+        word = targetString.split()[i]
+        if i == 0:
+            phrase = targetString
+        else:
+            phrase = ' '.join(targetString.split()[i::])
+        
+        for cNum in range(len(phrase)):
+            if cNum > 1:
+                if phrase[0:cNum].strip() not in targetKeyList:
+                    targetKeyList.append(phrase[0:cNum].strip())
+                    if len(phrase[0:cNum].strip()) > 2 and phrase[0:cNum].strip()[0] == '.' and phrase[0:cNum].strip()[1::] not in targetKeyList:
+                        targetKeyList.append(phrase[0:cNum].strip()[1::])
+                    if '-' in phrase[0:cNum].strip():
+                        newPhrase = phrase[0:cNum].strip().replace('-', ' ').strip()
+                        if newPhrase not in targetKeyList:
+                            targetKeyList.append(newPhrase)
+
+        if phrase.strip() not in targetKeyList:
+            targetKeyList.append(phrase.strip())
+
+def getCountString(targetCount):
+    displayString = ""
+    displayCode = ""
+    if targetCount > 1:
+        displayString = " (" + str(targetCount) + ")"
+        displayCode = "2r" + str(len(str(targetCount))) + "w1r"
+    return displayString, displayCode

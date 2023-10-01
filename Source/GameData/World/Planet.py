@@ -1,5 +1,5 @@
 import math
-from GameData.Room import Room
+from GameData.World.Room import Room
 
 class Planet:
 

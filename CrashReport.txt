@@ -1,15 +1,17 @@
 Traceback (most recent call last):
   File "D:\Codes\Python\Universe\Source\Screen\InputBar.py", line 47, in processInput
     game.processInputBarCommand(self.input)
-  File "D:\Codes\Python\Universe\Source\Game.py", line 909, in processInputBarCommand
-    self.player.unloadCheck(self.console, currentRoom, "All", None, ammoKey)
-  File "D:\Codes\Python\Universe\Source\GameData\Player.py", line 1646, in unloadCheck
-    if ammoKey != None and reloadCount == 0:
-NameError: name 'reloadCount' is not defined
+  File "D:\Codes\Python\Universe\Source\Game.py", line 363, in processInputBarCommand
+    currentRoom.display(self.console, self.galaxyList, self.player)
+  File "D:\Codes\Python\Universe\Source\GameData\World\Room.py", line 163, in display
+    countString, countCode = getCountString(mobData["Count"])
+  File "D:\Codes\Python\Universe\Source\Components\Utility.py", line 131, in getCountString
+    displayString = " (" + str(len(targetCount)) + ")"
+TypeError: object of type 'int' has no len()
 
-Input: unl all aowijdaowd
-Player Loc: [0, 0, 1, 0, 4]
+Input: l
+Player Loc: [0, 0, 1, 0, 1]
 Player Spaceship: None
-Player Targets: 0
-Player Inventory: 1
+Player Targets: 3
+Player Inventory: 0
 Player Gear: 0
