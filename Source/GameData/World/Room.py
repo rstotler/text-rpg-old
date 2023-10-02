@@ -377,7 +377,7 @@ class Room:
                     if currentArea.num != targetExit[3]:
                         currentArea = galaxyList[targetExit[0]].systemList[targetExit[1]].planetList[targetExit[2]].areaList[targetExit[3]]
                         
-        return currentArea, currentRoom, messageType
+        return currentArea, currentRoom, rNum + 1, messageType
 
     @staticmethod
     def getSurroundingRoomData(galaxyList, startArea, startRoom, targetRange):
@@ -399,7 +399,7 @@ class Room:
                     if targetExitDir != "North":
                         viewLoc = copy.deepcopy(firstLoc)
                     if targetExitDir in targetRoom.exit:
-                        nextArea, nextRoom, message = Room.getTargetRoomFromStartRoom(galaxyList, targetArea, targetRoom, targetExitDir, 1, True)
+                        nextArea, nextRoom, distance, message = Room.getTargetRoomFromStartRoom(galaxyList, targetArea, targetRoom, targetExitDir, 1, True)
                         if targetExitDir in ["East", "West"] : viewLoc[0] += 1
                         elif targetExitDir in ["North", "South"] : viewLoc[1] += 1
 
@@ -439,7 +439,7 @@ class Room:
                     if currentRoom.exit[searchDir] == None:
                         break
                     else:
-                        currentArea, currentRoom, message = Room.getTargetRoomFromStartRoom(galaxyList, currentArea, currentRoom, searchDir, 1, True)
+                        currentArea, currentRoom, distance, message = Room.getTargetRoomFromStartRoom(galaxyList, currentArea, currentRoom, searchDir, 1, True)
                         if message == "Door Is Closed":
                             messageMaster = message
 
@@ -460,7 +460,7 @@ class Room:
                                     if sideRoom.exit[sideDir] == None:
                                         break
                                     else:
-                                        sideArea, sideRoom, message = Room.getTargetRoomFromStartRoom(galaxyList, sideArea, sideRoom, sideDir, 1, True)
+                                        sideArea, sideRoom, distance, message = Room.getTargetRoomFromStartRoom(galaxyList, sideArea, sideRoom, sideDir, 1, True)
                                         if message == "Door Is Closed" : messageType = message
 
                                         if targetObject in sideRoom.mobList:

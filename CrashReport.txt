@@ -1,17 +1,16 @@
 Traceback (most recent call last):
   File "D:\Codes\Python\Universe\Source\Screen\InputBar.py", line 47, in processInput
     game.processInputBarCommand(self.input)
-  File "D:\Codes\Python\Universe\Source\Game.py", line 363, in processInputBarCommand
-    currentRoom.display(self.console, self.galaxyList, self.player)
-  File "D:\Codes\Python\Universe\Source\GameData\World\Room.py", line 163, in display
-    countString, countCode = getCountString(mobData["Count"])
-  File "D:\Codes\Python\Universe\Source\Components\Utility.py", line 131, in getCountString
-    displayString = " (" + str(len(targetCount)) + ")"
-TypeError: object of type 'int' has no len()
+  File "D:\Codes\Python\Universe\Source\Game.py", line 962, in processInputBarCommand
+    self.player.combatSkillCheck(self.console, self.galaxyList, currentRoom, combatSkill, mobCount, mobKey, None, None)
+  File "D:\Codes\Python\Universe\Source\GameData\Player\Player.py", line 2264, in combatSkillCheck
+    print(offAttackSkill.name["String"])
+AttributeError: 'NoneType' object has no attribute 'name'
 
-Input: l
+Input: shoot dro
 Player Loc: [0, 0, 1, 0, 1]
 Player Spaceship: None
-Player Targets: 3
-Player Inventory: 0
-Player Gear: 0
+Player Targets: 0
+Player Group: 0
+Player Inventory: 18
+Player Gear: 2

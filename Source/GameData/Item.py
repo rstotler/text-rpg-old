@@ -1,3 +1,4 @@
+from GameData.Skill import Skill
 from Components.Utility import appendKeyList
 from Components.Utility import getCountString
 
@@ -15,6 +16,7 @@ class Item:
 
         self.weight = 1.0
         self.pocket = "Misc"
+        self.weaponType = None
         self.gearSlot = None
         self.twoHanded = False
 
@@ -26,6 +28,8 @@ class Item:
         self.containerList = None
         self.containerPassword = None
         self.containerMaxLimit = None
+
+        self.skillList = []
 
         self.loadItem(num)
 
@@ -110,38 +114,47 @@ class Item:
             if num == 101:
                 self.name = {"String":"Sword", "Code":"1w4ddw"}
                 self.pocket = "Weapon"
+                self.weaponType = "Sword"
             elif num == 102:
                 self.name = {"String":"Shield", "Code":"1w5ddw"}
                 self.pocket = "Weapon"
+                self.weaponType = "Misc."
+                self.skillList.append(Skill(10))
             elif num == 103:
                 self.name = {"String":"Lance", "Code":"1w4ddw"}
                 self.pocket = "Weapon"
+                self.weaponType = "Polearm"
             elif num == 104:
                 self.name = {"String":"Greatsword", "Code":"1w9ddw"}
                 appendKeyList(self.keyList, "great")
                 self.pocket = "Weapon"
+                self.weaponType = "Sword"
                 self.twoHanded = True
             elif num == 105:
                 self.prefix = "An"
                 self.name = {"String":"Ebony Pistol", "Code":"1w5ddw1w5ddw"}
                 self.pocket = "Weapon"
+                self.weaponType = "Gun"
                 self.ranged = True
                 self.ammoType = ".45"
             elif num == 106:
                 self.prefix = "An"
                 self.name = {"String":"Ivory Pistol", "Code":"1w5ddw1w5ddw"}
                 self.pocket = "Weapon"
+                self.weaponType = "Gun"
                 self.ranged = True
                 self.ammoType = ".45"
             elif num == 107:
                 self.name = {"String":"Sniper Rifle", "Code":"1w6ddw1w4ddw"}
                 self.pocket = "Weapon"
+                self.weaponType = "Gun"
                 self.twoHanded = True
                 self.ranged = True
                 self.ammoType = "5.56"
             elif num == 108:
                 self.name = {"String":"Rocket Launcher", "Code":"15w"}
                 self.pocket = "Weapon"
+                self.weaponType = "Gun"
                 self.twoHanded = True
                 self.ranged = True
                 self.shellCapacity = 1
@@ -149,6 +162,7 @@ class Item:
             elif num == 109:
                 self.name = {"String":"Shotgun", "Code":"7w"}
                 self.pocket = "Weapon"
+                self.weaponType = "Gun"
                 self.twoHanded = True
                 self.ranged = True
                 self.shellCapacity = 5
@@ -294,7 +308,7 @@ class Item:
                         modCode = "2y1w1dw1ddw1w2dw1ddw1y"
                     countNum = 0
                     if "Count" in itemData : countNum = itemData["Count"]
-                    countString, countNum = getCountString(countNum)
+                    countString, countCode = getCountString(countNum)
                     weaponStatusString, weaponStatusCode = itemData["ItemData"].getWeaponStatusString()
                     console.lineList.insert(0, {"String":displayString + weaponStatusString + modString + countString, "Code":displayCode + weaponStatusCode + modCode + countCode})
             

@@ -19,6 +19,9 @@ class InputBar:
         self.previousInputList = []
         self.previousInputIndex = -1
 
+        self.inputList = []
+        self.inputListTimer = 0
+
     def processInput(self, keyName, game):
         if keyName == "up":
             if game.keyboard.control == False and self.previousInputIndex < len(self.previousInputList) - 1:
@@ -36,7 +39,7 @@ class InputBar:
                     self.input = ""            
 
         elif keyName == "return":
-            if len(self.input) > 0:
+            if len(self.input) > 0 and len(self.inputList) == 0:
                 self.input = self.input.strip()
                 if len(self.input) > 0:
                     try:
@@ -60,8 +63,15 @@ class InputBar:
 
             self.input = self.input + targetKey
 
-    def update(self, keyboard):
-        if len(self.input) > 0 and keyboard.backspaceTick == 0:
+    def update(self, game):
+        if len(self.inputList) > 0:
+            self.inputListTimer += 1
+            if self.inputListTimer >= 7:
+                self.inputListTimer = 0
+                game.processInputBarCommand(self.inputList[0])
+                del self.inputList[0]
+
+        if len(self.input) > 0 and game.keyboard.backspaceTick == 0:
             self.input = self.input[0:len(self.input) - 1]
 
     def draw(self, window):

@@ -5,7 +5,7 @@ from Screen.InputBar import InputBar
 from Screen.Map import Map
 from Components.Keyboard import Keyboard
 from GameData.Player.Player import Player
-from GameData.Player.Skill import Skill
+from GameData.Skill import Skill
 from GameData.World.Galaxy import Galaxy
 from GameData.World.SolarSystem import SolarSystem
 from GameData.World.Planet import Planet
@@ -22,6 +22,7 @@ from Components.Utility import appendKeyList
     # Base combat
     # Implement wordwrap into functions
     # Map
+    # Console window scroll
 
 class Game:
 
@@ -35,8 +36,9 @@ class Game:
         self.galaxyList = []
 
         self.frameTick = 0
-
+        
         self.loadGame()
+        self.inputBar.inputList = ["n", "w", "loot cab", "wear shi", "wear pis", "e", "s", "s", "shoot droid"]
 
     def loadGame(self):
         galaxyProtoMilkyWay = Galaxy()
@@ -247,7 +249,7 @@ class Game:
 
     def update(self, window):
         self.processInput()
-        self.inputBar.update(self.keyboard)
+        self.inputBar.update(self)
 
         if self.frameTick == 0:
             self.galaxyList[self.player.galaxy].systemList[self.player.system].update(self.galaxyList, self.player, self.console)
@@ -306,7 +308,7 @@ class Game:
 
     def processInputBarCommand(self, input):
         directionStringList = ["north", "nort", "nor", "no", "n", "east", "eas", "ea", "e", "south", "sout", "sou", "so", "s", "west", "wes", "we", "w"]
-        combatSkill, parsedCombatInput = Skill.parseSkillString(input.lower(), self.player.combatSkillList)
+        combatSkill, parsedCombatInput = Skill.parseSkillString(input.lower(), self.player.getCombatSkillList())
         currentRoom = Room.exists(self.galaxyList, self.player.spaceship, self.player.galaxy, self.player.system, self.player.planet, self.player.area, self.player.room)
         if currentRoom == None:
             currentRoom = self.galaxyList[0].systemList[0].planetList[0].areaList[0].roomList[0]
@@ -1267,5 +1269,6 @@ class Game:
             f.write("Player Loc: [" + str(self.player.galaxy) + ", " + str(self.player.system) + ", " + str(self.player.planet) + ", " + str(self.player.area) + ", " + str(self.player.room) + "]" + "\n")
             f.write("Player Spaceship: " + str(self.player.spaceship) + "\n")
             f.write("Player Targets: " + str(len(self.player.targetList)) + "\n")
+            f.write("Player Group: " + str(len(self.player.recruitList)) + "\n")
             f.write("Player Inventory: " + str(len(self.player.getAllItemList(["Inventory"]))) + "\n")
             f.write("Player Gear: " + str(len(self.player.getAllItemList(["Gear"]))) + "\n")

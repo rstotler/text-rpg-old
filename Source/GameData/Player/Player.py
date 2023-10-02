@@ -3,7 +3,7 @@ from GameData.World.Room import Room
 from GameData.World.Spaceship import Spaceship
 from GameData.Mob import Mob
 from GameData.Item import Item
-from GameData.Player.Skill import Skill
+from GameData.Skill import Skill
 from GameData.Action import Action
 from Components.Utility import stringIsNumber
 from Components.Utility import getCountString
@@ -19,13 +19,13 @@ class Player:
         self.spaceship = None
 
         self.actionList = []
-        self.combatSkillList = [Skill(1), Skill(2), Skill(3), Skill(4), Skill(5), Skill(6), Skill(7)]
+        self.combatSkillList = [Skill(1), Skill(2), Skill(3), Skill(4), Skill(5), Skill(6), Skill(7), Skill(8), Skill(9)]
 
         self.maxLookDistance = 5
         self.maxTargetDistance = 3
         self.targetList = []
-        self.combatList = []
         self.recruitList = []
+        self.combatList = []
 
         self.itemDict = {"Armor": [], "Weapon":[], "Ammo":[], "Misc": []}
         self.gearDict = {"Head":None, "Face":None, "Neck":[None, None], "Body Under":None, "Body Over":None, "About Body":None, "Hands":None, "Finger":[None, None], "Legs Under":None, "Legs Over":None, "Feet":None, "Left Hand":None, "Right Hand":None}
@@ -2218,23 +2218,25 @@ class Player:
         if Skill.skillAvailableCheck(self, combatSkill) == False:
             console.lineList.insert(0, {"Blank": True})
             console.lineList.insert(0, {"String": "You can't use that now.", "Code":"7w1y14w1y"})
-        elif mobKey == None and directionKey == None and len(self.targetList) == 0 and "All Only" not in combatSkill.ruleList:
+        elif mobKey == None and directionKey == None and len(self.targetList) == 0 and "All Only" not in combatSkill.ruleDict:
             console.lineList.insert(0, {"Blank": True})
             console.lineList.insert(0, {"String": "You aren't targeting anyone.", "Code":"8w1y18w1y"})
         elif (directionCount != None and directionCount > combatSkill.maxRange) or (mobKey == None and len(self.targetList) > 0 and Room.getTargetRange(galaxyList, currentRoom, self.targetList[0], combatSkill.maxRange)[0] == -1):
             console.lineList.insert(0, {"Blank": True})
-            console.lineList.insert(0, {"String": "It's too far.", "Code":"2w1y9w1y"})
-        elif mobKey == None and "From Another Room" in combatSkill.ruleList and Room.getTargetRange(galaxyList, currentRoom, self.targetList[0], combatSkill.maxRange)[0] == 0:
+            console.lineList.insert(0, {"String": "That's too far.", "Code":"4w1y9w1y"})
+        elif mobKey == None and "From Another Room" in combatSkill.ruleDict and Room.getTargetRange(galaxyList, currentRoom, self.targetList[0], combatSkill.maxRange)[0] == 0:
             console.lineList.insert(0, {"Blank": True})
             console.lineList.insert(0, {"String": "You're too close!", "Code":"7w1y12w1y"})
 
         else:
             targetRoom = currentRoom
+            roomDistance = 0
             if mobKey == None and len(self.targetList) > 0:
                 if self.targetList[0].spaceship != None:
                     targetRoom = galaxyList[self.targetList[0].galaxy].systemList[self.targetList[0].system].getSpaceship(self.targetList[0].spaceship).areaList[self.targetList[0].area].roomList[self.targetList[0].room]
                 else:
                     targetRoom = galaxyList[self.targetList[0].galaxy].systemList[self.targetList[0].system].planetList[self.targetList[0].planet].areaList[self.targetList[0].area].roomList[self.targetList[0].room]
+                roomDistance = Room.getTargetRange(galaxyList, currentRoom, self.targetList[0], self.maxTargetDistance)[0]
             elif directionCount != None:
                 if directionKey[0] == "n" : targetDirection = "North"
                 elif directionKey[0] == "e" : targetDirection = "East"
@@ -2245,32 +2247,59 @@ class Player:
                     targetArea = targetRoom.spaceshipObject.areaList[targetRoom.area]
                 else:
                     targetArea = galaxyList[targetRoom.galaxy].systemList[targetRoom.system].planetList[targetRoom.planet].areaList[targetRoom.area]
-                targetArea, targetRoom, message = Room.getTargetRoomFromStartRoom(galaxyList, targetArea, targetRoom, targetDirection, directionCount, True)
-            
-            if mobCount in ["All", None]:
-                maxTargets = len(targetRoom.mobList)
+                unusedArea, targetRoom, roomDistance, unusedMessage = Room.getTargetRoomFromStartRoom(galaxyList, targetArea, targetRoom, targetDirection, directionCount, True)
+
+            attackList = []
+            mainAttackHand = self.gearDict[self.dominantHand]
+            offAttackHand = self.gearDict[self.getOppositeHand(self.dominantHand)]
+            if combatSkill.weaponTypeList == []:
+                attackList.append(combatSkill)
             else:
-                maxTargets = mobCount
+                if combatSkill.weaponCheck(mainAttackHand, offAttackHand) == True:
+                    attackList.append(combatSkill)
+                    if len(combatSkill.weaponDataList) == 1 and (combatSkill.weaponDataList[0] == offAttackHand or (combatSkill.weaponDataList[0] == "Open Hand" and offAttackHand == None)):
+                        offAttackHand = self.gearDict[self.dominantHand]
+            if combatSkill.offHandAttacks == True and len(combatSkill.weaponTypeList) != 2 and offAttackHand != None:
+                offAttackSkill = self.getRandomAttackSkill(offAttackHand, None, roomDistance)
+                if offAttackSkill != None and offAttackSkill.weaponCheck(offAttackHand) == True:
+                    attackList.append(offAttackSkill)
+
+            allOnlyCheck = False
+            for attackSkill in attackList:
+                if "All Only" in attackSkill.ruleDict:
+                    allOnlyCheck = True
+
+            if mobCount in ["All", None] : maxTargets = len(targetRoom.mobList)
+            else : maxTargets = mobCount
             if combatSkill.maxTargets != "All" and maxTargets > combatSkill.maxTargets:
                 maxTargets = combatSkill.maxTargets
-
+                
             targetMobList = []
+            attackDisplayList = []
+            for i in range(len(attackList)):
+                attackDisplayList.append({"Name":attackList[i].name, "Mob Data":None, "Count":0, "Attack Data":attackList[i]})
             targetMob = None
             if maxTargets > 0:
                 for mob in targetRoom.mobList:
-                    if mobKey == "All" or \
+                    if mobKey == "All" or allOnlyCheck == True or \
                     (mobKey != None and mobKey in mob.keyList) or \
-                    (mobKey == None and mob in self.targetList) or \
-                    "All Only" in combatSkill.ruleList:
+                    (mobKey == None and mob in self.targetList):
+                        for i, attackSkill in enumerate(attackList):
+                            if attackDisplayList[i]["Mob Data"] == None:
+                                attackDisplayList[i]["Mob Data"] = mob
+                            elif attackDisplayList[i]["Mob Data"] != "Multiple" and attackDisplayList[i]["Mob Data"].num != mob.num:
+                                attackDisplayList[i]["Mob Data"] = "Multiple"
+                            attackDisplayList[i]["Count"] += 1
+
                         targetMobList.append(mob)
                         if targetMob == None:
                             targetMob = mob
                         elif targetMob != "Multiple" and targetMob.num != mob.num:
                             targetMob = "Multiple"
-                        if len(targetMobList) >= maxTargets:
+                        if allOnlyCheck != True and len(targetMobList) >= maxTargets:
                             break
-
-            if targetMob == None and "All Only" in combatSkill.ruleList:
+            
+            if targetMob == None and "All Only" in combatSkill.ruleDict:
                 console.lineList.insert(0, {"Blank": True})
                 console.lineList.insert(0, {"String": "Your " + combatSkill.name["String"] + " doesn't hit anyone.", "Code":"5w" + combatSkill.name["Code"] + "6w1y12w1y"})
             elif len(targetMobList) == 0 and mobKey not in ["All", None]:
@@ -2283,21 +2312,25 @@ class Player:
                 else:
                     console.lineList.insert(0, {"Blank": True})
                     console.lineList.insert(0, {"String": "You don't see anyone.", "Code":"7w1y12w1y"})
-            elif len(targetMobList) > 0:
-                if targetMob == "Multiple":
-                    console.lineList.insert(0, {"Blank": True})
-                    console.lineList.insert(0, {"String": "Your attack hits the group!", "Code":"26w1y"})
-                elif targetMob != None:
-                    countString, countCode = getCountString(len(targetMobList))
-                    console.lineList.insert(0, {"Blank": True})
-                    console.lineList.insert(0, {"String": "Your " + combatSkill.name["String"] + " hits " + targetMob.prefix.lower() + " " + targetMob.name["String"] + "!" + countString, "Code":"5w" + combatSkill.name["Code"] + "6w" + str(len(targetMob.prefix)) + "w1w" + targetMob.name["Code"] + "1y" + countCode})
-
+            elif len(attackDisplayList) > 0:
+                console.lineList.insert(0, {"Blank": True})
+                for attackData in attackDisplayList:
+                    if attackData["Mob Data"] == "Multiple":
+                        displayString = "Your " + attackData["Attack Data"].name["String"] + " hits the group!"
+                        displayCode = "5w" + attackData["Attack Data"].name["Code"] + "15w1y"
+                        console.lineList.insert(0, {"String": displayString, "Code":displayCode})
+                    elif attackData["Mob Data"] != None:
+                        countString, countCode = getCountString(attackData["Count"])
+                        displayString = "Your " + attackData["Attack Data"].name["String"] + " hits " + attackData["Mob Data"].prefix.lower() + " " + attackData["Mob Data"].name["String"] + "!"
+                        displayCode = "5w" + attackData["Attack Data"].name["Code"] + "6w" + str(len(attackData["Mob Data"].prefix)) + "w1w" + attackData["Mob Data"].name["Code"] + "1y"
+                        console.lineList.insert(0, {"String": displayString + countString, "Code":displayCode + countCode})
+               
     def displaySkills(self, console):
         console.lineList.insert(0, {"Blank": True})
         console.lineList.insert(0, {"String":"Skill List:", "Code":"10w1y"})
         console.lineList.insert(0, {"String":"--=======--", "Code":"1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y"})
 
-        for skill in self.combatSkillList:
+        for skill in self.getSkillList():
             displayString = skill.name["String"]
             displayCode = skill.name["Code"]
             console.lineList.insert(0, {"String":displayString, "Code":displayCode})
@@ -2520,6 +2553,67 @@ class Player:
             returnIndex = magazineIndex
         return returnItem, returnIndex
 
+    def getSkillList(self):
+        skillList = []
+        for skill in self.getCombatSkillList():
+            skillList.append(skill)
+        return skillList
+
+    def getCombatSkillList(self):
+        skillList = []
+        for skill in self.combatSkillList:
+            skillList.append(skill)
+        for gearSlot in self.gearDict:
+            if isinstance(self.gearDict[gearSlot], list):
+                gearList = self.gearDict[gearSlot]
+            else:
+                gearList = [self.gearDict[gearSlot]]
+            for gear in gearList:
+                if gear != None:
+                    for skill in gear.skillList:
+                        skillCheck = False
+                        for s in skillList:
+                            if skill.num == s.num:
+                                skillCheck = True
+                                break
+                        if skillCheck == False:
+                            skillList.append(skill)
+        return skillList
+
+    def getRandomAttackSkill(self, mainWeapon="No Check", offWeapon="Unused", distance=None):
+        skillList = []
+        for skill in self.getCombatSkillList():
+            if skill.ruleCheck(distance) == True:
+                if mainWeapon == "No Check" or \
+                (len(skill.weaponTypeList) == 0 and "Gear Num List" in skill.ruleDict and mainWeapon != None and mainWeapon.num in skill.ruleDict["Gear Num List"]) \
+                or \
+                (len(skill.weaponTypeList) == 1 and \
+                ((skill.weaponTypeList[0] == "Open Hand" and mainWeapon == None) or \
+                (mainWeapon != None and skill.weaponTypeList[0] == mainWeapon.weaponType))):
+                    skillList.append(skill)
+                elif offWeapon != "Unused" and len(skill.weaponTypeList) == 2:
+                    firstCheck = False
+                    if ((skill.weaponTypeList[0] == "Open Hand" and mainWeapon == None) or (mainWeapon != None and skill.weaponTypeList[0] == mainWeapon.weaponType)):
+                        firstCheck = mainWeapon
+                    elif ((skill.weaponTypeList[0] == "Open Hand" and offWeapon == None) or (offWeapon != None and skill.weaponTypeList[0] == offWeapon.weaponType)):
+                        firstCheck = offWeapon
+                    if firstCheck != False:
+                        if firstCheck == mainWeapon:
+                            secondCheck = offWeapon
+                        else : secondCheck = mainWeapon
+                        if (skill.weaponTypeList[1] == "Open Hand" and secondCheck == None) or (secondCheck != None and skill.weaponTypeList[1] == secondCheck.weaponType):
+                            skillList.append(skill)
+                    
+        if len(skillList) > 0:
+            return random.choice(skillList)
+        return None
+    
+    def getOppositeHand(self, targetHand):
+        if targetHand == "Left Hand":
+            return "Right Hand"
+        else:
+            return "Left Hand"
+
     def hasKey(self, password):
         for pocket in self.itemDict:
             for item in self.itemDict[pocket]:
@@ -2528,20 +2622,14 @@ class Player:
                         if playerPassword == password:
                             return True
         return False
-
+    
     def lightInBagCheck(self, targetPocket):
         for item in self.itemDict[targetPocket]:
             if "Glowing" in item.flags and item.flags["Glowing"] == True:
                 return True
 
         return False
-
-    def getOppositeHand(self, targetHand):
-        if targetHand == "Left Hand":
-            return "Right Hand"
-        else:
-            return "Left Hand"
-
+    
     def emote(self, console, input):
         if input in ["hmm", "hm"]:
             console.lineList.insert(0, {"Blank": True})
