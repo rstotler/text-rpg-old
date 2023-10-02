@@ -1,6 +1,7 @@
 import pygame, traceback
 from pygame import *
 from Components.Utility import writeColor
+from Components.Utility import writeCrashReport
 
 # Input Bar Width (Characters) - 56 #
 # Character Size - [10, 18] #
@@ -8,10 +9,9 @@ from Components.Utility import writeColor
 class InputBar:
 
     def __init__(self):
-        self.font = pygame.font.Font("../Assets/Fonts/CodeNewRomanB.otf", 18)
-        
         rectSize = [600, 22]
         self.surface = pygame.Surface(rectSize)
+        self.font = pygame.font.Font("../Assets/Fonts/CodeNewRomanB.otf", 18)
 
         self.input = ""
         self.inputBlinkerTimer = 0
@@ -20,7 +20,7 @@ class InputBar:
         self.previousInputIndex = -1
 
         self.inputList = []
-        self.inputListTimer = 0
+        self.inputListTimer = 999
 
     def processInput(self, keyName, game):
         if keyName == "up":
@@ -48,8 +48,9 @@ class InputBar:
                             if len(self.previousInputList) > 20:
                                 self.previousInputList = self.previousInputList[0:20]
                         game.processInputBarCommand(self.input)
+                        game.console.displayLine = 0
                     except Exception as error:
-                        game.writeCrashReport(traceback.format_exc(), self.input)
+                        writeCrashReport(traceback.format_exc(), self.input, game.player)
                         print(traceback.format_exc())
                         raise SystemExit
                     
@@ -66,9 +67,10 @@ class InputBar:
     def update(self, game):
         if len(self.inputList) > 0:
             self.inputListTimer += 1
-            if self.inputListTimer >= 7:
+            if self.inputListTimer >= 3:
                 self.inputListTimer = 0
                 game.processInputBarCommand(self.inputList[0])
+                game.console.displayLine = 0
                 del self.inputList[0]
 
         if len(self.input) > 0 and game.keyboard.backspaceTick == 0:

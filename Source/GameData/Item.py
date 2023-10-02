@@ -118,7 +118,7 @@ class Item:
             elif num == 102:
                 self.name = {"String":"Shield", "Code":"1w5ddw"}
                 self.pocket = "Weapon"
-                self.weaponType = "Misc."
+                self.weaponType = "Shield"
                 self.skillList.append(Skill(10))
             elif num == 103:
                 self.name = {"String":"Lance", "Code":"1w4ddw"}

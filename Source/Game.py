@@ -4,7 +4,7 @@ from Screen.Console import Console
 from Screen.InputBar import InputBar
 from Screen.Map import Map
 from Components.Keyboard import Keyboard
-from GameData.Player.Player import Player
+from GameData.Player import Player
 from GameData.Skill import Skill
 from GameData.World.Galaxy import Galaxy
 from GameData.World.SolarSystem import SolarSystem
@@ -18,11 +18,26 @@ from Components.Utility import stringIsNumber
 from Components.Utility import appendKeyList
 
 # To Do List:
-    # Mob room messages
-    # Base combat
-    # Implement wordwrap into functions
-    # Map
-    # Console window scroll
+    # Basic Mob Speech
+    # Implement wordWrap()
+    # Combat:
+    # -Gun Ammo
+    # -Auto-Reload
+    # -Don't Let Player Use Same Skill Twice (Off Hand Attack) When It Is A Gear Skill
+    # -Some Attacks Miss
+    # -Time-Based Action
+    # -Mobs Counter-Attack
+    # -Mob Death
+    # -Auto-Loot
+    # Make "All Only" Skills Hit Everyone (Ignore Team Damage/Heal Enemies)
+    # Make Player Lose Sight Of Mobs On Movement, On Darkness
+    # Mob Updates/Movement
+    # Combat Mobs Chase Player
+    # Stop Command
+    # Attack Command
+    # Dodge Command
+    # Parry Command
+    # Fix Map Doors
 
 class Game:
 
@@ -38,7 +53,8 @@ class Game:
         self.frameTick = 0
         
         self.loadGame()
-        self.inputBar.inputList = ["n", "w", "loot cab", "wear shi", "wear pis", "e", "s", "s", "shoot droid"]
+        # self.inputBar.inputList = ["n", "w", "loot cab", "wear shi", "wear pis", "e", "s", "s", "shoot droid"]
+        self.inputBar.inputList = ["n", "w", "get key from chest", "e", "s", "s", "s", "s"]
 
     def loadGame(self):
         galaxyProtoMilkyWay = Galaxy()
@@ -150,6 +166,9 @@ class Game:
             roomCOTU05.name = {"String":"COTU Landing Pad"}
             roomCOTU05.exit["North"] = [0, 0, 1, 0, 2]
 
+            # Zero Area Coordinates #
+            areaCOTU.zeroCoordinates(self.galaxyList)
+
         # Debug Spaceship #
         if True:
             cotuTransportShip = Spaceship(0, 0, 1, "COTU Spaceport", [0, 1], [[0, 1]])
@@ -189,7 +208,8 @@ class Game:
                         targetExitRoom.exit[exitDir] = "Spaceship Exit"
                         targetExitRoom.installDoor(self.galaxyList, exitDir, "Automatic", None, "Closed", True)
                         break
-
+            cotuTransportShipArea0.zeroCoordinates(self.galaxyList)
+            
         # Milky Way & Sol #
         if True:
             galaxyMilkyWay = Galaxy()
@@ -247,6 +267,17 @@ class Game:
         cotuTransportShipRoom00.installDoor(self.galaxyList, "South", "Automatic", "COTU Spaceport")
         cotuTransportShipRoom00.lockUnlockDoor(self.galaxyList, "Lock", "South")
 
+        # Load Map #
+        playerArea, playerRoom = Room.getAreaAndRoom(self.galaxyList, self.player)
+        self.map.loadMap(playerArea)
+
+    def draw(self, window):
+        window.fill([0, 0, 0])
+
+        self.console.draw(window)
+        self.inputBar.draw(window)
+        self.map.draw(window, self.galaxyList, self.player)
+
     def update(self, window):
         self.processInput()
         self.inputBar.update(self)
@@ -254,13 +285,8 @@ class Game:
         if self.frameTick == 0:
             self.galaxyList[self.player.galaxy].systemList[self.player.system].update(self.galaxyList, self.player, self.console)
         if self.frameTick in [0, 30]:
-            playerRoom = Room.exists(self.galaxyList, self.player.spaceship, self.player.galaxy, self.player.system, self.player.planet, self.player.area, self.player.room)
-            if playerRoom != None:
-                if playerRoom.spaceshipObject == None:
-                    playerArea = self.galaxyList[playerRoom.galaxy].systemList[playerRoom.system].planetList[playerRoom.planet].areaList[playerRoom.area]
-                else:
-                    playerArea = playerRoom.spaceshipObject.areaList[playerRoom.area]
-                updateAreaList, updateRoomList = Room.getSurroundingRoomData(self.galaxyList, playerArea, playerRoom, 4)
+            playerArea, playerRoom = Room.getAreaAndRoom(self.galaxyList, self.player)
+            updateAreaList, updateRoomList = Room.getSurroundingRoomData(self.galaxyList, playerArea, playerRoom, 4)
             self.player.update(self.console)
                 
         self.frameTick += 1
@@ -281,13 +307,13 @@ class Game:
                 elif event.key == K_ESCAPE:
                     raise SystemExit
                 elif self.keyboard.control == True and event.key in [K_UP, K_RIGHT, K_DOWN, K_LEFT]:
-                    if event.key == K_UP : targetDir = "North"
-                    elif event.key == K_RIGHT : targetDir = "East"
-                    elif event.key == K_DOWN : targetDir = "South"
-                    elif event.key == K_LEFT : targetDir = "West"
                     currentRoom = Room.exists(self.galaxyList, self.player.spaceship, self.player.galaxy, self.player.system, self.player.planet, self.player.area, self.player.room)
                     if currentRoom != None:
-                        self.player.moveCheck(self.console, self.galaxyList, currentRoom, targetDir)
+                        if event.key == K_UP : targetDir = "n"
+                        elif event.key == K_RIGHT : targetDir = "e"
+                        elif event.key == K_DOWN : targetDir = "s"
+                        elif event.key == K_LEFT : targetDir = "w"
+                        self.player.moveCheck(self.console, self.map, self.galaxyList, currentRoom, targetDir)
                 else:
                     keyName = pygame.key.name(event.key)
                     self.inputBar.processInput(keyName, self)
@@ -301,6 +327,14 @@ class Game:
                     self.keyboard.backspace = False
                     self.keyboard.backspaceTick = -1
                 
+            elif event.type == MOUSEWHEEL:
+                x, y = pygame.mouse.get_pos()
+                if x >= 600 and y < 200:
+                    self.map.moveMouseWheel(-event.y, self.player)
+                else:
+                    if len(self.inputBar.inputList) == 0:
+                        self.console.scroll(self.keyboard, event.y)
+
             elif event.type == QUIT:
                 raise SystemExit
 
@@ -538,15 +572,11 @@ class Game:
 
         # Movement #
         elif len(input.split()) == 1 and input.lower() in directionStringList:
-            if input.lower() in ["north", "nort", "nor", "no", "n"] : targetDir = "North"
-            elif input.lower() in ["east", "eas", "ea", "e"] : targetDir = "East"
-            elif input.lower() in ["south", "sout", "sou", "so", "s"] : targetDir = "South"
-            else : targetDir = "West"
-
+            
             # Move Direction '#' #
 
             # Move Direction #
-            self.player.moveCheck(self.console, self.galaxyList, currentRoom, targetDir)
+            self.player.moveCheck(self.console, self.map, self.galaxyList, currentRoom, input.lower())
 
         # Open/Close #
         elif input.lower().split()[0] in ["open", "ope", "op", "o", "close", "clos", "clo", "cl"]:
@@ -854,7 +884,7 @@ class Game:
         elif input.lower().split()[0] in ["attack", "attac", "atta", "att", "at", "a"]:
             pass
 
-        # Combat Skill #
+        # Combat Skill [Needs Testing] #
         elif combatSkill != None:
             parsedCombatInput = parsedCombatInput.split()
             
@@ -866,17 +896,19 @@ class Game:
                 directionCount = int(parsedCombatInput[-1])
                 self.player.combatSkillCheck(self.console, self.galaxyList, currentRoom, combatSkill, mobCount, mobKey, directionKey, directionCount)
 
-            # Skill All Mob Direction '#' #
-            elif len(parsedCombatInput) > 3 and parsedCombatInput[0] == "all" and parsedCombatInput[-2] in directionStringList and stringIsNumber(parsedCombatInput[-1]) and int(parsedCombatInput[-1]) > 0:
-                mobCount = "All"
+            # Skill All/Group Mob Direction '#' #
+            elif len(parsedCombatInput) > 3 and parsedCombatInput[0] in ["all", "group"] and parsedCombatInput[-2] in directionStringList and stringIsNumber(parsedCombatInput[-1]) and int(parsedCombatInput[-1]) > 0:
+                if parsedCombatInput[0] == "all" : mobCount = "All"
+                else : mobCount = "Group"
                 mobKey = ' '.join(parsedCombatInput[1:-2])
                 directionKey = parsedCombatInput[-2]
                 directionCount = int(parsedCombatInput[-1])
                 self.player.combatSkillCheck(self.console, self.galaxyList, currentRoom, combatSkill, mobCount, mobKey, directionKey, directionCount)
 
-            # Skill All Direction '#' #
-            elif len(parsedCombatInput) == 3 and parsedCombatInput[0] == "all" and parsedCombatInput[1] in directionStringList and stringIsNumber(parsedCombatInput[2]) and int(parsedCombatInput[2]) > 0:
-                mobCount = "All"
+            # Skill All/Group Direction '#' #
+            elif len(parsedCombatInput) == 3 and parsedCombatInput[0] in ["all", "group"] and parsedCombatInput[1] in directionStringList and stringIsNumber(parsedCombatInput[2]) and int(parsedCombatInput[2]) > 0:
+                if parsedCombatInput[0] == "all" : mobCount = "All"
+                else : mobCount = "Group"
                 mobKey = "All"
                 directionKey = parsedCombatInput[-2]
                 directionCount = int(parsedCombatInput[-1])
@@ -898,17 +930,19 @@ class Game:
                 directionCount = 1
                 self.player.combatSkillCheck(self.console, self.galaxyList, currentRoom, combatSkill, mobCount, mobKey, directionKey, directionCount)
 
-            # Skill All Mob Direction #
-            elif len(parsedCombatInput) > 2 and parsedCombatInput[0] == "all" and parsedCombatInput[-1] in directionStringList:
-                mobCount = "All"
+            # Skill All/Group Mob Direction #
+            elif len(parsedCombatInput) > 2 and parsedCombatInput[0] in ["all", "group"] and parsedCombatInput[-1] in directionStringList:
+                if parsedCombatInput[0] == "all" : mobCount = "All"
+                else : mobCount = "Group"
                 mobKey = ' '.join(parsedCombatInput[1:-1])
                 directionKey = parsedCombatInput[-1]
                 directionCount = 1
                 self.player.combatSkillCheck(self.console, self.galaxyList, currentRoom, combatSkill, mobCount, mobKey, directionKey, directionCount)
 
-            # Skill All Direction #
-            elif len(parsedCombatInput) == 2 and parsedCombatInput[0] == "all" and parsedCombatInput[1] in directionStringList:
-                mobCount = "All"
+            # Skill All/Group Direction #
+            elif len(parsedCombatInput) == 2 and parsedCombatInput[0] in ["all", "group"] and parsedCombatInput[1] in directionStringList:
+                if parsedCombatInput[0] == "all" : mobCount = "All"
+                else : mobCount = "Group"
                 mobKey = "All"
                 directionKey = parsedCombatInput[-1]
                 directionCount = 1
@@ -936,15 +970,17 @@ class Game:
                 mobKey = ' '.join(parsedCombatInput[1::])
                 self.player.combatSkillCheck(self.console, self.galaxyList, currentRoom, combatSkill, mobCount, mobKey, None, None)
 
-            # Skill All Mob #
-            elif len(parsedCombatInput) > 1 and parsedCombatInput[0] == "all":
-                mobCount = "All"
+            # Skill All/Group Mob #
+            elif len(parsedCombatInput) > 1 and parsedCombatInput[0] in ["all", "group"]:
+                if parsedCombatInput[0] == "all" : mobCount = "All"
+                else : mobCount = "Group"
                 mobKey = ' '.join(parsedCombatInput[1::])
                 self.player.combatSkillCheck(self.console, self.galaxyList, currentRoom, combatSkill, mobCount, mobKey, None, None)
             
-            # Skill All #
-            elif len(parsedCombatInput) == 1 and parsedCombatInput[0] == "all":
-                mobCount = "All"
+            # Skill All/Group #
+            elif len(parsedCombatInput) == 1 and parsedCombatInput[0] in ["all", "group"]:
+                if parsedCombatInput[0] == "all" : mobCount = "All"
+                else : mobCount = "Group"
                 mobKey = "All"
                 self.player.combatSkillCheck(self.console, self.galaxyList, currentRoom, combatSkill, mobCount, mobKey, None, None)
 
@@ -956,10 +992,11 @@ class Game:
                 directionCount = 1
                 self.player.combatSkillCheck(self.console, self.galaxyList, currentRoom, combatSkill, mobCount, mobKey, directionKey, directionCount)
 
-            # Skill Mob #
+            # Skill Mob/Self #
             elif len(parsedCombatInput) > 0:
                 mobCount = 1
                 mobKey = ' '.join(parsedCombatInput)
+                if mobKey == "self" : mobKey = "Self"
                 self.player.combatSkillCheck(self.console, self.galaxyList, currentRoom, combatSkill, mobCount, mobKey, None, None)
 
             # Skill #
@@ -1054,7 +1091,7 @@ class Game:
             else:
                 self.player.unloadCheck(self.console, self.galaxyList, self.player, currentRoom, "All", "All", None)
 
-        # Recruit/Tame #
+        # Recruit/Tame [Needs Testing] #
         elif input.lower().split()[0] in ["tame", "tam", "recruit", "recrui", "recru", "recr", "rec"]:
 
             # Recruit All Mob #
@@ -1166,7 +1203,7 @@ class Game:
         # Board #
         elif input.lower().split()[0] in ["board", "boar", "boa", "bo"]:
             if len(input.split()) > 1:
-                self.player.boardCheck(self.console, self.galaxyList, currentRoom, ' '.join(input.lower().split()[1::]))
+                self.player.boardCheck(self.console, self.map, self.galaxyList, currentRoom, ' '.join(input.lower().split()[1::]))
             
             else:
                 self.console.lineList.insert(0, {"Blank": True})
@@ -1220,6 +1257,18 @@ class Game:
             self.console.lineList.insert(0, {"Blank": True})
             self.console.lineList.insert(0, {"String": "Setting changed.", "Code":"15w1y"})
 
+        # Team Damage #
+        elif input.lower().split()[0] == "teamdamage" or (len(input.split()) == 2 and input.lower().split()[0] == "team" and input.lower().split()[1] == "damage"):
+            self.player.teamDamage = not self.player.teamDamage
+            self.console.lineList.insert(0, {"Blank": True})
+            self.console.lineList.insert(0, {"String": "Setting changed.", "Code":"15w1y"})
+
+        # Heal Enemies #
+        elif input.lower().split()[0] == "healenemies" or (len(input.split()) == 2 and input.lower().split()[0] == "heal" and input.lower().split()[1] == "enemies"):
+            self.player.healEnemies = not self.player.healEnemies
+            self.console.lineList.insert(0, {"Blank": True})
+            self.console.lineList.insert(0, {"String": "Setting changed.", "Code":"15w1y"})
+
         ## God Commands ##
         # Manifest #
         elif input.lower().split()[0] in ["manifest", "manifes", "manife", "manif", "mani", "man"]:
@@ -1254,21 +1303,3 @@ class Game:
         else:
             self.console.lineList.insert(0, {"Blank": True})
             self.console.lineList.insert(0, {"String": "Huh?", "Code":"3w1y"})
-
-    def draw(self, window):
-        window.fill([0, 0, 0])
-
-        self.console.draw(window)
-        self.inputBar.draw(window)
-        self.map.draw(window)
-
-    def writeCrashReport(self, errorString, input):
-        with open("../CrashReport.txt", "w") as f:
-            f.write(errorString + "\n")
-            f.write("Input: " + input + "\n")
-            f.write("Player Loc: [" + str(self.player.galaxy) + ", " + str(self.player.system) + ", " + str(self.player.planet) + ", " + str(self.player.area) + ", " + str(self.player.room) + "]" + "\n")
-            f.write("Player Spaceship: " + str(self.player.spaceship) + "\n")
-            f.write("Player Targets: " + str(len(self.player.targetList)) + "\n")
-            f.write("Player Group: " + str(len(self.player.recruitList)) + "\n")
-            f.write("Player Inventory: " + str(len(self.player.getAllItemList(["Inventory"]))) + "\n")
-            f.write("Player Gear: " + str(len(self.player.getAllItemList(["Gear"]))) + "\n")

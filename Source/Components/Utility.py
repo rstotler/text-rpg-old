@@ -1,3 +1,7 @@
+def writeFast(label, color, location, font, surface):
+	labelRender = font.render(label, True, color)
+	surface.blit(labelRender, location)
+
 def writeColor(label, colorCode, location, font, surface):
     targetColor = ""
     colorCount = 0
@@ -131,3 +135,14 @@ def getCountString(targetCount):
         displayString = " (" + str(targetCount) + ")"
         displayCode = "2r" + str(len(str(targetCount))) + "w1r"
     return displayString, displayCode
+
+def writeCrashReport(errorString, input, player):
+    with open("../CrashReport.txt", "w") as f:
+        f.write(errorString + "\n")
+        f.write("Input: " + input + "\n")
+        f.write("Player Loc: [" + str(player.galaxy) + ", " + str(player.system) + ", " + str(player.planet) + ", " + str(player.area) + ", " + str(player.room) + "]" + "\n")
+        f.write("Player Spaceship: " + str(player.spaceship) + "\n")
+        f.write("Player Targets: " + str(len(player.targetList)) + "\n")
+        f.write("Player Group: " + str(len(player.recruitList)) + "\n")
+        f.write("Player Inventory: " + str(len(player.getAllItemList(["Inventory"]))) + "\n")
+        f.write("Player Gear: " + str(len(player.getAllItemList(["Gear"]))) + "\n")

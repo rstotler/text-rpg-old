@@ -11,6 +11,8 @@ class Room:
         self.room = room
         self.spaceshipObject = None
 
+        self.mapCoordinates = [None, None]
+
         self.name = {"String":"A Debug Room"}
         self.description = []
         self.exit = {"North": None, "East": None, "South": None, "West": None}
@@ -476,3 +478,20 @@ class Room:
             return -1, None, messageType
         else:
             return targetRange, searchDir, messageType
+
+    @staticmethod
+    def getAreaAndRoom(galaxyList, target):
+        if isinstance(target, Room):
+            spaceshipNum = target.spaceshipObject.num
+        else:
+            spaceshipNum = target.spaceship
+
+        targetRoom = Room.exists(galaxyList, spaceshipNum, target.galaxy, target.system, target.planet, target.area, target.room)
+        if targetRoom == None:
+            targetRoom = galaxyList[0].systemList[0].planetList[0].areaList[0].roomList[0]
+        if targetRoom.spaceshipObject != None:
+            targetArea = targetRoom.spaceshipObject.areaList[target.area]
+        else:
+            targetArea = galaxyList[target.galaxy].systemList[target.system].planetList[target.planet].areaList[target.area]
+        return targetArea, targetRoom
+        

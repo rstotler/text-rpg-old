@@ -1,3 +1,5 @@
+import random
+
 class Skill:
 
     def __init__(self, num):
@@ -12,6 +14,7 @@ class Skill:
         self.maxTargets = 1
         self.maxRange = 0
 
+        self.healCheck = False
         self.ruleDict = {}
 
         self.loadSkill(num)
@@ -62,6 +65,11 @@ class Skill:
         elif num == 10:
             self.name = {"String":"Bash", "Code":"4w"}
             self.ruleDict["Gear Num List"] = [102]
+            self.ruleDict["r"] = random.randrange(8888)
+        elif num == 11:
+            self.name = {"String":"Pray", "Code":"4w"}
+            self.maxTargets = "All"
+            self.healCheck = True
 
         if "All Only" in self.ruleDict:
             self.maxTargets = "All"
