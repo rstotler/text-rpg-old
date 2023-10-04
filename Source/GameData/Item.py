@@ -1,3 +1,4 @@
+import copy
 from GameData.Skill import Skill
 from Components.Utility import appendKeyList
 from Components.Utility import getCountString
@@ -204,6 +205,15 @@ class Item:
                 self.name = {"String":".45 HP Round", "Code":"1y11w"}
                 self.pocket = "Ammo"
                 self.ammoType = ".45"
+            if num == 209:
+                self.name = {"String":"5.56 6-Round Magazine", "Code":"1w1y4w1y14w"}
+                self.pocket = "Ammo"
+                self.ammoType = "5.56"
+                self.shellCapacity = 6
+            if num == 210:
+                self.name = {"String":"5.56 Standard Round", "Code":"1w1y17w"}
+                self.pocket = "Ammo"
+                self.ammoType = "5.56"
 
         # Misc. (901 - 1000) #
         if self.name["String"] == "Debug Item":
@@ -265,6 +275,13 @@ class Item:
 
         # Create Key List #
         appendKeyList(self.keyList, self.name["String"].lower())
+        for word in self.name["String"].lower().split():
+            if '-' in word:
+                for subword in word.split('-'):
+                    if subword not in self.keyList:
+                        self.keyList.append(subword)
+                if word.replace('-', ' ').strip() not in self.keyList:
+                    self.keyList.append(word.replace('-', ' ').strip())
 
         if "Code" not in self.name:
             self.name["Code"] = str(len(self.name["String"])) + "w"
@@ -276,7 +293,6 @@ class Item:
         console.lineList.insert(0, {"String": "You look at " + self.prefix.lower() + " " + self.name["String"] + ".", "Code":"12w" + str(len(self.prefix)) + "w1w" + self.name["Code"] + "1y"})
         
         if "Glowing" in self.flags and self.flags["Glowing"] == True:
-            console.lineList.insert(0, {"Blank": True})
             console.lineList.insert(0, {"String": "It's glowing.", "Code":"2w1y9w1y"})
         elif self.containerList == None:
             console.lineList.insert(0, {"String": "You see nothing special.", "Code":"23w1y"})
@@ -441,5 +457,14 @@ class Item:
         corpseItem = Item(666)
         corpseItem.prefix = "The corpse of"
         corpseItem.name["String"] = targetMob.prefix.lower() + " " + targetMob.name["String"]
-        corpseItem.name["Code"] = "14w" + str(len(targetMob.prefix)) + "w1w" + targetMob.name["Code"]
+        corpseItem.name["Code"] = str(len(targetMob.prefix)) + "w1w" + targetMob.name["Code"]
+        for item in targetMob.getAllItemList():
+            corpseItem.containerList.append(item)
+        appendKeyList(corpseItem.keyList, corpseItem.name["String"].lower())
         return corpseItem
+
+    @staticmethod
+    def getSpecialItemNum(targetItem):
+        if targetItem == "Corpse":
+            return 666
+        return 0

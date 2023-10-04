@@ -42,9 +42,9 @@ class Skill:
         elif num == 5:
             self.name = {"String":"Explosion", "Code":"9w"}
             self.ruleDict["All Only"] = True
-            # self.maxTargets = "All" # Is Automatically Set Below
             self.maxRange = 1
             self.offHandAttacks = False
+            # self.maxTargets = "All" # Is Automatically Set Below
         elif num == 6:
             self.name = {"String":"Snipe", "Code":"5w"}
             self.ruleDict["From Another Room"] = True
@@ -74,8 +74,15 @@ class Skill:
         elif num == 12:
             self.name = {"String":"Bless", "Code":"5w"}
             self.ruleDict["All Only"] = True
-            # self.maxTargets = "All" # Is Automatically Set Below
             self.healCheck = True
+            # self.maxTargets = "All" # Is Automatically Set Below
+        elif num == 13:
+            self.name = {"String":"Bullet Storm", "Code":"12w"}
+            self.weaponTypeList = ["Gun"]
+            self.ruleDict["All Only"] = True
+            self.maxRange = 1
+            self.offHandAttacks = False
+            # self.maxTargets = "All" # Is Automatically Set Below
 
         if "All Only" in self.ruleDict:
             self.maxTargets = "All"
@@ -92,7 +99,10 @@ class Skill:
                     s = 0
                     if i > 0:
                         s += len(' '.join(nameStringList[0:i])) + 1
-                    self.keyList.append(phrase[0:s + cNum + 1])
+                    if not (phrase[0:s + cNum + 1][-2] == ' '):
+                        self.keyList.append(phrase[0:s + cNum + 1])
+        if self.name["String"].lower().replace(' ', '') not in self.keyList:
+            self.keyList.append(self.name["String"].lower().replace(' ', ''))
         
     def weaponAttackCheck(self, mainHandWeapon, offHandWeapon="Unused"):
         # Checks For Skills That Require Two Weapons Don't Exist Yet! #

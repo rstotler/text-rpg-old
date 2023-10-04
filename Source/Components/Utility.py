@@ -116,13 +116,13 @@ def appendKeyList(targetKeyList, targetString):
         
         for cNum in range(len(phrase)):
             if cNum > 1:
-                if phrase[0:cNum].strip() not in targetKeyList:
+                if phrase[0:cNum].strip() not in targetKeyList and not (len(phrase[0:cNum].strip()) > 1 and phrase[0:cNum].strip()[-2] == ' ' and phrase[0:cNum].strip()[-1] in ["n", "e", "s", "w"]):
                     targetKeyList.append(phrase[0:cNum].strip())
-                    if len(phrase[0:cNum].strip()) > 2 and phrase[0:cNum].strip()[0] == '.' and phrase[0:cNum].strip()[1::] not in targetKeyList:
+                    if len(phrase[0:cNum].strip()) > 2 and phrase[0:cNum].strip()[0] == '.' and phrase[0:cNum].strip()[1::] not in targetKeyList and not (len(phrase[0:cNum].strip()[1::]) > 1 and phrase[0:cNum].strip()[1::][-2] == ' ' and phrase[0:cNum].strip()[1::][-1] in ["n", "e", "s", "w"]):
                         targetKeyList.append(phrase[0:cNum].strip()[1::])
                     if '-' in phrase[0:cNum].strip():
                         newPhrase = phrase[0:cNum].strip().replace('-', ' ').strip()
-                        if newPhrase not in targetKeyList:
+                        if newPhrase not in targetKeyList and not (len(newPhrase) > 1 and newPhrase[-2] == ' ' and newPhrase[-1] in ["n", "e", "s", "w"]):
                             targetKeyList.append(newPhrase)
 
         if phrase.strip() not in targetKeyList:

@@ -1,38 +1,47 @@
 import copy, random
 from GameData.World.Room import Room
 from GameData.World.Spaceship import Spaceship
-from GameData.Mob import Mob
 from GameData.Item import Item
 from GameData.Skill import Skill
 from GameData.Action import Action
 from GameData.Combat import Combat
+from Components.Utility import appendKeyList
 from Components.Utility import stringIsNumber
 from Components.Utility import getCountString
+from Components.Utility import wordWrap
 
 class Player:
 
-    def __init__(self):
-        self.galaxy = 0
-        self.system = 0
-        self.planet = 1
-        self.area = 0
-        self.room = 0
-        self.spaceship = None
+    def __init__(self, galaxy, system, planet, area, room, spaceship, num):
+        self.galaxy = galaxy
+        self.system = system
+        self.planet = planet
+        self.area = area
+        self.room = room
+        self.spaceship = spaceship
+        self.num = num
+        self.flags = {}
+
+        self.prefix = "A"
+        self.name = {"String":"Debug Mob", "Code":"9w"}
+        self.roomDescription = {"String":"is standing here.", "Code":"16w1y"}
+        self.keyList = []
 
         self.actionList = []
-        self.combatSkillList = [Skill(1), Skill(2), Skill(3), Skill(4), Skill(5), Skill(6), Skill(7), Skill(8), Skill(9), Skill(11), Skill(12)]
+        self.combatSkillList = [Skill(1), Skill(2), Skill(3), Skill(4), Skill(5), Skill(6), Skill(7), Skill(8), Skill(9), Skill(11), Skill(12), Skill(13)]
+
+        self.currentHealth = 2
 
         self.maxLookDistance = 3
         self.maxTargetDistance = 2
-        self.targetList = []
+        self.targetList = [] # Not Used For Mobs
         self.recruitList = []
-        self.combatList = []
+        self.combatList = [] # Player - Contains Other Mobs, Mobs - Also Only Contains Other Mobs
 
         self.itemDict = {"Armor": [], "Weapon":[], "Ammo":[], "Misc": []}
         self.gearDict = {"Head":None, "Face":None, "Neck":[None, None], "Body Under":None, "Body Over":None, "About Body":None, "Hands":None, "Finger":[None, None], "Legs Under":None, "Legs Over":None, "Feet":None, "Left Hand":None, "Right Hand":None}
         self.dominantHand = "Right Hand"
 
-        self.areaMessageTimer = random.randrange(200) + 200
         self.emoteList = ["hmm", "hm", "nod", "nodnod", "tap", "boggle", "ahah", "jump", "gasp", "haha", "lol", "cheer", "smile", "swear", "sigh", "grin", "snicker"]
 
         self.autoLoot = False
@@ -42,17 +51,20 @@ class Player:
 
         self.debugDualWield = False
 
-    def update(self, console):
-        if len(self.actionList) > 0:
-            self.actionList[0].update(console, self)
-            if self.actionList[0].currentTick >= self.actionList[0].maxTick:
-                del self.actionList[0]
+        if num != None:
+            self.loadMob(num)
 
-        self.areaMessageTimer -= 1
-        if self.areaMessageTimer <= 0:
-            self.areaMessageTimer = random.randrange(200) + 200
-            console.lineList.insert(0, {"Blank": True})
-            console.lineList.insert(0, {"String": "You hear some squeaking sounds.", "Code":"30w1y"})
+    def update(self, console, galaxyList, player, currentRoom):
+        if self.num != None:
+            distanceToPlayer, directionToPlayer, unused = Room.getTargetRange(galaxyList, currentRoom, player, self.maxTargetDistance)
+            
+            # Chase Player #
+            if self in player.combatList and distanceToPlayer != -1:
+                
+                # Next Room Locked Door Check #
+                if "No Chase" not in self.flags and distanceToPlayer > 0 \
+                and not (currentRoom.door[directionToPlayer] != None and currentRoom.door[directionToPlayer]["Status"] == "Locked" and "Password" in currentRoom.door[directionToPlayer] and self.hasKey(currentRoom.door[directionToPlayer]["Password"]) == False):
+                    self.moveCheck(console, map, galaxyList, player, currentRoom, directionToPlayer.lower())
 
     def lookDirection(self, console, galaxyList, currentRoom, lookDir, count):
         if isinstance(count, int) and count > 50:
@@ -252,7 +264,7 @@ class Player:
                 if targetMobKey != "All" and targetMob == None:
                     console.lineList.insert(0, {"Blank": True})
                     console.lineList.insert(0, {"String": "You don't see them.", "Code":"7w1y10w1y"})
-                elif targetMob != None and isinstance(targetMob, Mob) == False:
+                elif targetMob != None and hasattr(targetMob, "dominantHand") == False:
                     console.lineList.insert(0, {"Blank": True})
                     console.lineList.insert(0, {"String":"You can't target that.", "Code":"7w1y13w1y"})
                 
@@ -396,7 +408,7 @@ class Player:
                         console.lineList.insert(0, {"Blank": True})
                         console.lineList.insert(0, {"String": "You don't see them.", "Code":"7w1y10w1y"})
                         return
-                    elif isinstance(targetMob, Mob) == False:
+                    elif hasattr(targetMob, "dominantHand") == False:
                         console.lineList.insert(0, {"Blank": True})
                         console.lineList.insert(0, {"String":"You can't target that.", "Code":"7w1y13w1y"})
                         return
@@ -494,31 +506,45 @@ class Player:
                     console.lineList.insert(0, {"Blank": True})
                     console.lineList.insert(0, {"String":displayString + dirString + dirCountString, "Code":displayCode + dirCode + dirCountCode})
 
-    def moveCheck(self, console, map, galaxyList, currentRoom, targetDirKey):
-        if targetDirKey in ["north", "nort", "nor", "no", "n"] : targetDir = "North"
-        elif targetDirKey in ["east", "eas", "ea", "e"] : targetDir = "East"
-        elif targetDirKey in ["south", "sout", "sou", "so", "s"] : targetDir = "South"
+    def moveCheck(self, console, map, galaxyList, player, currentRoom, targetDirKey):
+        if targetDirKey.lower() in ["north", "nort", "nor", "no", "n"] : targetDir = "North"
+        elif targetDirKey.lower() in ["east", "eas", "ea", "e"] : targetDir = "East"
+        elif targetDirKey.lower() in ["south", "sout", "sou", "so", "s"] : targetDir = "South"
         else : targetDir = "West"
         
         if currentRoom.door[targetDir] != None and currentRoom.door[targetDir]["Type"] == "Manual" and currentRoom.door[targetDir]["Status"] in ["Closed", "Locked"]:
-            console.lineList.insert(0, {"Blank": True})
-            console.lineList.insert(0, {"String": "The door is closed.", "Code":"18w1y"})
+            if self.num == None:
+                console.lineList.insert(0, {"Blank": True})
+                console.lineList.insert(0, {"String": "The door is closed.", "Code":"18w1y"})
         elif currentRoom.door[targetDir] != None and currentRoom.door[targetDir]["Type"] == "Automatic" and currentRoom.door[targetDir]["Status"] == "Locked" and "Password" in currentRoom.door[targetDir] and self.hasKey(currentRoom.door[targetDir]["Password"]) == False:
-            console.lineList.insert(0, {"Blank": True})
-            console.lineList.insert(0, {"String": "You lack the proper key.", "Code":"23w1y"})
+            if self.num == None:
+                console.lineList.insert(0, {"Blank": True})
+                console.lineList.insert(0, {"String": "You lack the proper key.", "Code":"23w1y"})
         elif currentRoom.exit[targetDir] == None:
-            console.lineList.insert(0, {"Blank": True})
-            console.lineList.insert(0, {"String": "You can't go that way!", "Code":"7w1y13w1y"})
+            if self.num == None:
+                console.lineList.insert(0, {"Blank": True})
+                console.lineList.insert(0, {"String": "You can't go that way!", "Code":"7w1y13w1y"})
 
         else:
+            mobString = self.prefix + " " + self.name["String"]
+            mobCode = str(len(self.prefix)) + "w1w" + self.name["Code"]
             if len(self.actionList) > 0:
                 self.actionList = []
+                if self.num == None:
+                    console.lineList.insert(0, {"Blank": True})
+                    console.lineList.insert(0, {"String": "You stop what you're doing and move.", "Code":"17w1y17w1y"})
+                elif currentRoom.sameRoomCheck(player):
+                    console.lineList.insert(0, {"Blank": True})
+                    console.lineList.insert(0, {"String":mobString + " stops what they're doing and moves " + targetDir + ".", "Code":mobCode + "16w1y19w" + str(len(targetDir)) + "w1y"})
+            elif self.num != None and currentRoom.sameRoomCheck(player) and not (currentRoom.door[targetDir] != None and currentRoom.door[targetDir]["Type"] == "Automatic"):
                 console.lineList.insert(0, {"Blank": True})
-                console.lineList.insert(0, {"String": "You stop what you're doing and move.", "Code":"17w1y17w1y"})
+                console.lineList.insert(0, {"String":mobString + " moves " + targetDir + ".", "Code":mobCode + "7w" + str(len(targetDir)) + "w1y"})
 
             currentArea = Room.getAreaAndRoom(galaxyList, self)[0]
             targetArea, targetRoom, unusedDistance, unusedMessage = Room.getTargetRoomFromStartRoom(galaxyList, currentArea, currentRoom, targetDir, 1, True)
 
+            # Move #
+            automaticDoorCheck = False
             if targetRoom.spaceshipObject != None:
                 self.area = targetRoom.area
                 self.room = targetRoom.room
@@ -530,35 +556,58 @@ class Player:
                 self.room = targetRoom.room
                 if self.spaceship != None:
                     self.spaceship = None
-                    map.loadMap(targetArea)
+                    if self.num == None:
+                        map.loadMap(targetArea)
+                
+                if self.num == None or targetRoom.sameRoomCheck(player) == True or currentRoom.sameRoomCheck(player) == True:
+                    if self.num == None:
+                        console.lineList.insert(0, {"Blank": True})
+                    if currentRoom.door[targetDir] != None and currentRoom.door[targetDir]["Type"] == "Automatic":
+                        doorString = "door"
+                        if currentRoom.exit[targetDir] == "Spaceship Exit":
+                            doorString = "hatch"
+                        if self.num == None:
+                            console.lineList.insert(0, {"String": "The " + doorString + " opens and closes as you walk through.", "Code":"4w" + str(len(doorString)) + "w37w1y"})
+                        else:
+                            displayDirection = targetDir
+                            leavesString = " leaves"
+                            if targetRoom.sameRoomCheck(player) == True:
+                                displayDirection = Room.getOppositeDirection(targetDir)
+                                leavesString = " enters"
+                            displayString = "The door to the " + displayDirection + " opens and closes as " + mobString + leavesString + "."
+                            displayCode = "16w" + str(len(displayDirection)) + "w21w" + mobCode + str(len(leavesString)) + "w1y"
+                            console.lineList.insert(0, {"Blank": True})
+                            for displayLine in wordWrap(displayString, displayCode, console.characterWidth):
+                                console.lineList.insert(0, {"String":displayLine["String"], "Code":displayLine["Code"]})
+                        if self.num == None:
+                            console.lineList.insert(0, {"Blank": True})
+                        automaticDoorCheck = True
 
-                console.lineList.insert(0, {"Blank": True})
-                if currentRoom.door[targetDir] != None and currentRoom.door[targetDir]["Type"] == "Automatic":
-                    doorString = "door"
-                    if currentRoom.exit[targetDir] == "Spaceship Exit":
-                        doorString = "hatch"
-                    console.lineList.insert(0, {"String": "The " + doorString + " opens and closes as you walk through.", "Code":"4w" + str(len(doorString)) + "w37w1y"})
-                    console.lineList.insert(0, {"Blank": True})
+            if self.num != None:
+                if self in currentRoom.mobList:
+                    del currentRoom.mobList[currentRoom.mobList.index(self)]
+                targetRoom.mobList.append(self)
 
             delTargetList = []
             delMobData = None
             loseSightDir = None
-            for targetMob in self.targetList:
-                distance, direction, message = Room.getTargetRange(galaxyList, targetRoom, targetMob, self.maxTargetDistance + 1)
-                if distance == self.maxTargetDistance + 1:
-                    delTargetList.append(targetMob)
-                    loseSightDir = direction
-                    if delMobData == None:
-                        delMobData = targetMob
-                    elif delMobData != "Multiple" and delMobData.num != targetMob.num:
-                        delMobData = "Multiple"
-            for targetMob in delTargetList:
-                if targetMob in self.targetList:
-                    del self.targetList[self.targetList.index(targetMob)]
+            if self.num == None:
+                for targetMob in self.targetList:
+                    distance, direction, message = Room.getTargetRange(galaxyList, targetRoom, targetMob, self.maxTargetDistance + 1)
+                    if distance == self.maxTargetDistance + 1:
+                        delTargetList.append(targetMob)
+                        loseSightDir = direction
+                        if delMobData == None:
+                            delMobData = targetMob
+                        elif delMobData != "Multiple" and delMobData.num != targetMob.num:
+                            delMobData = "Multiple"
+                for targetMob in delTargetList:
+                    if targetMob in self.targetList:
+                        del self.targetList[self.targetList.index(targetMob)]
 
-            targetRoom.display(console, galaxyList, self)
+                targetRoom.display(console, galaxyList, self)
 
-            if len(delTargetList) > 0:
+            if self.num == None and len(delTargetList) > 0:
                 countString, countCode = getCountString(len(delTargetList))
                 if delMobData != "Multiple":
                     displayString = "You lose sight of " + delMobData.prefix.lower() + " " + delMobData.name["String"] + countString + " to the " + loseSightDir + "."
@@ -573,6 +622,12 @@ class Player:
                     displayCode = "18w" + str(len(someString)) + "w8w" + countCode + "8w" + str(len(loseSightDir)) + "w1y"
                     console.lineList.insert(0, {"Blank": True})
                     console.lineList.insert(0, {"String":displayString, "Code":displayCode})
+
+            elif self.num != None and targetRoom.sameRoomCheck(player) == True and automaticDoorCheck == False:
+                displayString = self.prefix + " " + self.name["String"] + " enters from the " + Room.getOppositeDirection(targetDir) + "."
+                displayCode = str(len(self.prefix)) + "w1w" + self.name["Code"] + "17w" + str(len(Room.getOppositeDirection(targetDir))) + "w1y"
+                console.lineList.insert(0, {"Blank": True})
+                console.lineList.insert(0, {"String":displayString, "Code":displayCode})
 
     def openCloseDoorCheck(self, console, galaxyList, currentRoom, targetAction, targetDir):
         targetDoorAction = targetAction
@@ -693,7 +748,7 @@ class Player:
             console.lineList.insert(0, {"Blank": True})
             console.lineList.insert(0, {"String": "You don't see anything like that.", "Code":"7w1y24w1y"})
         
-        elif isinstance(targetObject, Mob):
+        elif hasattr(targetObject, "dominantHand") == True:
             console.lineList.insert(0, {"Blank": True})
             console.lineList.insert(0, {"String": "You can't " + targetAction.lower() + " that!", "Code":"7w1y2w" + str(len(targetAction)) + "w5w1y"})
         
@@ -725,7 +780,7 @@ class Player:
             console.lineList.insert(0, {"Blank": True})
             console.lineList.insert(0, {"String": "You don't see anything like that.", "Code":"7w1y24w1y"})
         
-        elif isinstance(targetObject, Mob):
+        elif hasattr(targetObject, "dominantHand") == True:
             console.lineList.insert(0, {"Blank": True})
             console.lineList.insert(0, {"String": "You can't " + targetAction.lower() + " that!", "Code":"7w1y2w" + str(len(targetAction)) + "w5w1y"})
         
@@ -947,8 +1002,13 @@ class Player:
                             if targetContainer != None:
                                 pickUpString = "get "
                                 pickUpCode = "4w"
-                            getString = "You " + pickUpString + getItem.prefix.lower() + " " + getItem.name["String"] + countString + fromString + "."
-                            getCode = "4w" + pickUpCode + str(len(getItem.prefix)) + "w1w" + getItem.name["Code"] + countCode + fromCode + "1y"
+                            itemNameString = getItem.prefix.lower() + " " + getItem.name["String"]
+                            itemNameCode = str(len(getItem.prefix)) + "w1w" + getItem.name["Code"]
+                            if getItem.num == Item.getSpecialItemNum("Corpse"):
+                                itemNameString = "a corpse"
+                                itemNameCode = "8w"
+                            getString = "You " + pickUpString + itemNameString + countString + fromString + "."
+                            getCode = "4w" + pickUpCode + itemNameCode + countCode + fromCode + "1y"
                             if blankCheck == False : console.lineList.insert(0, {"Blank": True})
                             console.lineList.insert(0, {"String":getString, "Code":getCode})
          
@@ -1153,9 +1213,14 @@ class Player:
                 if blankCheck == False : console.lineList.insert(0, {"Blank": True})
                 console.lineList.insert(0, {"String":"You drop some things on the ground.", "Code":"34w1y"})
             elif dropItem != None:
+                itemNameString = dropItem.prefix.lower() + " " + dropItem.name["String"]
+                itemNameCode = str(len(dropItem.prefix)) + "w1w" + dropItem.name["Code"]
+                if dropItem.num == Item.getSpecialItemNum("Corpse"):
+                    itemNameString = "a corpse"
+                    itemNameCode = "8w"
                 countString, countCode = getCountString(dropCount)
-                dropString = "You drop " + dropItem.prefix.lower() + " " + dropItem.name["String"] + " on the ground." + countString
-                dropCode = "9w" + str(len(dropItem.prefix.lower())) + "w1w" + dropItem.name["Code"] + "14w1y" + countCode
+                dropString = "You drop " + itemNameString + " on the ground." + countString
+                dropCode = "9w" + itemNameCode + "14w1y" + countCode
                 if blankCheck == False : console.lineList.insert(0, {"Blank": True})
                 console.lineList.insert(0, {"String":dropString, "Code":dropCode})
 
@@ -1749,94 +1814,7 @@ class Player:
             console.lineList.insert(0, {"String": "You aren't doing anything.", "Code":"8w1y16w1y"})
         else:
             self.stopActions(console)
-
-    def displayInventory(self, console, galaxyList, currentRoom, targetPocketKey):
-        targetPocket = None
-        if targetPocketKey in ["gear", "gea", "ge", "g"]:
-            targetPocket = "Armor"
-        elif targetPocketKey in ["weapons", "weapon", "weapo", "weap", "wea", "we", "w"]:
-            targetPocket = "Weapon"
-        elif targetPocketKey in ["ammo", "amm", "am", "a"]:
-            targetPocket = "Ammo"
-        elif targetPocketKey in ["misc.", "misc", "mis", "mi", "m"]:
-            targetPocket = "Misc"
-
-        if targetPocket not in self.itemDict:
-            console.lineList.insert(0, {"Blank": True})
-            console.lineList.insert(0, {"String":"Open which bag? (Gear, Weapon, Ammo, Misc.)", "Code":"14w2y1r4w2y6w2y4w2y4w1y1r"})
-
-        else:
-            displayList = []
-            for item in self.itemDict[targetPocket]:
-                if item.ranged == True:
-                    displayList.append({"ItemData":item})
-                else:
-                    displayData = None
-                    for data in displayList:
-                        if "Num" in data and data["Num"] == item.num:
-                            displayData = data
-                            break
-                    if displayData == None:
-                        itemCount = 1
-                        if item.quantity != None:
-                            itemCount = item.quantity
-                        displayList.append({"Num":item.num, "Count":itemCount, "ItemData":item})
-                    else:
-                        displayData["Count"] += 1
-
-            targetPocketDisplayString = targetPocket
-            targetPocketDisplayCode = str(len(targetPocket)) + "w"
-            if targetPocket == "Armor":
-                targetPocketDisplayString = "Gear"
-                targetPocketDisplayCode = "4w"
-            elif targetPocket == "Misc":
-                targetPocketDisplayString = "Misc."
-                targetPocketDisplayCode = "4w1y"
-            underlineString = ""
-            underlineCode = ""
-            for i in range(len(targetPocketDisplayString) + 4):
-                underlineChar = "-"
-                indentCount = int(len(targetPocketDisplayString + " Bag") * .25)
-                if indentCount <= 0:
-                    indentCount = 1
-                if i not in range(0, indentCount) and i not in range(len(targetPocketDisplayString + " Bag") - indentCount, len(targetPocketDisplayString + " Bag")):
-                    underlineChar = "="
-                underlineString = underlineString + underlineChar
-                if i % 2 == 1:
-                    underlineCode = underlineCode + "1y"
-                else:
-                    underlineCode = underlineCode + "1dy"
-            console.lineList.insert(0, {"Blank": True})
-            console.lineList.insert(0, {"String": targetPocketDisplayString + " Bag", "Code": targetPocketDisplayCode + "4w"})
-            console.lineList.insert(0, {"String": underlineString, "Code": underlineCode})
-
-            if len(self.itemDict[targetPocket]) == 0:
-                console.lineList.insert(0, {"String": "-Empty", "Code": "1y5w"})
-            elif currentRoom.isLit(galaxyList, self) == False and self.lightInBagCheck(targetPocket) == False:
-                inventoryCount = 0
-                for displayItemData in displayList:
-                    if "Count" in displayItemData:
-                        inventoryCount += displayItemData["Count"]
-                    else:
-                        inventoryCount += 1
-                countString, countCode = getCountString(inventoryCount)
-                console.lineList.insert(0, {"String": "-Something" + countString, "Code": "1y9w" + countCode})
-            else:
-                for displayItemData in displayList:
-                    item = displayItemData["ItemData"]
-                    modString = ""
-                    modCode = ""
-                    if "Glowing" in item.flags and item.flags["Glowing"] == True:
-                        modString = " (Glowing)"
-                        modCode = "2y1w1dw1ddw1w2dw1ddw1y"
-                    countNum = 0
-                    if "Count" in displayItemData : countNum = displayItemData["Count"]
-                    countString, countCode = getCountString(countNum)
-                    itemDisplayString = item.prefix + " " + item.name["String"]
-                    itemDisplayCode = str(len(item.prefix)) + "w1w" + item.name["Code"]
-                    weaponStatusString, weaponStatusCode = item.getWeaponStatusString()
-                    console.lineList.insert(0, {"String":itemDisplayString + weaponStatusString + countString + modString, "Code":itemDisplayCode + weaponStatusCode + countCode + modCode})
-                    
+           
     def wearCheck(self, console, targetItemKey, count, targetGearSlotIndex=None):
         blankCheck = self.stopActions(console)
 
@@ -2346,7 +2324,7 @@ class Player:
                 mobKillList = []
                 if not ((mobKey == "Self" and allOnlyCheck == False) or (combatSkill.healCheck == True and mobKey == None and mobCount == None and len(self.targetList) > 0 and self.healEnemies == False and allOnlyCheck == False)):
                     for i in range(len(attackList)):
-                        attackDisplayList.append({"Mob Data":None, "Count":0, "Kill Count":0, "Attack Data":attackList[i]})
+                        attackDisplayList.append({"Mob Data":None, "Killed Mob Data":None, "Count":0, "Kill Count":0, "Miss Count":0, "Attack Data":attackList[i]})
                     if maxTargets > 0 and not (combatSkill.healCheck == True and mobKey == "Self" and allOnlyCheck == False):
                         for mob in targetRoom.mobList:
                             if mobKey == "All" or allOnlyCheck == True or \
@@ -2385,7 +2363,9 @@ class Player:
                                                 attackDisplayList[i]["Mob Data"] = "Multiple"
                                             if hitCheck == True:
                                                 attackDisplayList[i]["Count"] += 1
-                                            
+                                            else:
+                                                attackDisplayList[i]["Miss Count"] += 1
+
                                         targetMobList.append(mob)
 
                                         if mob.currentHealth <= 0:
@@ -2394,8 +2374,13 @@ class Player:
                                             targetRoom.itemList.append(Item.createCorpse(mob))
                                             if mob in self.targetList : del self.targetList[self.targetList.index(mob)]
                                             if mob in self.recruitList : del self.recruitList[self.recruitList.index(mob)]
+                                            if attackDisplayList[0]["Killed Mob Data"] == None:
+                                                attackDisplayList[0]["Killed Mob Data"] = mob
+                                            elif attackDisplayList[0]["Killed Mob Data"] != "Multiple" and attackDisplayList[0]["Killed Mob Data"].num != mob.num:
+                                                attackDisplayList[0]["Killed Mob Data"] = "Multiple"
                                         elif mob.currentHealth > 0 and combatSkill.healCheck == False and mob not in self.targetList and mob not in self.recruitList:
                                             self.targetList.insert(0, mob)
+                                            if mob not in self.combatList : self.combatList.append(mob)
 
                                         if targetMob == None:
                                             targetMob = mob
@@ -2449,15 +2434,22 @@ class Player:
                                     if blankCheck == False : console.lineList.insert(0, {"Blank": True})
                                     console.lineList.insert(0, {"String": displayString, "Code":displayCode})
                                     blankCheck = True
-                                elif attackData["Miss Check"] == "Miss Attack":
-                                    countString, countCode = getCountString(attackData["Count"])
-                                    displayString = "Your " + attackData["Attack Data"].name["String"] + directionString + directionCountString + " misses " + attackData["Mob Data"].prefix.lower() + " " + attackData["Mob Data"].name["String"] + "." + countString
-                                    displayCode = "5w" + attackData["Attack Data"].name["Code"] + directionCode + directionCountCode + "8w" + str(len(attackData["Mob Data"].prefix)) + "w1w" + attackData["Mob Data"].name["Code"] + "1y" + countCode
+                                elif attackData["Miss Check"] == "Miss Attack" and not (attackData["Mob Data"] == "Multiple" and attackData["Count"] > 0):
+                                    countString = ""
+                                    countCode = ""
+                                    mobString = "the group"
+                                    mobCode = "9w"
+                                    if attackData["Mob Data"] != "Multiple":
+                                        countString, countCode = getCountString(attackData["Miss Count"])
+                                        mobString = attackData["Mob Data"].prefix + " " + attackData["Mob Data"].name["String"]
+                                        mobCode = str(len(attackData["Mob Data"].prefix)) + "w1w" + attackData["Mob Data"].name["Code"]
+                                    displayString = "Your " + attackData["Attack Data"].name["String"] + directionString + directionCountString + " misses " + mobString + "." + countString
+                                    displayCode = "5w" + attackData["Attack Data"].name["Code"] + directionCode + directionCountCode + "8w" + mobCode + "1y" + countCode
                                     if blankCheck == False : console.lineList.insert(0, {"Blank": True})
                                     console.lineList.insert(0, {"String": displayString, "Code":displayCode})
                                     blankCheck = True
 
-                            else:
+                            if attackData["Count"] > 0:
                                 hitString = " hits"
                                 hitCode = "5w"
                                 if blankCheck == False : console.lineList.insert(0, {"Blank": True})
@@ -2472,20 +2464,108 @@ class Player:
                                     console.lineList.insert(0, {"String": displayString, "Code":displayCode})
                                 elif attackData["Mob Data"] != None:
                                     countString, countCode = getCountString(attackData["Count"])
-                                    displayString = "Your " + attackData["Attack Data"].name["String"] + directionString + directionCountString + hitString + " " + attackData["Mob Data"].prefix.lower() + " " + attackData["Mob Data"].name["String"] + "!" + countString
-                                    displayCode = "5w" + attackData["Attack Data"].name["Code"] + directionCode + directionCountCode + hitCode + "1w" + str(len(attackData["Mob Data"].prefix)) + "w1w" + attackData["Mob Data"].name["Code"] + "1y" + countCode
+                                    displayString = "Your " + attackData["Attack Data"].name["String"] + directionString + directionCountString + hitString + " " + attackData["Mob Data"].prefix.lower() + " " + attackData["Mob Data"].name["String"] + "!"
+                                    displayCode = "5w" + attackData["Attack Data"].name["Code"] + directionCode + directionCountCode + hitCode + "1w" + str(len(attackData["Mob Data"].prefix)) + "w1w" + attackData["Mob Data"].name["Code"] + "1y"
                                     console.lineList.insert(0, {"String": displayString + countString, "Code":displayCode + countCode})
                         
                         if attackDisplayList[0]["Kill Count"] > 0:
                             countString, countCode = getCountString(attackData["Kill Count"])
-                            if attackData["Mob Data"] == "Multiple":
+                            if attackData["Killed Mob Data"] == "Multiple":
                                 displayString = "Your attack kills your targets!"
                                 displayCode = "30w1y"
                                 console.lineList.insert(0, {"String": displayString + countString, "Code":displayCode + countCode})
                             else:
-                                displayString = attackData["Mob Data"].prefix + " " + attackData["Mob Data"].name["String"] + " is DEAD!"
-                                displayCode = str(len(attackData["Mob Data"].prefix)) + "w1w" + attackData["Mob Data"].name["Code"] + "8w1y"
+                                displayString = attackDisplayList[0]["Killed Mob Data"].prefix + " " + attackDisplayList[0]["Killed Mob Data"].name["String"] + " is DEAD!"
+                                displayCode = str(len(attackDisplayList[0]["Killed Mob Data"].prefix)) + "w1w" + attackDisplayList[0]["Killed Mob Data"].name["Code"] + "8w1y"
                                 console.lineList.insert(0, {"String": displayString + countString, "Code":displayCode + countCode})
+
+    def displayInventory(self, console, galaxyList, currentRoom, targetPocketKey):
+        targetPocket = None
+        if targetPocketKey in ["gear", "gea", "ge", "g"]:
+            targetPocket = "Armor"
+        elif targetPocketKey in ["weapons", "weapon", "weapo", "weap", "wea", "we", "w"]:
+            targetPocket = "Weapon"
+        elif targetPocketKey in ["ammo", "amm", "am", "a"]:
+            targetPocket = "Ammo"
+        elif targetPocketKey in ["misc.", "misc", "mis", "mi", "m"]:
+            targetPocket = "Misc"
+
+        if targetPocket not in self.itemDict:
+            console.lineList.insert(0, {"Blank": True})
+            console.lineList.insert(0, {"String":"Open which bag? (Gear, Weapon, Ammo, Misc.)", "Code":"14w2y1r4w2y6w2y4w2y4w1y1r"})
+
+        else:
+            displayList = []
+            for item in self.itemDict[targetPocket]:
+                if item.ranged == True:
+                    displayList.append({"ItemData":item})
+                else:
+                    displayData = None
+                    for data in displayList:
+                        if "Num" in data and data["Num"] == item.num:
+                            if item.num != Item.getSpecialItemNum("Corpse") or item.name["String"] == data["ItemData"].name["String"]:
+                                displayData = data
+                                break
+                    if displayData == None:
+                        itemCount = 1
+                        if item.quantity != None:
+                            itemCount = item.quantity
+                        displayList.append({"Num":item.num, "Count":itemCount, "ItemData":item})
+                    else:
+                        displayData["Count"] += 1
+
+            targetPocketDisplayString = targetPocket
+            targetPocketDisplayCode = str(len(targetPocket)) + "w"
+            if targetPocket == "Armor":
+                targetPocketDisplayString = "Gear"
+                targetPocketDisplayCode = "4w"
+            elif targetPocket == "Misc":
+                targetPocketDisplayString = "Misc."
+                targetPocketDisplayCode = "4w1y"
+            underlineString = ""
+            underlineCode = ""
+            for i in range(len(targetPocketDisplayString) + 4):
+                underlineChar = "-"
+                indentCount = int(len(targetPocketDisplayString + " Bag") * .25)
+                if indentCount <= 0:
+                    indentCount = 1
+                if i not in range(0, indentCount) and i not in range(len(targetPocketDisplayString + " Bag") - indentCount, len(targetPocketDisplayString + " Bag")):
+                    underlineChar = "="
+                underlineString = underlineString + underlineChar
+                if i % 2 == 1:
+                    underlineCode = underlineCode + "1y"
+                else:
+                    underlineCode = underlineCode + "1dy"
+            console.lineList.insert(0, {"Blank": True})
+            console.lineList.insert(0, {"String": targetPocketDisplayString + " Bag", "Code": targetPocketDisplayCode + "4w"})
+            console.lineList.insert(0, {"String": underlineString, "Code": underlineCode})
+
+            if len(self.itemDict[targetPocket]) == 0:
+                console.lineList.insert(0, {"String": "-Empty", "Code": "1y5w"})
+            elif currentRoom.isLit(galaxyList, self) == False and self.lightInBagCheck(targetPocket) == False:
+                inventoryCount = 0
+                for displayItemData in displayList:
+                    if "Count" in displayItemData:
+                        inventoryCount += displayItemData["Count"]
+                    else:
+                        inventoryCount += 1
+                countString, countCode = getCountString(inventoryCount)
+                console.lineList.insert(0, {"String": "-Something" + countString, "Code": "1y9w" + countCode})
+            else:
+                for displayItemData in displayList:
+                    item = displayItemData["ItemData"]
+                    modString = ""
+                    modCode = ""
+                    if "Glowing" in item.flags and item.flags["Glowing"] == True:
+                        modString = " (Glowing)"
+                        modCode = "2y1w1dw1ddw1w2dw1ddw1y"
+                    countNum = 0
+                    if "Count" in displayItemData : countNum = displayItemData["Count"]
+                    countString, countCode = getCountString(countNum)
+                    itemDisplayString = item.prefix + " " + item.name["String"]
+                    itemDisplayCode = str(len(item.prefix)) + "w1w" + item.name["Code"]
+                    weaponStatusString, weaponStatusCode = item.getWeaponStatusString()
+                    console.lineList.insert(0, {"String":itemDisplayString + weaponStatusString + countString + modString, "Code":itemDisplayCode + weaponStatusCode + countCode + modCode})
 
     def displaySkills(self, console):
         console.lineList.insert(0, {"Blank": True})
@@ -2637,7 +2717,7 @@ class Player:
             targetPlanet = currentRoom.spaceshipObject.planet
             targetArea = currentRoom.area
             targetRoom = currentRoom.room
-            targetSpaceship = currentRoom.spaceship
+            targetSpaceship = currentRoom.spaceshipObject.num
         else:
             targetGalaxy = currentRoom.galaxy
             targetSystem = currentRoom.system
@@ -2648,7 +2728,7 @@ class Player:
 
         for i in range(targetCount):
             if targetType == "Mob":
-                newMob = Mob(targetNum, targetGalaxy, targetSystem, targetPlanet, targetArea, targetRoom, targetSpaceship)
+                newMob = Player(targetGalaxy, targetSystem, targetPlanet, targetArea, targetRoom, targetSpaceship, targetNum)
                 currentRoom.mobList.append(newMob)
                 if manifestTarget == None:
                     manifestTarget = newMob
@@ -2804,10 +2884,15 @@ class Player:
                     return True
         elif len(combatSkill.weaponTypeList) == 1:
             if targetWeapon == "Unused":
-                if ((self.gearDict["Left Hand"] != None and combatSkill.weaponTypeList[0] == self.gearDict["Left Hand"].weaponType) or (self.gearDict["Right Hand"] != None and combatSkill.weaponTypeList[0] == self.gearDict["Right Hand"].weaponType)):
-                    return True
+                if self.gearDict["Left Hand"] != None and combatSkill.weaponTypeList[0] == self.gearDict["Left Hand"].weaponType:
+                    if not ("Requires Two-Handed Weapon" in combatSkill.ruleDict and self.gearDict["Left Hand"].twoHanded == False):
+                        return True
+                if self.gearDict["Right Hand"] != None and combatSkill.weaponTypeList[0] == self.gearDict["Right Hand"].weaponType:
+                    if not ("Requires Two-Handed Weapon" in combatSkill.ruleDict and self.gearDict["Right Hand"].twoHanded == False):
+                        return True
             elif (targetWeapon in ["Open Hand", None] and combatSkill.weaponTypeList[0] == "Open Hand") or (targetWeapon != None and targetWeapon.weaponType == combatSkill.weaponTypeList[0]):
-                return True
+                if not ("Requires Two-Handed Weapon" in combatSkill.ruleDict and targetWeapon not in ["Open Hand", None] and targetWeapon.twoHanded == False):
+                    return True
 
         elif len(combatSkill.weaponTypeList) == 2 and targetWeapon == "Unused":
             correctWeaponTypeList = []
@@ -2842,8 +2927,8 @@ class Player:
         for pocket in self.itemDict:
             for item in self.itemDict[pocket]:
                 if "Password List" in item.flags:
-                    for playerPassword in item.flags["Password List"]:
-                        if playerPassword == password:
+                    for targetPassword in item.flags["Password List"]:
+                        if targetPassword == password:
                             return True
         return False
     
@@ -2923,3 +3008,22 @@ class Player:
             console.lineList.insert(0, {"Blank": True})
             console.lineList.insert(0, {"String":"You snicker softly.", "Code":"18w1y"})
         
+    # Mob Functions #
+    def loadMob(self, num):
+        if num == 1:
+            self.name = {"String":"Robotic Greeter Droid", "Code":"21w"}
+        elif num == 2:
+            self.name = {"String":"Mummy", "Code":"5w"}
+            self.flags ["No Chase"] = True
+        elif num == 3:
+            self.name = {"String":"Reptoid", "Code":"7w"}
+        elif num == 4:
+            self.name = {"String":"Tall Droid", "Code":"10w"}
+
+        # Create Key List #
+        appendKeyList(self.keyList, self.name["String"].lower())
+
+    def lookDescription(self, console):
+        console.lineList.insert(0, {"Blank": True})
+        console.lineList.insert(0, {"String": "You look at " + self.prefix.lower() + " " + self.name["String"] + ".", "Code":"12w" + str(len(self.prefix)) + "w1w" + self.name["Code"] + "1y"})
+        console.lineList.insert(0, {"String": "You see nothing special.", "Code":"23w1y"})

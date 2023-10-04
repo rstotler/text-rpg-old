@@ -1,11 +1,11 @@
 Traceback (most recent call last):
   File "D:\Codes\Python\Universe\Source\Screen\InputBar.py", line 50, in processInput
     game.processInputBarCommand(self.input)
-  File "D:\Codes\Python\Universe\Source\Game.py", line 398, in processInputBarCommand
+  File "D:\Codes\Python\Universe\Source\Game.py", line 408, in processInputBarCommand
     currentRoom.display(self.console, self.galaxyList, self.player)
-  File "D:\Codes\Python\Universe\Source\GameData\World\Room.py", line 186, in display
-    if item.quantity != None:
-AttributeError: 'NoneType' object has no attribute 'quantity'
+  File "D:\Codes\Python\Universe\Source\GameData\World\Room.py", line 182, in display
+    if item.num != Item.getSpecialItemNum("Corpse"):
+NameError: name 'Item' is not defined
 
 Input: l
 Player Loc: [0, 0, 1, 0, 1]

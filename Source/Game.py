@@ -12,8 +12,8 @@ from GameData.World.Planet import Planet
 from GameData.World.Area import Area
 from GameData.World.Room import Room
 from GameData.World.Spaceship import Spaceship
-from GameData.Mob import Mob
 from GameData.Item import Item
+from GameData.Action import Action
 from Components.Utility import stringIsNumber
 from Components.Utility import appendKeyList
 
@@ -26,12 +26,12 @@ from Components.Utility import appendKeyList
     # -Mobs Counter-Attack
     # Make Player Lose Sight Of Mobs On Darkness
     # Mob Updates/Movement
-    # Combat Mobs Chase Player
     # Attack Command
     # Dodge Command
     # Parry Command
     # Fix Map Doors (Active Map)
     # Auto-Loot
+    # Counter-Attack (Passive Skill)
 
 class Game:
 
@@ -41,14 +41,14 @@ class Game:
         self.inputBar = InputBar()
         self.map = Map()
 
-        self.player = Player()
+        self.player = Player(0, 0, 1, 0, 1, None, None)
         self.galaxyList = []
 
         self.frameTick = 0
         
         self.loadGame()
-        self.inputBar.inputList = ["n", "w", "loot cab", "wear pis", "wear pis", "e", "s", "s", "reload"]
-
+        # self.inputBar.inputList = ["n", "w", "loot cab", "wear pis", "wear pis", "e", "s", "s", "reload"]
+        
     def loadGame(self):
         galaxyProtoMilkyWay = Galaxy()
         self.galaxyList.append(galaxyProtoMilkyWay)
@@ -105,7 +105,7 @@ class Game:
             roomCOTU01.name = {"String":"Bridge To The Spaceport", "Code":"14w1w1dw2ddw1dw1w1dw1ddw1dw"}
             roomCOTU01.exit["North"] = [0, 0, 1, 0, 0]
             roomCOTU01.exit["South"] = [0, 0, 1, 0, 2]
-            roomCOTU01.mobList.append(Mob(1, 0, 0, 1, 0, 1, None))
+            roomCOTU01.mobList.append(Player(0, 0, 1, 0, 1, None, 1))
 
             roomCOTU02 = Room(0, 0, 1, 0, 2)
             areaCOTU.roomList.append(roomCOTU02)
@@ -153,6 +153,8 @@ class Game:
             weaponsCabinet.containerList.append(Item(205, 25))
             weaponsCabinet.containerList.append(Item(207, 10))
             weaponsCabinet.containerList.append(Item(206, 40))
+            weaponsCabinet.containerList.append(Item(209))
+            weaponsCabinet.containerList.append(Item(210, 25))
 
             roomCOTU05 = Room(0, 0, 1, 0, 5)
             areaCOTU.roomList.append(roomCOTU05)
@@ -280,7 +282,14 @@ class Game:
         if self.frameTick in [0, 30]:
             playerArea, playerRoom = Room.getAreaAndRoom(self.galaxyList, self.player)
             updateAreaList, updateRoomList = Room.getSurroundingRoomData(self.galaxyList, playerArea, playerRoom, 4)
-            self.player.update(self.console)
+            for room in updateRoomList:
+                for mob in room.mobList:
+                    mob.update(self.console, self.galaxyList, self.player, room)
+
+            Action.updateActionCommand(self.console, self.player)
+            for updateRoom in updateRoomList:
+                for mob in updateRoom.mobList:
+                    Action.updateActionCommand(self.console, mob)
                 
         self.frameTick += 1
         if self.frameTick >= 60:
@@ -306,7 +315,7 @@ class Game:
                         elif event.key == K_RIGHT : targetDir = "e"
                         elif event.key == K_DOWN : targetDir = "s"
                         elif event.key == K_LEFT : targetDir = "w"
-                        self.player.moveCheck(self.console, self.map, self.galaxyList, currentRoom, targetDir)
+                        self.player.moveCheck(self.console, self.map, self.galaxyList, self.player, currentRoom, targetDir)
                 else:
                     keyName = pygame.key.name(event.key)
                     self.inputBar.processInput(keyName, self)
@@ -569,7 +578,7 @@ class Game:
             # Move Direction '#' #
 
             # Move Direction #
-            self.player.moveCheck(self.console, self.map, self.galaxyList, currentRoom, input.lower())
+            self.player.moveCheck(self.console, self.map, self.galaxyList, self.player, currentRoom, input.lower())
 
         # Open/Close #
         elif input.lower().split()[0] in ["open", "ope", "op", "o", "close", "clos", "clo", "cl"]:

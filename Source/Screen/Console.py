@@ -12,6 +12,8 @@ class Console:
         self.surface = pygame.Surface(rectSize)
         self.font = pygame.font.Font("../Assets/Fonts/CodeNewRomanB.otf", 18)
 
+        self.characterWidth = 59
+        
         self.lineList = []
         self.displayLine = 0
 

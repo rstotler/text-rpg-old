@@ -21,5 +21,5 @@ class Combat:
 
             return False, dataDict
 
-        target.currentHealth -= 100
+        target.currentHealth -= 1
         return True, None

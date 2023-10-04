@@ -1,4 +1,5 @@
 import copy
+from GameData.Item import Item
 from Components.Utility import getCountString
 
 class Room:
@@ -179,8 +180,9 @@ class Room:
                 displayData = None
                 for data in displayList:
                     if data["Num"] == item.num:
-                        displayData = data
-                        break
+                        if item.num != Item.getSpecialItemNum("Corpse") or item.name["String"] == data["ItemData"].name["String"]:
+                            displayData = data
+                            break
                 if displayData == None:
                     itemCount = 1
                     if item.quantity != None:
@@ -385,12 +387,9 @@ class Room:
     def getSurroundingRoomData(galaxyList, startArea, startRoom, targetRange):
         oppositeDir = {"North":"South", "East":"West", "South":"North", "West":"East"}
         def examineRoomData(targetArea, targetRoom, targetRange, targetDir, examinedAreaList, examinedRoomList, viewLoc):
-            spaceshipNum = targetRoom.spaceshipObject
-            if spaceshipNum != None:
-                spaceshipNum = spaceshipNum.num
-            if {"Galaxy":targetRoom.galaxy, "System":targetRoom.system, "Planet":targetRoom.planet, "Area":targetRoom.area, "Spaceship":spaceshipNum} not in examinedAreaList:
-                examinedAreaList.append({"Galaxy":targetRoom.galaxy, "System":targetRoom.system, "Planet":targetRoom.planet, "Area":targetRoom.area, "Spaceship":spaceshipNum})
-            examinedRoomList.append({"Galaxy":targetRoom.galaxy, "System":targetRoom.system, "Planet":targetRoom.planet, "Area":targetRoom.area, "Room":targetRoom.room, "Spaceship":spaceshipNum})
+            if targetArea not in examinedAreaList:
+                examinedAreaList.append(targetArea)
+            examinedRoomList.append(targetRoom)
 
             if viewLoc[0] + viewLoc[1] < targetRange:
                 firstLoc = copy.deepcopy(viewLoc)
@@ -404,11 +403,7 @@ class Room:
                         nextArea, nextRoom, distance, message = Room.getTargetRoomFromStartRoom(galaxyList, targetArea, targetRoom, targetExitDir, 1, True)
                         if targetExitDir in ["East", "West"] : viewLoc[0] += 1
                         elif targetExitDir in ["North", "South"] : viewLoc[1] += 1
-
-                        spaceshipNum = nextRoom.spaceshipObject
-                        if spaceshipNum != None:
-                            spaceshipNum = spaceshipNum.num
-                        if {"Galaxy":nextRoom.galaxy, "System":nextRoom.system, "Planet":nextRoom.planet, "Area":nextRoom.area, "Room":nextRoom.room, "Spaceship":spaceshipNum} not in examinedRoomList:
+                        if nextRoom not in examinedRoomList:
                             examinedAreaList, examinedRoomList = examineRoomData(nextArea, nextRoom, targetRange, targetExitDir, examinedAreaList, examinedRoomList, viewLoc)
 
             return examinedAreaList, examinedRoomList
@@ -420,7 +415,8 @@ class Room:
         targetRange = 0
         searchDir = None
         messageType = None
-        if targetObject in startRoom.mobList:
+        if (targetObject.num != None and targetObject in startRoom.mobList) or \
+        (targetObject.num == None and startRoom.sameRoomCheck(targetObject) == True):
             return 0, None, None
 
         else:
@@ -445,7 +441,8 @@ class Room:
                         if message == "Door Is Closed":
                             messageMaster = message
 
-                        if targetObject in currentRoom.mobList:
+                        if (targetObject.num != None and targetObject in currentRoom.mobList) or \
+                        (targetObject.num == None and currentRoom.sameRoomCheck(targetObject) == True):
                             messageType = messageMaster
                             targetFoundCheck = True
                             targetRange = rNum + 1
@@ -465,7 +462,8 @@ class Room:
                                         sideArea, sideRoom, distance, message = Room.getTargetRoomFromStartRoom(galaxyList, sideArea, sideRoom, sideDir, 1, True)
                                         if message == "Door Is Closed" : messageType = message
 
-                                        if targetObject in sideRoom.mobList:
+                                        if targetObject in sideRoom.mobList or \
+                                        (targetObject.num == None and sideRoom.sameRoomCheck(targetObject) == True):
                                             targetFoundCheck = True
                                             targetRange = (rNum + 1) + (sideNum + 1)
                                             break
@@ -498,3 +496,10 @@ class Room:
             targetArea = galaxyList[target.galaxy].systemList[target.system].planetList[target.planet].areaList[target.area]
         return targetArea, targetRoom
         
+    @staticmethod
+    def getOppositeDirection(targetDirection):
+        targetDirection = targetDirection.lower()
+        if targetDirection[0] == "n" : return "South"
+        elif targetDirection[0] == "e" : return "West"
+        elif targetDirection[0] == "s" : return "North"
+        else : return "East"
