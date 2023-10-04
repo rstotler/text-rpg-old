@@ -21,23 +21,17 @@ from Components.Utility import appendKeyList
     # Basic Mob Speech
     # Implement wordWrap()
     # Combat:
-    # -Gun Ammo
-    # -Auto-Reload
-    # -Don't Let Player Use Same Skill Twice (Off Hand Attack) When It Is A Gear Skill
-    # -Some Attacks Miss
     # -Time-Based Action
+    # -Auto-Reload
     # -Mobs Counter-Attack
-    # -Mob Death
-    # -Auto-Loot
-    # Make "All Only" Skills Hit Everyone (Ignore Team Damage/Heal Enemies)
-    # Make Player Lose Sight Of Mobs On Movement, On Darkness
+    # Make Player Lose Sight Of Mobs On Darkness
     # Mob Updates/Movement
     # Combat Mobs Chase Player
-    # Stop Command
     # Attack Command
     # Dodge Command
     # Parry Command
-    # Fix Map Doors
+    # Fix Map Doors (Active Map)
+    # Auto-Loot
 
 class Game:
 
@@ -53,8 +47,7 @@ class Game:
         self.frameTick = 0
         
         self.loadGame()
-        # self.inputBar.inputList = ["n", "w", "loot cab", "wear shi", "wear pis", "e", "s", "s", "shoot droid"]
-        self.inputBar.inputList = ["n", "w", "get key from chest", "e", "s", "s", "s", "s"]
+        self.inputBar.inputList = ["n", "w", "loot cab", "wear pis", "wear pis", "e", "s", "s", "reload"]
 
     def loadGame(self):
         galaxyProtoMilkyWay = Galaxy()
@@ -860,8 +853,11 @@ class Game:
                 self.player.removeCheck(self.console, targetItemKey, "All")
 
             # Remove Gear/Weapon 'GearSlot' #
-            elif len(input.split()) > 2 and stringIsNumber(input.split()[-1]) and int(input.split()[-1]) > 0:
-                targetGearSlotIndex = int(input.split()[-1]) - 1
+            elif len(input.split()) > 2 and (stringIsNumber(input.split()[-1]) and int(input.split()[-1]) > 0) or input.lower().split()[-1] in ["left", "right"]:
+                if stringIsNumber(input.split()[-1]):
+                    targetGearSlotIndex = int(input.split()[-1]) - 1
+                else:
+                    targetGearSlotIndex = input.lower().split()[-1]
                 targetItemKey = ' '.join(input.lower().split()[1:-1])
                 self.player.removeCheck(self.console, targetItemKey, 1, targetGearSlotIndex)
 
@@ -882,9 +878,17 @@ class Game:
         ## Combat Commands ##
         # Attack #
         elif input.lower().split()[0] in ["attack", "attac", "atta", "att", "at", "a"]:
-            pass
+            
+            # Attack Mob #
+            if len(input.split()) > 1:
+                mobKey = ' '.join(input.lower().split()[1::])
+                self.player.attackCheck(self.console, self.galaxyList, currentRoom, mobKey)
 
-        # Combat Skill [Needs Testing] #
+            # Attack #
+            else:
+                self.player.attackCheck(self.console, self.galaxyList, currentRoom, None)
+
+        # Combat Skill #
         elif combatSkill != None:
             parsedCombatInput = parsedCombatInput.split()
             
@@ -1157,7 +1161,7 @@ class Game:
 
         # Stop #
         elif len(input.split()) == 1 and input.lower() == "stop":
-            pass
+            self.player.stopCheck(self.console)
 
         ## Status Commands ##
         # Inventory #

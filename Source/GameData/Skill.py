@@ -22,10 +22,10 @@ class Skill:
     def loadSkill(self, num):
 
         # Combat #
+        # "All Only" Skills Hit Everyone (Ignore Team Damage/Heal Enemies)
         if num == 1:
             self.name = {"String":"Punch", "Code":"5w"}
             self.weaponTypeList = ["Open Hand"]
-            self.offHandAttacks = False
         elif num == 2:
             self.name = {"String":"Spin Fist", "Code":"9w"}
             self.weaponTypeList = ["Open Hand", "Open Hand"]
@@ -38,6 +38,7 @@ class Skill:
             self.name = {"String":"Inferno", "Code":"7w"}
             self.maxTargets = "All"
             self.maxRange = 1
+            self.offHandAttacks = False
         elif num == 5:
             self.name = {"String":"Explosion", "Code":"9w"}
             self.ruleDict["All Only"] = True
@@ -47,13 +48,14 @@ class Skill:
         elif num == 6:
             self.name = {"String":"Snipe", "Code":"5w"}
             self.ruleDict["From Another Room"] = True
+            self.ruleDict["Requires Two-Handed Weapon"] = True
             self.weaponTypeList = ["Gun"]
-            self.maxRange = 2
+            self.maxRange = 3
             self.offHandAttacks = False
         elif num == 7:
             self.name = {"String":"Shoot", "Code":"5w"}
             self.weaponTypeList = ["Gun"]
-            self.maxRange = 1
+            self.maxRange = 2
         elif num == 8:
             self.name = {"String":"Slash", "Code":"5w"}
             self.weaponTypeList = ["Sword"]
@@ -65,10 +67,14 @@ class Skill:
         elif num == 10:
             self.name = {"String":"Bash", "Code":"4w"}
             self.ruleDict["Gear Num List"] = [102]
-            self.ruleDict["r"] = random.randrange(8888)
         elif num == 11:
             self.name = {"String":"Pray", "Code":"4w"}
             self.maxTargets = "All"
+            self.healCheck = True
+        elif num == 12:
+            self.name = {"String":"Bless", "Code":"5w"}
+            self.ruleDict["All Only"] = True
+            # self.maxTargets = "All" # Is Automatically Set Below
             self.healCheck = True
 
         if "All Only" in self.ruleDict:
@@ -88,10 +94,18 @@ class Skill:
                         s += len(' '.join(nameStringList[0:i])) + 1
                     self.keyList.append(phrase[0:s + cNum + 1])
         
-    def weaponCheck(self, mainHandWeapon, offHandWeapon="Unused"):
-        if len(self.weaponTypeList) == 0:
-            if mainHandWeapon == None : self.weaponDataList = ["Open Hand"]
-            else : self.weaponDataList = [mainHandWeapon]
+    def weaponAttackCheck(self, mainHandWeapon, offHandWeapon="Unused"):
+        # Checks For Skills That Require Two Weapons Don't Exist Yet! #
+
+        if "Gear Num List" in self.ruleDict:
+            if self in mainHandWeapon.skillList:
+                self.weaponDataList = [mainHandWeapon]
+                return True
+            elif offHandWeapon != "Unused" and self in offHandWeapon.skillList:
+                self.weaponDataList = [offHandWeapon]
+                return True
+            return False
+        elif len(self.weaponTypeList) == 0:
             return True
         elif len(self.weaponTypeList) == 1 and self.weaponTypeList[0] == "Open Hand":
             self.weaponDataList = ["Open Hand"]
@@ -105,14 +119,24 @@ class Skill:
             elif offHandWeapon not in [None, "Unused"] and offHandWeapon.weaponType == self.weaponTypeList[0]:
                 self.weaponDataList = [offHandWeapon]
             return True
-
         return False
 
-    def ruleCheck(self, distance=None):
-        if "From Another Room" in self.ruleDict and distance != None and distance == 0:
+    def ruleCheck(self, flags):
+        if "Distance" in flags:
+            if "From Another Room" in self.ruleDict and flags["Distance"] == 0:
+                return False
+            elif flags["Distance"] > self.maxRange:
+                return False
+
+        if '"All" Attacks Disabled' in flags and "All Only" in self.ruleDict:
             return False
-        elif distance != None and distance > self.maxRange:
+
+        if "Disable Two-Handed Attacks" in flags and "Requires Two-Handed Weapon" in self.ruleDict:
             return False
+
+        if "Disable Healing" in flags and self.healCheck == True:
+            return False
+
         return True
 
     @staticmethod
@@ -126,19 +150,3 @@ class Skill:
                 if phrase in skill.keyList:
                     return skill, ' '.join(inputString.split()[len(inputString.split()) - i::])
         return None, None
-
-    @staticmethod
-    def skillAvailableCheck(target, combatSkill):
-        if len(combatSkill.weaponTypeList) == 0:
-            return True
-        elif len(combatSkill.weaponTypeList) == 1 and combatSkill.weaponTypeList == ["Open Hand"]:
-            if target.gearDict["Left Hand"] == None or target.gearDict["Right Hand"] == None:
-                if not (target.debugDualWield == False and target.gearDict[target.dominantHand] != None and target.gearDict[target.dominantHand].twoHanded == True):
-                    return True
-        elif len(combatSkill.weaponTypeList) == 2 and combatSkill.weaponTypeList == ["Open Hand", "Open Hand"]:
-            if target.gearDict["Left Hand"] == None and target.gearDict["Right Hand"] == None:
-                return True
-        elif len(combatSkill.weaponTypeList) == 1 and ((target.gearDict["Left Hand"] != None and combatSkill.weaponTypeList[0] == target.gearDict["Left Hand"].weaponType) or (target.gearDict["Right Hand"] != None and combatSkill.weaponTypeList[0] == target.gearDict["Right Hand"].weaponType)):
-            return True
-
-        return False

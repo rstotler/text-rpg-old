@@ -482,7 +482,10 @@ class Room:
     @staticmethod
     def getAreaAndRoom(galaxyList, target):
         if isinstance(target, Room):
-            spaceshipNum = target.spaceshipObject.num
+            if target.spaceshipObject != None:
+                spaceshipNum = target.spaceshipObject.num
+            else:
+                spaceshipNum = None
         else:
             spaceshipNum = target.spaceship
 

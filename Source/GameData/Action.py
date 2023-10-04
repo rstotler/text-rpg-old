@@ -89,7 +89,7 @@ class Action:
                         targetAmmo, ammoIndex = player.ammoCheck(weapon.ammoType, reloadKey)
 
                     if ammoIndex != -1 and not (reloadKey == "All" and ammoKey == None and weapon.magazine != None and weapon.magazine.flags["Ammo"] != None and weapon.magazine.flags["Ammo"].num != targetAmmo.num):
-                        if weapon.magazine == None or weapon.magazine.flags["Ammo"].quantity < weapon.magazine.shellCapacity or weapon.isLoaded(player.itemDict["Ammo"]) == False or (targetAmmo != None and weapon.magazine != None and targetAmmo.num != weapon.magazine.flags["Ammo"].num):
+                        if weapon.magazine == None or weapon.magazine.flags["Ammo"] == None or weapon.magazine.flags["Ammo"].quantity < weapon.magazine.shellCapacity or weapon.isLoaded(player.itemDict["Ammo"]) == False or (targetAmmo != None and weapon.magazine != None and weapon.magazine.flags["Ammo"] != None and targetAmmo.num != weapon.magazine.flags["Ammo"].num):
                             weaponMagazine = weapon.magazine
                             if weaponMagazine == None:
                                 weaponMagazine = targetMagazine

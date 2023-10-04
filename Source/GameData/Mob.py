@@ -17,6 +17,8 @@ class Mob:
         self.roomDescription = {"String":"is standing here.", "Code":"16w1y"}
         self.keyList = []
 
+        self.currentHealth = 100
+
         self.loadMob(num)
 
     def loadMob(self, num):
@@ -34,4 +36,5 @@ class Mob:
 
     def lookDescription(self, console):
         console.lineList.insert(0, {"Blank": True})
+        console.lineList.insert(0, {"String": "You look at " + self.prefix.lower() + " " + self.name["String"] + ".", "Code":"12w" + str(len(self.prefix)) + "w1w" + self.name["Code"] + "1y"})
         console.lineList.insert(0, {"String": "You see nothing special.", "Code":"23w1y"})

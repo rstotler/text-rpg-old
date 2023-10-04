@@ -26,6 +26,7 @@ class Spaceship:
 
     def lookDescription(self, console):
         console.lineList.insert(0, {"Blank": True})
+        console.lineList.insert(0, {"String": "You look at " + self.name["String"] + ".", "Code":"12w" + self.name["Code"] + "1y"})
         console.lineList.insert(0, {"String": "You see nothing special.", "Code":"23w1y"})
 
     @staticmethod

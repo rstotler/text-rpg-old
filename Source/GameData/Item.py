@@ -229,6 +229,13 @@ class Item:
                 self.flags["Glowing"] = True
                 self.flags["No Get"] = True
 
+        # Special Items #
+        if self.name["String"] == "Debug Item":
+            if num == 666:
+                self.name = {"String":"Corpse", "Code":"6w"}
+                self.roomDescription = {"String":"is laying on the ground.", "Code":"23w1y"}
+                self.containerList = []
+
         # Quantity Item Setup #
         if self.quantity == None:
             if self.pocket == "Ammo" and self.magazine == False:
@@ -265,15 +272,16 @@ class Item:
             self.roomDescription["Code"] = str(len(self.roomDescription["String"])) + "w"
 
     def lookDescription(self, console, lookDistance=0, passwordCheck=False):
+        console.lineList.insert(0, {"Blank": True})
+        console.lineList.insert(0, {"String": "You look at " + self.prefix.lower() + " " + self.name["String"] + ".", "Code":"12w" + str(len(self.prefix)) + "w1w" + self.name["Code"] + "1y"})
+        
         if "Glowing" in self.flags and self.flags["Glowing"] == True:
             console.lineList.insert(0, {"Blank": True})
             console.lineList.insert(0, {"String": "It's glowing.", "Code":"2w1y9w1y"})
-        else:
-            console.lineList.insert(0, {"Blank": True})
+        elif self.containerList == None:
             console.lineList.insert(0, {"String": "You see nothing special.", "Code":"23w1y"})
 
         if self.containerList != None and lookDistance == 0:
-            console.lineList.insert(0, {"Blank": True})
             if self.containerPassword != None and passwordCheck == False:
                 console.lineList.insert(0, {"String": "It's locked.", "Code":"2w1y8w1y"})
             elif len(self.containerList) == 0:
@@ -316,14 +324,6 @@ class Item:
             displayString, displayCode = self.getWeaponStatusString()
             console.lineList.insert(0, {"String": "Rounds:" + displayString, "Code":"6w1y" + displayCode})
 
-    def lightInContainerCheck(self):
-        if self.containerList != None:
-            for item in self.containerList:
-                if "Glowing" in item.flags and item.flags["Glowing"] == True:
-                    return True
-
-        return False
-
     def getWeight(self, multiplyQuantity=True):
         if self.quantity == None:
             weight = self.weight + self.getContainerWeight()
@@ -356,29 +356,53 @@ class Item:
                     return item
         return None
 
+    def shoot(self):
+        if self.shellCapacity != None:
+            self.magazine.quantity -= 1
+            if self.magazine.quantity <= 0:
+                self.magazine = None
+        else:
+            self.magazine.flags["Ammo"].quantity -= 1
+            if self.magazine.flags["Ammo"].quantity <= 0:
+                self.magazine.flags["Ammo"] = None
+
     def isLoaded(self, ammoList=[]):
         maxInventoryMagCapacity = -1
-        if len(ammoList) > 0:
+        if isinstance(ammoList, list) and len(ammoList) > 0:
             maxInventoryMagCapacity = 0
             for item in ammoList:
                 if item.shellCapacity != None and item.ammoType == self.ammoType:
                     if item.shellCapacity > maxInventoryMagCapacity:
                         maxInventoryMagCapacity = item.shellCapacity
-        
-        if self.pocket == "Weapon" and self.ranged == True:
-            if self.shellCapacity != None and self.magazine != None and self.shellCapacity >= self.magazine.quantity:
-                return True
-            elif self.shellCapacity == None and self.magazine != None and maxInventoryMagCapacity <= self.magazine.shellCapacity and "Ammo" in self.magazine.flags and self.magazine.flags["Ammo"] != None and self.magazine.flags["Ammo"].quantity >= self.magazine.shellCapacity:
-                return True
+
+        if self.weaponType == "Gun":
+            if self.shellCapacity != None and self.magazine != None:
+                maxCapacity = self.shellCapacity
+                if isinstance(ammoList, int) : maxCapacity = ammoList
+                if self.magazine.quantity >= maxCapacity:
+                    return True
+            elif self.shellCapacity == None and self.magazine != None and "Ammo" in self.magazine.flags and self.magazine.flags["Ammo"] != None and maxInventoryMagCapacity <= self.magazine.shellCapacity:
+                maxCapacity = self.magazine.shellCapacity
+                if isinstance(ammoList, int) : maxCapacity = ammoList
+                if self.magazine.flags["Ammo"].quantity >= maxCapacity:
+                    return True
         return False
 
-    def isEmpty(self):
-        if self.shellCapacity != None:
-            if self.magazine == None:
+    def isEmpty(self, magazineCheck=False):
+        if self.containerList != None:
+            if len(self.containerList) == 0:
                 return True
-        else:
-            if self.magazine == None:
-                return True
+            return False
+
+        elif self.pocket == "Weapon":
+            if self.shellCapacity != None:
+                if self.magazine == None:
+                    return True
+            else:
+                if self.magazine == None:
+                    return True
+                elif magazineCheck == True and self.magazine.flags["Ammo"] == None:
+                    return True
         return False
 
     def getWeaponStatusString(self):
@@ -403,3 +427,19 @@ class Item:
                 statusCode += "2y" + str(len(str(currentRounds))) + "w1y" + str(len(str(maxRounds))) + "w1y"
 
         return statusString, statusCode
+
+    def lightInContainerCheck(self):
+        if self.containerList != None:
+            for item in self.containerList:
+                if "Glowing" in item.flags and item.flags["Glowing"] == True:
+                    return True
+
+        return False
+
+    @staticmethod
+    def createCorpse(targetMob):
+        corpseItem = Item(666)
+        corpseItem.prefix = "The corpse of"
+        corpseItem.name["String"] = targetMob.prefix.lower() + " " + targetMob.name["String"]
+        corpseItem.name["Code"] = "14w" + str(len(targetMob.prefix)) + "w1w" + targetMob.name["Code"]
+        return corpseItem

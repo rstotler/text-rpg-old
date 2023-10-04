@@ -1,12 +1,16 @@
 Traceback (most recent call last):
-  File "D:\Codes\Python\Universe\Source\Screen\InputBar.py", line 52, in processInput
-    1 / 0
-ZeroDivisionError: division by zero
+  File "D:\Codes\Python\Universe\Source\Screen\InputBar.py", line 50, in processInput
+    game.processInputBarCommand(self.input)
+  File "D:\Codes\Python\Universe\Source\Game.py", line 398, in processInputBarCommand
+    currentRoom.display(self.console, self.galaxyList, self.player)
+  File "D:\Codes\Python\Universe\Source\GameData\World\Room.py", line 186, in display
+    if item.quantity != None:
+AttributeError: 'NoneType' object has no attribute 'quantity'
 
-Input: d
+Input: l
 Player Loc: [0, 0, 1, 0, 1]
 Player Spaceship: None
-Player Targets: 1
+Player Targets: 0
 Player Group: 0
-Player Inventory: 18
+Player Inventory: 16
 Player Gear: 2
