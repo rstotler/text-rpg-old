@@ -39,7 +39,7 @@ class Room:
         if self.inside == True:
             nameString = "(Inside) " + nameString
             nameCode = "1r6w2r" + nameCode
-        console.lineList.insert(0, {"String":nameString, "Code":nameCode})
+        console.write(nameString, nameCode, True)
 
         # Underline #
         underlineString = ""
@@ -56,14 +56,14 @@ class Room:
                 underlineCode = underlineCode + "1y"
             else:
                 underlineCode = underlineCode + "1dy"
-        console.lineList.insert(0, {"String":underlineString, "Code":underlineCode})
+        console.write(underlineString, underlineCode)
 
         # Description #
         if roomIsLit == False:
-            console.lineList.insert(0, {"String":"It's too dark to see..", "Code":"2w1y17w2y"})
+            console.write("It's too dark to see..", "2w1y17w2y")
         else:
             for line in self.description:
-                console.lineList.insert(0, line)
+                console.write(line["String"], line["Code"])
 
         # Exits #
         otherRoomSpaceshipNum = None
@@ -103,7 +103,7 @@ class Room:
                         exitRoomCode = "3r1w" + str(len(exitDir) - 1) + "ddw2r3y" + exitRoomNameCode
                     else:
                         exitRoomCode = "2r1w" + str(len(exitDir) - 1) + "ddw2r3y" + exitRoomNameCode
-                console.lineList.insert(0, {"String":exitRoomString, "Code":exitRoomCode})
+                console.write(exitRoomString, exitRoomCode)
             else:
                 if exitDir in ["East", "West"]:
                     exitRoomCode = "3r1w" + str(len(exitDir) - 1) + "ddw2r3y2r1w6ddw2r"
@@ -112,9 +112,9 @@ class Room:
                 
                 if roomIsLit == False:
                     exitRoomCode = exitRoomCode[0:-8] + "1dw1a2da1dda2r"
-                    console.lineList.insert(0, {"String":"( " + spaceString + exitDir + " ) - ( Black )", "Code":exitRoomCode})
+                    console.write("( " + spaceString + exitDir + " ) - ( Black )", exitRoomCode)
                 else:
-                    console.lineList.insert(0, {"String":"( " + spaceString + exitDir + " ) - ( Nothing )", "Code":exitRoomCode})
+                    console.write("( " + spaceString + exitDir + " ) - ( Nothing )", exitRoomCode)
 
         # Spaceships #
         if len(self.spaceshipList) > 0:
@@ -122,12 +122,12 @@ class Room:
                 displayString = "A spaceship is sitting on the launch pad."
                 displayCode = "40w1y"
                 countString, countCode = len(self.spaceshipList)
-                console.lineList.insert(0, {"String":displayString + countString, "Code":displayCode + countCode})
+                console.write(displayString + countString, displayCode + countCode)
             else:
                 for spaceship in self.spaceshipList:
                     displayString = "A " + spaceship.name["String"] + " is sitting on the launch pad."
                     displayCode = "2w" + spaceship.name["Code"] + "29w1y"
-                    console.lineList.insert(0, {"String":displayString, "Code":displayCode})
+                    console.write(displayString, displayCode)
             
         # Mobs #
         if True:
@@ -155,7 +155,7 @@ class Room:
 
             if roomIsLit == False and totalMobCount > 0:
                 countString, countCode = getCountString(totalMobCount)
-                console.lineList.insert(0, {"String":"There is someone here." + countString, "Code":"21w1y" + countCode})
+                console.write("There is someone here." + countString, "21w1y" + countCode)
 
             else:
                 for mobData in mobDisplayList:
@@ -170,7 +170,7 @@ class Room:
                     countString, countCode = getCountString(mobData["Count"])
                     mobDisplayString = targetString + mobData["Mob Data"].prefix + " " + mobData["Mob Data"].name["String"] + " " + mobData["Mob Data"].roomDescription["String"] + countString
                     mobDisplayCode = targetCode + str(len(mobData["Mob Data"].prefix)) + "w1w" + mobData["Mob Data"].name["Code"] + "1w" + mobData["Mob Data"].roomDescription["Code"] + countCode
-                    console.lineList.insert(0, {"String":mobDisplayString, "Code":mobDisplayCode})
+                    console.write(mobDisplayString, mobDisplayCode)
 
         # Items #
         if True:
@@ -195,8 +195,8 @@ class Room:
 
             if roomIsLit == False and totalItemCount > 0:
                 countString, countCode = getCountString(totalItemCount)
-                console.lineList.insert(0, {"String":"There is something on the ground." + countString, "Code":"32w1y" + countCode})
-                        
+                console.write("There is something on the ground." + countString, "32w1y" + countCode)
+
             else:
                 for itemData in displayList:
                     item = itemData["ItemData"]
@@ -209,7 +209,7 @@ class Room:
                     countString, countCode = getCountString(itemData["Count"])
                     itemDisplayString = item.prefix + " " + item.name["String"] + " " + item.roomDescription["String"] + modString + countString
                     itemDisplayCode = str(len(item.prefix)) + "w1w" + item.name["Code"] + "1w" + item.roomDescription["Code"] + modCode + countCode
-                    console.lineList.insert(0, {"String":itemDisplayString, "Code":itemDisplayCode})
+                    console.write(itemDisplayString, itemDisplayCode)
 
     def installDoor(self, galaxyList, targetDir, doorType, password, status="Closed", oneWay=False):
         self.door[targetDir] = {"Type": doorType, "Status": status}
@@ -280,7 +280,7 @@ class Room:
 
         return False
     
-    def isLit(self, galaxyList, player):
+    def isLit(self, galaxyList, targetPlayer):
         targetPlanet = None
         if self.galaxy != None and self.system != None and self.planet != None:
             if self.galaxy <= len(galaxyList) - 1 and self.system <= len(galaxyList[self.galaxy].systemList) -1 and self.planet <= len(galaxyList[self.galaxy].systemList[self.system].planetList) - 1:
@@ -293,16 +293,16 @@ class Room:
             if "Glowing" in item.flags and item.flags["Glowing"] == True:
                 return True
 
-        if self.sameRoomCheck(player):
-            for gearSlot in player.gearDict:
-                if isinstance(player.gearDict[gearSlot], list):
-                    for gearSubSlot in player.gearDict[gearSlot]:
+        if self.sameRoomCheck(targetPlayer):
+            for gearSlot in targetPlayer.gearDict:
+                if isinstance(targetPlayer.gearDict[gearSlot], list):
+                    for gearSubSlot in targetPlayer.gearDict[gearSlot]:
                         if gearSubSlot != None:
                             if "Glowing" in gearSubSlot.flags and gearSubSlot.flags["Glowing"] == True:
                                 return True
                 else:
-                    if player.gearDict[gearSlot] != None:
-                        item = player.gearDict[gearSlot]
+                    if targetPlayer.gearDict[gearSlot] != None:
+                        item = targetPlayer.gearDict[gearSlot]
                         if "Glowing" in item.flags and item.flags["Glowing"] == True:
                             return True
                 

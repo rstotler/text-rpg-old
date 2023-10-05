@@ -8,7 +8,6 @@ from GameData.Combat import Combat
 from Components.Utility import appendKeyList
 from Components.Utility import stringIsNumber
 from Components.Utility import getCountString
-from Components.Utility import wordWrap
 
 class Player:
 
@@ -30,7 +29,7 @@ class Player:
         self.actionList = []
         self.combatSkillList = [Skill(1), Skill(2), Skill(3), Skill(4), Skill(5), Skill(6), Skill(7), Skill(8), Skill(9), Skill(11), Skill(12), Skill(13)]
 
-        self.currentHealth = 2
+        self.currentHealth = 3
 
         self.maxLookDistance = 3
         self.maxTargetDistance = 2
@@ -58,13 +57,17 @@ class Player:
         if self.num != None:
             distanceToPlayer, directionToPlayer, unused = Room.getTargetRange(galaxyList, currentRoom, player, self.maxTargetDistance)
             
-            # Chase Player #
-            if self in player.combatList and distanceToPlayer != -1:
-                
-                # Next Room Locked Door Check #
-                if "No Chase" not in self.flags and distanceToPlayer > 0 \
-                and not (currentRoom.door[directionToPlayer] != None and currentRoom.door[directionToPlayer]["Status"] == "Locked" and "Password" in currentRoom.door[directionToPlayer] and self.hasKey(currentRoom.door[directionToPlayer]["Password"]) == False):
-                    self.moveCheck(console, map, galaxyList, player, currentRoom, directionToPlayer.lower())
+            if self in player.combatList:
+                if distanceToPlayer == 0:
+                    pass
+
+                # Chase Player #
+                elif distanceToPlayer > 0:
+                    
+                    # Next Room Locked Door Check #
+                    if "No Chase" not in self.flags and \
+                    not (currentRoom.door[directionToPlayer] != None and currentRoom.door[directionToPlayer]["Status"] == "Locked" and "Password" in currentRoom.door[directionToPlayer] and self.hasKey(currentRoom.door[directionToPlayer]["Password"]) == False):
+                        self.moveCheck(console, map, galaxyList, player, currentRoom, directionToPlayer.lower())
 
     def lookDirection(self, console, galaxyList, currentRoom, lookDir, count):
         if isinstance(count, int) and count > 50:
@@ -560,13 +563,12 @@ class Player:
                         map.loadMap(targetArea)
                 
                 if self.num == None or targetRoom.sameRoomCheck(player) == True or currentRoom.sameRoomCheck(player) == True:
-                    if self.num == None:
-                        console.lineList.insert(0, {"Blank": True})
                     if currentRoom.door[targetDir] != None and currentRoom.door[targetDir]["Type"] == "Automatic":
                         doorString = "door"
                         if currentRoom.exit[targetDir] == "Spaceship Exit":
                             doorString = "hatch"
                         if self.num == None:
+                            console.lineList.insert(0, {"Blank": True})
                             console.lineList.insert(0, {"String": "The " + doorString + " opens and closes as you walk through.", "Code":"4w" + str(len(doorString)) + "w37w1y"})
                         else:
                             displayDirection = targetDir
@@ -577,10 +579,7 @@ class Player:
                             displayString = "The door to the " + displayDirection + " opens and closes as " + mobString + leavesString + "."
                             displayCode = "16w" + str(len(displayDirection)) + "w21w" + mobCode + str(len(leavesString)) + "w1y"
                             console.lineList.insert(0, {"Blank": True})
-                            for displayLine in wordWrap(displayString, displayCode, console.characterWidth):
-                                console.lineList.insert(0, {"String":displayLine["String"], "Code":displayLine["Code"]})
-                        if self.num == None:
-                            console.lineList.insert(0, {"Blank": True})
+                            console.write(displayString, displayCode)
                         automaticDoorCheck = True
 
             if self.num != None:
@@ -1246,8 +1245,8 @@ class Player:
             console.lineList.insert(0, {"Blank": True})
             console.lineList.insert(0, {"String":"You switch your handedness to your " + self.dominantHand.lower() + ".", "Code":"35w" + str(len(self.dominantHand)) + "w1y"})
 
-    def reloadCheck(self, console, galaxyList, player, currentRoom, reloadKey, reloadSlotKey, ammoKey):
-        if currentRoom.isLit(galaxyList, player) == False:
+    def reloadCheck(self, console, galaxyList, currentRoom, reloadKey, reloadSlotKey, ammoKey):
+        if currentRoom.isLit(galaxyList, self) == False:
             console.lineList.insert(0, {"Blank": True})
             console.lineList.insert(0, {"String": "It's too dark to see.", "Code":"2w1y17w1y"})
 
@@ -1344,129 +1343,13 @@ class Player:
                 console.lineList.insert(0, {"String":"You aren't holding anything.", "Code":"8w1y18w1y"})
 
             else:
-                playerCopy = copy.deepcopy(self)
-                magazineCheck = False
-                reloadCount = 0
-                reloadWeapon = None
-                requireWeapon = None
-                for weaponIndex, weapon in enumerate(reloadList):
-                    weapon = copy.deepcopy(weapon)
-                    ammoCheck = False
-                    targetAmmo = None
-                    targetMagazine = None
-                    ammoIndex = -1
-                    reloadQuantity = 0
-                    targetMagazine = None
-                    heldMagazineCheck = False
+                flags = self.reloadFunction(copy.deepcopy(self), copy.deepcopy(reloadList), reloadTargetShiftCheck, reloadKey, ammoKey)
+                requireWeapon = flags["requireWeapon"]
+                magazineCheck = flags["magazineCheck"]
+                reloadCount = flags["reloadCount"]
+                targetAmmo = flags["targetAmmo"]
+                reloadWeapon = flags["reloadWeapon"]
 
-                    # Non-Magazine Weapons #
-                    if weapon.shellCapacity != None:
-                        targetAmmo, ammoIndex = playerCopy.ammoCheck(weapon.ammoType)
-                        if ammoKey != None:
-                            targetAmmo, ammoIndex = playerCopy.ammoCheck(weapon.ammoType, ammoKey)
-                        elif reloadTargetShiftCheck == True:
-                            targetAmmo, ammoIndex = playerCopy.ammoCheck(weapon.ammoType, reloadKey)
-
-                        if weapon.magazine == None or weapon.magazine.quantity < weapon.shellCapacity or (targetAmmo != None and weapon.magazine.num != targetAmmo.num):
-                            if ammoIndex != -1 and not (reloadKey == "All" and ammoKey == None and weapon.magazine != None and weapon.magazine.num != targetAmmo.num):
-                                if weapon.magazine != None and weapon.magazine.num != targetAmmo.num:
-                                    inventoryAmmo, unused = playerCopy.getTargetItem(weapon.magazine.num, ["Inventory"])
-                                    if inventoryAmmo != None:
-                                        inventoryAmmo.quantity += weapon.magazine.quantity
-                                    else:
-                                        playerCopy.itemDict["Ammo"].append(weapon.magazine)
-                                    weapon.magazine = None
-
-                                alreadyLoadedCount = 0
-                                if weapon.magazine != None:
-                                    alreadyLoadedCount = weapon.magazine.quantity
-                                reloadQuantity = weapon.shellCapacity - alreadyLoadedCount
-                                if reloadQuantity > targetAmmo.quantity:
-                                    reloadQuantity = targetAmmo.quantity
-                                if weapon.magazine == None:
-                                    splitItem = copy.deepcopy(targetAmmo)
-                                    splitItem.quantity = reloadQuantity
-                                    weapon.magazine = splitItem
-                                else:
-                                    weapon.magazine.quantity += reloadQuantity
-                                ammoCheck = True
-                                magazineCheck = None
-                                reloadCount += 1
-                                if reloadWeapon == None:
-                                    reloadWeapon = weapon
-                                elif reloadWeapon != "Multiple" and reloadWeapon.num != weapon.num:
-                                    reloadWeapon = "Multiple"
-
-                    # Magazine Weapons #
-                    else:
-                        targetMagazine, magazineIndex = playerCopy.ammoCheck(weapon.ammoType, None, True)
-                        if magazineIndex != -1:
-                            magazineCheck = True
-                        else:
-                            requireWeapon = weapon
-                        if weapon.magazine != None or magazineIndex != -1:
-                            targetAmmo, ammoIndex = playerCopy.ammoCheck(weapon.ammoType)
-                            if ammoKey != None:
-                                targetAmmo, ammoIndex = playerCopy.ammoCheck(weapon.ammoType, ammoKey)
-                            elif reloadTargetShiftCheck == True:
-                                targetAmmo, ammoIndex = playerCopy.ammoCheck(weapon.ammoType, reloadKey)
-
-                            if ammoIndex != -1 and not (reloadKey == "All" and ammoKey == None and weapon.magazine != None and weapon.magazine.flags["Ammo"] != None and weapon.magazine.flags["Ammo"].num != targetAmmo.num):
-                                if weapon.magazine == None or weapon.magazine.flags["Ammo"] == None or weapon.magazine.flags["Ammo"].quantity < weapon.magazine.shellCapacity or weapon.isLoaded(playerCopy.itemDict["Ammo"]) == False or (targetAmmo != None and weapon.magazine != None and weapon.magazine.flags["Ammo"] != None and targetAmmo.num != weapon.magazine.flags["Ammo"].num):
-                                    weaponMagazine = weapon.magazine
-                                    if weaponMagazine == None:
-                                        weaponMagazine = targetMagazine
-                                        heldMagazineCheck = True
-                                    elif weaponMagazine != None and targetMagazine != None and weaponMagazine.shellCapacity < targetMagazine.shellCapacity:
-                                        playerCopy.itemDict["Ammo"].append(weaponMagazine)
-                                        if weaponMagazine.flags["Ammo"] != None:
-                                            heldAmmo, unused = playerCopy.getTargetItem(weaponMagazine.flags["Ammo"].num, ["Inventory"])
-                                            if heldAmmo != None:
-                                                heldAmmo.quantity += weaponMagazine.flags["Ammo"].quantity
-                                            else:
-                                                playerCopy.itemDict["Ammo"].append(weaponMagazine.flags["Ammo"])
-                                            weaponMagazine.flags["Ammo"] = None
-                                        weaponMagazine = targetMagazine
-
-                                    if weapon.magazine != None and weapon.magazine.flags["Ammo"] != None and weapon.magazine.flags["Ammo"].num != targetAmmo.num:
-                                        inventoryAmmo, unused = playerCopy.getTargetItem(weapon.magazine.flags["Ammo"].num, ["Inventory"])
-                                        if inventoryAmmo != None:
-                                            inventoryAmmo.quantity += weapon.magazine.flags["Ammo"].quantity
-                                        else:
-                                            playerCopy.itemDict["Ammo"].append(weapon.magazine.flags["Ammo"])
-                                        weapon.magazine.flags["Ammo"] = None
-                                        
-                                    alreadyLoadedCount = 0
-                                    if weaponMagazine.flags["Ammo"] != None:
-                                        alreadyLoadedCount = weaponMagazine.flags["Ammo"].quantity
-                                    reloadQuantity = weaponMagazine.shellCapacity - alreadyLoadedCount
-                                    if reloadQuantity > targetAmmo.quantity:
-                                        reloadQuantity = targetAmmo.quantity
-                                    if weaponMagazine.flags["Ammo"] == None:
-                                        splitItem = copy.deepcopy(targetAmmo)
-                                        splitItem.quantity = reloadQuantity
-                                        weaponMagazine.flags["Ammo"] = splitItem
-                                    else:
-                                        weaponMagazine.flags["Ammo"].quantity += reloadQuantity
-                                        
-                                    weapon.magazine = weaponMagazine
-                                    ammoCheck = True
-                                    reloadCount += 1
-                                    if reloadWeapon == None:
-                                        reloadWeapon = weapon
-                                    elif reloadWeapon.num != weapon.num:
-                                        reloadWeapon = "Multiple"
-
-                    if targetAmmo != None:
-                        if reloadQuantity >= targetAmmo.quantity:
-                            del playerCopy.itemDict["Ammo"][ammoIndex]
-                        else:
-                            targetAmmo.quantity -= reloadQuantity
-                    if targetMagazine != None and ammoCheck == True and heldMagazineCheck == True:
-                        if targetMagazine in playerCopy.itemDict["Ammo"]:
-                            magazineIndex = playerCopy.itemDict["Ammo"].index(targetMagazine)
-                            del playerCopy.itemDict["Ammo"][magazineIndex] 
-                
                 if requireWeapon != None and magazineCheck == False and reloadCount == 0 and not (requireWeapon.shellCapacity == None and requireWeapon.magazine != None):
                     displayString = "It requires a " + requireWeapon.ammoType + "."
                     displayCode = "14w" + str(len(requireWeapon.ammoType)) + "w1y"
@@ -1505,13 +1388,13 @@ class Player:
                     if blankCheck == False : console.lineList.insert(0, {"Blank": True})
                     console.lineList.insert(0, {"String":"You don't have " + thatString + " ammo.", "Code":"7w1y7w" + str(len(thatString)) + "w5w1y"})
                 elif reloadWeapon == "Multiple":
-                    actionFlags = {"Reload List":reloadList, "Reload Key":reloadKey, "Ammo Key":ammoKey, "Reload Target Shift Check":reloadTargetShiftCheck}
+                    actionFlags = {"Reload List":reloadList, "Reload Target Shift Check":reloadTargetShiftCheck, "Reload Key":reloadKey, "Ammo Key":ammoKey}
                     self.actionList.append(Action("Reload", actionFlags))
                     
                     if blankCheck == False : console.lineList.insert(0, {"Blank": True})
                     console.lineList.insert(0, {"String":"You start reloading some weapons..", "Code":"32w2y"})
                 elif reloadWeapon != None:
-                    actionFlags = {"Reload List":reloadList, "Reload Key":reloadKey, "Ammo Key":ammoKey, "Reload Target Shift Check":reloadTargetShiftCheck}
+                    actionFlags = {"Reload List":reloadList, "Reload Target Shift Check":reloadTargetShiftCheck, "Reload Key":reloadKey, "Ammo Key":ammoKey}
                     self.actionList.append(Action("Reload", actionFlags))
 
                     countString = ""
@@ -1522,8 +1405,164 @@ class Player:
                     if blankCheck == False : console.lineList.insert(0, {"Blank": True})
                     console.lineList.insert(0, {"String":"You start reloading " + reloadWeapon.prefix.lower() + " " + reloadWeapon.name["String"] + ".." + countString, "Code":"20w" + str(len(reloadWeapon.prefix)) + "w1w" + reloadWeapon.name["Code"] + "2y" + countCode})
 
-    def unloadCheck(self, console, galaxyList, player, currentRoom, unloadKey, unloadSlotKey, ammoKey):
-        if currentRoom.isLit(galaxyList, player) == False:
+    def reloadCompleteAction(self, console, flags):
+        reloadList = flags["Reload List"]
+        reloadTargetShiftCheck = flags["Reload Target Shift Check"]
+        reloadKey = flags["Reload Key"]
+        ammoKey = flags["Ammo Key"]
+
+        flags = self.reloadFunction(self, reloadList, reloadTargetShiftCheck, reloadKey, ammoKey)
+        reloadWeapon = flags["reloadWeapon"]
+        reloadCount = flags["reloadCount"]
+
+        if reloadWeapon != "Multiple":
+            displayString = "You finish reloading " + reloadWeapon.prefix.lower() + " " + reloadWeapon.name["String"] + "."
+            displayCode = "21w" + str(len(reloadWeapon.prefix)) + "w1w" + reloadWeapon.name["Code"] + "1y"
+            countString = ""
+            countCode = ""
+            if reloadCount > 1:
+                countString = " (" + str(reloadCount) + ")"
+                countCode = "2r" + str(len(str(reloadCount))) + "w1y"
+            console.lineList.insert(0, {"Blank": True})
+            console.lineList.insert(0, {"String":displayString + countString, "Code":displayCode + countCode})
+        else:
+            displayString = "You finish reloading."
+            displayCode = "20w1y"
+            console.lineList.insert(0, {"Blank": True})
+            console.lineList.insert(0, {"String":displayString, "Code":displayCode})
+        
+    def reloadFunction(self, targetPlayer, reloadList, reloadTargetShiftCheck, reloadKey, ammoKey):
+        magazineCheck = False
+        reloadCount = 0
+        reloadWeapon = None
+        requireWeapon = None
+        for weaponIndex, weapon in enumerate(reloadList):
+            ammoCheck = False
+            targetAmmo = None
+            targetMagazine = None
+            ammoIndex = -1
+            reloadQuantity = 0
+            targetMagazine = None
+            heldMagazineCheck = False
+
+            # Non-Magazine Weapons #
+            if weapon.shellCapacity != None:
+                targetAmmo, ammoIndex = targetPlayer.ammoCheck(weapon.ammoType)
+                if ammoKey != None:
+                    targetAmmo, ammoIndex = targetPlayer.ammoCheck(weapon.ammoType, ammoKey)
+                elif reloadTargetShiftCheck == True:
+                    targetAmmo, ammoIndex = targetPlayer.ammoCheck(weapon.ammoType, reloadKey)
+
+                if weapon.magazine == None or weapon.magazine.quantity < weapon.shellCapacity or (targetAmmo != None and weapon.magazine.num != targetAmmo.num):
+                    if ammoIndex != -1 and not (reloadKey == "All" and ammoKey == None and weapon.magazine != None and weapon.magazine.num != targetAmmo.num):
+                        if weapon.magazine != None and weapon.magazine.num != targetAmmo.num:
+                            inventoryAmmo, unused = targetPlayer.getTargetItem(weapon.magazine.num, ["Inventory"])
+                            if inventoryAmmo != None:
+                                inventoryAmmo.quantity += weapon.magazine.quantity
+                            else:
+                                targetPlayer.itemDict["Ammo"].append(weapon.magazine)
+                            weapon.magazine = None
+
+                        alreadyLoadedCount = 0
+                        if weapon.magazine != None:
+                            alreadyLoadedCount = weapon.magazine.quantity
+                        reloadQuantity = weapon.shellCapacity - alreadyLoadedCount
+                        if reloadQuantity > targetAmmo.quantity:
+                            reloadQuantity = targetAmmo.quantity
+                        if weapon.magazine == None:
+                            splitItem = copy.deepcopy(targetAmmo)
+                            splitItem.quantity = reloadQuantity
+                            weapon.magazine = splitItem
+                        else:
+                            weapon.magazine.quantity += reloadQuantity
+                        ammoCheck = True
+                        magazineCheck = None
+                        reloadCount += 1
+                        if reloadWeapon == None:
+                            reloadWeapon = weapon
+                        elif reloadWeapon != "Multiple" and reloadWeapon.num != weapon.num:
+                            reloadWeapon = "Multiple"
+
+            # Magazine Weapons #
+            else:
+                targetMagazine, magazineIndex = targetPlayer.ammoCheck(weapon.ammoType, None, True)
+                if magazineIndex != -1:
+                    magazineCheck = True
+                else:
+                    requireWeapon = weapon
+                if weapon.magazine != None or magazineIndex != -1:
+                    targetAmmo, ammoIndex = targetPlayer.ammoCheck(weapon.ammoType)
+                    if ammoKey != None:
+                        targetAmmo, ammoIndex = targetPlayer.ammoCheck(weapon.ammoType, ammoKey)
+                    elif reloadTargetShiftCheck == True:
+                        targetAmmo, ammoIndex = targetPlayer.ammoCheck(weapon.ammoType, reloadKey)
+
+                    if ammoIndex != -1 and not (reloadKey == "All" and ammoKey == None and weapon.magazine != None and weapon.magazine.flags["Ammo"] != None and weapon.magazine.flags["Ammo"].num != targetAmmo.num):
+                        if weapon.magazine == None or weapon.magazine.flags["Ammo"] == None or weapon.magazine.flags["Ammo"].quantity < weapon.magazine.shellCapacity or weapon.isLoaded(targetPlayer.itemDict["Ammo"]) == False or (targetAmmo != None and weapon.magazine != None and weapon.magazine.flags["Ammo"] != None and targetAmmo.num != weapon.magazine.flags["Ammo"].num):
+                            weaponMagazine = weapon.magazine
+                            if weaponMagazine == None:
+                                weaponMagazine = targetMagazine
+                                heldMagazineCheck = True
+                            elif weaponMagazine != None and targetMagazine != None and weaponMagazine.shellCapacity < targetMagazine.shellCapacity:
+                                targetPlayer.itemDict["Ammo"].append(weaponMagazine)
+                                if weaponMagazine.flags["Ammo"] != None:
+                                    heldAmmo, unused = targetPlayer.getTargetItem(weaponMagazine.flags["Ammo"].num, ["Inventory"])
+                                    if heldAmmo != None:
+                                        heldAmmo.quantity += weaponMagazine.flags["Ammo"].quantity
+                                    else:
+                                        targetPlayer.itemDict["Ammo"].append(weaponMagazine.flags["Ammo"])
+                                    weaponMagazine.flags["Ammo"] = None
+                                weaponMagazine = targetMagazine
+
+                            if weapon.magazine != None and weapon.magazine.flags["Ammo"] != None and weapon.magazine.flags["Ammo"].num != targetAmmo.num:
+                                inventoryAmmo, unused = targetPlayer.getTargetItem(weapon.magazine.flags["Ammo"].num, ["Inventory"])
+                                if inventoryAmmo != None:
+                                    inventoryAmmo.quantity += weapon.magazine.flags["Ammo"].quantity
+                                else:
+                                    targetPlayer.itemDict["Ammo"].append(weapon.magazine.flags["Ammo"])
+                                weapon.magazine.flags["Ammo"] = None
+                                
+                            alreadyLoadedCount = 0
+                            if weaponMagazine.flags["Ammo"] != None:
+                                alreadyLoadedCount = weaponMagazine.flags["Ammo"].quantity
+                            reloadQuantity = weaponMagazine.shellCapacity - alreadyLoadedCount
+                            if reloadQuantity > targetAmmo.quantity:
+                                reloadQuantity = targetAmmo.quantity
+                            if weaponMagazine.flags["Ammo"] == None:
+                                splitItem = copy.deepcopy(targetAmmo)
+                                splitItem.quantity = reloadQuantity
+                                weaponMagazine.flags["Ammo"] = splitItem
+                            else:
+                                weaponMagazine.flags["Ammo"].quantity += reloadQuantity
+                                
+                            weapon.magazine = weaponMagazine
+                            ammoCheck = True
+                            reloadCount += 1
+                            if reloadWeapon == None:
+                                reloadWeapon = weapon
+                            elif reloadWeapon.num != weapon.num:
+                                reloadWeapon = "Multiple"
+
+            if targetAmmo != None:
+                if reloadQuantity >= targetAmmo.quantity:
+                    del targetPlayer.itemDict["Ammo"][ammoIndex]
+                else:
+                    targetAmmo.quantity -= reloadQuantity
+            if targetMagazine != None and ammoCheck == True and heldMagazineCheck == True:
+                if targetMagazine in targetPlayer.itemDict["Ammo"]:
+                    magazineIndex = targetPlayer.itemDict["Ammo"].index(targetMagazine)
+                    del targetPlayer.itemDict["Ammo"][magazineIndex]
+        
+        returnFlags = {}
+        returnFlags["requireWeapon"] = requireWeapon
+        returnFlags["magazineCheck"] = magazineCheck
+        returnFlags["reloadCount"] = reloadCount
+        returnFlags["targetAmmo"] = targetAmmo
+        returnFlags["reloadWeapon"] = reloadWeapon
+        return returnFlags
+
+    def unloadCheck(self, console, galaxyList, currentRoom, unloadKey, unloadSlotKey, ammoKey):
+        if currentRoom.isLit(galaxyList, self) == False:
             console.lineList.insert(0, {"Blank": True})
             console.lineList.insert(0, {"String": "It's too dark to see.", "Code":"2w1y17w1y"})
 
@@ -1625,81 +1664,11 @@ class Player:
                 console.lineList.insert(0, {"String":"You aren't holding anything.", "Code":"8w1y18w1y"})
 
             else:
-                player = copy.deepcopy(self)
-                unloadWeapon = None
-                unloadCount = 0
-                tooMuchWeightCheck = False
-                for weaponIndex, weapon in enumerate(unloadList):
-                    weapon = copy.deepcopy(weapon)
-                    
-                    # Non-Magazine Weapons #
-                    if weapon.shellCapacity != None and weapon.magazine != None:
-                        if not (ammoKey != None and ammoKey not in weapon.magazine.keyList):
-                            getQuantity = weapon.magazine.quantity
-                            if roomItem != None and player.getWeight() + roomItem.getWeight() > player.getMaxWeight():
-                                getQuantity = 0
-                                tooMuchWeightCheck = True
-                                if player.getWeight() + roomItem.getWeight(False) <= player.getMaxWeight():
-                                    getQuantity = int((player.getMaxWeight() - player.getWeight()) / roomItem.getWeight(False))
-
-                            if getQuantity > 0:
-                                inventoryAmmo, unused = player.getTargetItem(weapon.magazine.num, ["Inventory"])
-                                if inventoryAmmo != None:
-                                    inventoryAmmo.quantity += getQuantity
-                                else:
-                                    splitItem = copy.deepcopy(weapon.magazine)
-                                    splitItem.quantity = getQuantity
-                                    player.itemDict["Ammo"].append(splitItem)
-                                if getQuantity == weapon.magazine.quantity:
-                                    weapon.magazine = None
-                                else:
-                                    weapon.magazine.quantity -= getQuantity
-
-                                if unloadWeapon == None:
-                                    unloadWeapon = weapon
-                                elif unloadWeapon != "Multiple" and unloadWeapon.num != weapon.num:
-                                    unloadWeapon = "Multiple"
-                                unloadCount += 1
-
-                    # Magazine Weapons #
-                    elif weapon.magazine != None:
-                        if not (ammoKey != None and weapon.magazine.flags["Ammo"] != None and ammoKey not in weapon.magazine.flags["Ammo"].keyList):
-                            getQuantity = 0
-                            if weapon.magazine.flags["Ammo"] != None:
-                                getQuantity = weapon.magazine.flags["Ammo"].quantity
-                            if roomItem != None and weapon.magazine.flags["Ammo"] != None and player.getWeight() + weapon.magazine.flags["Ammo"].getWeight() > player.getMaxWeight():
-                                getQuantity = 0
-                                tooMuchWeightCheck = True
-                                if player.getWeight() + weapon.magazine.flags["Ammo"].getWeight(False) <= player.getMaxWeight():
-                                    getQuantity = int((player.getMaxWeight() - player.getWeight()) / weapon.magazine.flags["Ammo"].getWeight(False))
-
-                            if getQuantity > 0:
-                                inventoryAmmo, unused = player.getTargetItem(weapon.magazine.flags["Ammo"].num, ["Inventory"])
-                                if inventoryAmmo != None:
-                                    inventoryAmmo.quantity += getQuantity
-                                else:
-                                    splitItem = copy.deepcopy(weapon.magazine.flags["Ammo"])
-                                    splitItem.quantity = getQuantity
-                                    player.itemDict["Ammo"].append(splitItem)
-                                if getQuantity == weapon.magazine.flags["Ammo"].quantity:
-                                    weapon.magazine.flags["Ammo"] = None
-                                else:
-                                    weapon.magazine.flags["Ammo"].quantity -= getQuantity
-
-                            magazineCheck = False
-                            if roomItem != None and player.getWeight() + weapon.magazine.getWeight() > player.getMaxWeight():
-                                tooMuchWeightCheck = True
-                            else:
-                                player.itemDict["Ammo"].append(weapon.magazine)
-                                weapon.magazine = None
-                                magazineCheck = True
-                            
-                            if getQuantity > 0 or magazineCheck == True:
-                                if unloadWeapon == None:
-                                    unloadWeapon = weapon
-                                elif unloadWeapon != "Multiple" and unloadWeapon.num != weapon.num:
-                                    unloadWeapon = "Multiple"
-                                unloadCount += 1
+                flags = self.unloadFunction(copy.deepcopy(self), copy.deepcopy(unloadList), roomItem, ammoKey)
+                unloadWeapon = flags["unloadWeapon"]
+                unloadCount = flags["unloadCount"]
+                tooMuchWeightCheck = flags["tooMuchWeightCheck"]
+                shellCount = flags["shellCount"]
 
                 if ammoKey != None and unloadCount == 0:
                     if blankCheck == False : console.lineList.insert(0, {"Blank": True})
@@ -1717,13 +1686,13 @@ class Player:
                     if blankCheck == False : console.lineList.insert(0, {"Blank": True})
                     console.lineList.insert(0, {"String":"Your weapons are already unloaded.", "Code":"33w1y"})
                 elif unloadWeapon == "Multiple":
-                    actionFlags = {"Unload List":unloadList, "Ammo Key":ammoKey, "Room Item":roomItem}
+                    actionFlags = {"unloadList":unloadList, "roomItem":roomItem, "ammoKey":ammoKey, "shellCount":shellCount}
                     self.actionList.append(Action("Unload", actionFlags))
 
                     if blankCheck == False : console.lineList.insert(0, {"Blank": True})
                     console.lineList.insert(0, {"String":"You start unloading some weapons..", "Code":"32w2y"})
                 elif unloadWeapon != None:
-                    actionFlags = {"Unload List":unloadList, "Ammo Key":ammoKey, "Room Item":roomItem}
+                    actionFlags = {"unloadList":unloadList, "roomItem":roomItem, "ammoKey":ammoKey, "shellCount":shellCount}
                     self.actionList.append(Action("Unload", actionFlags))
 
                     countString = ""
@@ -1733,6 +1702,143 @@ class Player:
                         countCode = "2r" + str(len(str(unloadCount))) + "w1r"
                     if blankCheck == False : console.lineList.insert(0, {"Blank": True})
                     console.lineList.insert(0, {"String":"You start unloading " + unloadWeapon.prefix.lower() + " " + unloadWeapon.name["String"] + ".." + countString, "Code":"20w" + str(len(unloadWeapon.prefix)) + "w1w" + unloadWeapon.name["Code"] + "2y" + countCode})
+
+    def unloadCompleteAction(self, console, flags):
+        unloadList = flags["unloadList"]
+        roomItem = flags["roomItem"]
+        ammoKey = flags["ammoKey"]
+
+        flags = self.unloadFunction(self, unloadList, roomItem, ammoKey)
+        unloadWeapon = flags["unloadWeapon"]
+        unloadCount = flags["unloadCount"]
+        targetAmmo = flags["targetAmmo"]
+        targetMagazine = flags["targetMagazine"]
+        magazineCount = flags["magazineCount"]
+        shellCount = flags["shellCount"]
+
+        if unloadWeapon == "Multiple" or magazineCount > 1:
+            console.lineList.insert(0, {"Blank": True})
+            console.lineList.insert(0, {"String":"You finish unloading your weapons.", "Code":"33w1y"})
+
+        else:
+            countString = ""
+            countCode = ""
+            if unloadWeapon != "Multiple" and unloadCount > 1:
+                countString = " (" + str(unloadCount) + ")"
+                countCode = "2r" + str(len(str(unloadCount))) + "w1r"
+            unloadString = ""
+            unloadCode = ""
+            if targetAmmo != None and shellCount > 0:
+                shellString = ""
+                shellCode = ""
+                if shellCount > 1:
+                    shellString = " (" + str(shellCount) + ")"
+                    shellCode = "2r" + str(len(str(shellCount))) + "w1r"
+                unloadString = targetAmmo.name["String"] + shellString
+                unloadCode = targetAmmo.name["Code"] + shellCode
+            elif targetAmmo == None and targetMagazine != None:
+                unloadString = targetMagazine.prefix.lower() + " " + targetMagazine.name["String"]
+                unloadCode = str(len(targetMagazine.prefix)) + "w1w" + targetMagazine.name["Code"]
+                if magazineCount > 1:
+                    unloadString = "some magazines"
+                    unloadCode = "14w"
+            console.lineList.insert(0, {"Blank": True})
+            console.lineList.insert(0, {"String":"You unload " + unloadString + " from " + unloadWeapon.prefix.lower() + " " + unloadWeapon.name["String"] + "." + countString, "Code":"11w" + unloadCode + "6w" + str(len(unloadWeapon.prefix)) + "w1w" + unloadWeapon.name["Code"] + "1y" + countCode})
+
+    def unloadFunction(self, targetPlayer, unloadList, roomItem, ammoKey):
+        unloadWeapon = None
+        unloadCount = 0
+        targetAmmo = None
+        shellCount = 0
+        targetMagazine = None
+        magazineCount = 0
+        tooMuchWeightCheck = False
+        for weaponIndex, weapon in enumerate(unloadList):
+            
+            # Non-Magazine Weapons #
+            if weapon.shellCapacity != None and weapon.magazine != None:
+                if not (ammoKey != None and ammoKey not in weapon.magazine.keyList):
+                    getQuantity = weapon.magazine.quantity
+                    if roomItem != None and targetPlayer.getWeight() + roomItem.getWeight() > targetPlayer.getMaxWeight():
+                        getQuantity = 0
+                        tooMuchWeightCheck = True
+                        if targetPlayer.getWeight() + roomItem.getWeight(False) <= targetPlayer.getMaxWeight():
+                            getQuantity = int((targetPlayer.getMaxWeight() - targetPlayer.getWeight()) / roomItem.getWeight(False))
+
+                    if getQuantity > 0:
+                        shellCount += getQuantity
+                        inventoryAmmo, unused = targetPlayer.getTargetItem(weapon.magazine.num, ["Inventory"])
+                        if inventoryAmmo != None:
+                            inventoryAmmo.quantity += getQuantity
+                        else:
+                            splitItem = copy.deepcopy(weapon.magazine)
+                            splitItem.quantity = getQuantity
+                            targetPlayer.itemDict["Ammo"].append(splitItem)
+                        targetAmmo = weapon.magazine
+                        if getQuantity == weapon.magazine.quantity:
+                            weapon.magazine = None
+                        else:
+                            weapon.magazine.quantity -= getQuantity
+
+                        if unloadWeapon == None:
+                            unloadWeapon = weapon
+                        elif unloadWeapon != "Multiple" and unloadWeapon.num != weapon.num:
+                            unloadWeapon = "Multiple"
+                        unloadCount += 1
+
+            # Magazine Weapons #
+            elif weapon.magazine != None:
+                if not (ammoKey != None and weapon.magazine.flags["Ammo"] != None and ammoKey not in weapon.magazine.flags["Ammo"].keyList):
+                    getQuantity = 0
+                    if weapon.magazine.flags["Ammo"] != None:
+                        getQuantity = weapon.magazine.flags["Ammo"].quantity
+                    if roomItem != None and weapon.magazine.flags["Ammo"] != None and targetPlayer.getWeight() + weapon.magazine.flags["Ammo"].getWeight() > targetPlayer.getMaxWeight():
+                        getQuantity = 0
+                        tooMuchWeightCheck = True
+                        if targetPlayer.getWeight() + weapon.magazine.flags["Ammo"].getWeight(False) <= targetPlayer.getMaxWeight():
+                            getQuantity = int((targetPlayer.getMaxWeight() - targetPlayer.getWeight()) / weapon.magazine.flags["Ammo"].getWeight(False))
+
+                    if getQuantity > 0:
+                        shellCount += getQuantity
+                        inventoryAmmo, unused = targetPlayer.getTargetItem(weapon.magazine.flags["Ammo"].num, ["Inventory"])
+                        if inventoryAmmo != None:
+                            inventoryAmmo.quantity += getQuantity
+                        else:
+                            splitItem = copy.deepcopy(weapon.magazine.flags["Ammo"])
+                            splitItem.quantity = getQuantity
+                            targetPlayer.itemDict["Ammo"].append(splitItem)
+                        targetAmmo = weapon.magazine.flags["Ammo"]
+                        if getQuantity == weapon.magazine.flags["Ammo"].quantity:
+                            weapon.magazine.flags["Ammo"] = None
+                        else:
+                            weapon.magazine.flags["Ammo"].quantity -= getQuantity
+
+                    magazineCheck = False
+                    if roomItem != None and targetPlayer.getWeight() + weapon.magazine.getWeight() > targetPlayer.getMaxWeight():
+                        tooMuchWeightCheck = True
+                    else:
+                        targetPlayer.itemDict["Ammo"].append(weapon.magazine)
+                        targetMagazine = weapon.magazine
+                        weapon.magazine = None
+                        magazineCheck = True
+                        magazineCount += 1
+                    
+                    if getQuantity > 0 or magazineCheck == True:
+                        if unloadWeapon == None:
+                            unloadWeapon = weapon
+                        elif unloadWeapon != "Multiple" and unloadWeapon.num != weapon.num:
+                            unloadWeapon = "Multiple"
+                        unloadCount += 1
+
+        returnFlags = {}
+        returnFlags["unloadWeapon"] = unloadWeapon
+        returnFlags["unloadCount"] = unloadCount
+        returnFlags["tooMuchWeightCheck"] = tooMuchWeightCheck
+        returnFlags["targetAmmo"] = targetAmmo
+        returnFlags["shellCount"] = shellCount
+        returnFlags["targetMagazine"] = targetMagazine
+        returnFlags["magazineCount"] = magazineCount
+        return returnFlags
 
     def recruitCheck(self, console, galaxyList, player, currentRoom, mobKey, mobCount):
         if currentRoom.isLit(galaxyList, player) == False:
@@ -2265,6 +2371,7 @@ class Player:
             message = None
             roomDistance = 0
             targetRoom = currentRoom
+            targetDirection = None
             if mobKey == None and len(self.targetList) > 0:
                 targetArea, targetRoom = Room.getAreaAndRoom(galaxyList, self.targetList[0])
                 roomDistance, targetDirection, message = Room.getTargetRange(galaxyList, currentRoom, self.targetList[0], self.maxTargetDistance)
@@ -2286,117 +2393,12 @@ class Player:
             else:
                 blankCheck = self.stopActions(console)
 
-                attackList = []
-                mainAttackHand = self.gearDict[self.dominantHand]
-                offAttackHand = self.gearDict[self.getOppositeHand(self.dominantHand)]
-                combatSkill.weaponDataList = []
-                if combatSkill.weaponAttackCheck(mainAttackHand, offAttackHand) == True:
-                    attackList.append(combatSkill)
-                    if len(combatSkill.weaponDataList) == 1 and (combatSkill.weaponDataList[0] == offAttackHand or (combatSkill.weaponDataList[0] == "Open Hand" and offAttackHand == None)):
-                        offAttackHand = self.gearDict[self.dominantHand]
-                if combatSkill.offHandAttacks == True and len(combatSkill.weaponTypeList) != 2 and combatSkill.healCheck == False:
-                    offAttackSkill = copy.deepcopy(self.getRandomAttackSkill(offAttackHand, None, {"Distance":roomDistance, '"All" Attacks Disabled':True, "Disable Two-Handed Attacks":True, "Disable Healing":True}))
-                    if isinstance(offAttackSkill, Skill) and offAttackSkill.weaponAttackCheck(offAttackHand) == True:
-                        attackList.append(offAttackSkill)
+                flags = self.combatSkillFunction(self, combatSkill, targetRoom, roomDistance, mobKey, mobCount, directionKey, True)
+                targetMob = flags["targetMob"]
+                selfSkill = flags["selfSkill"]
+                targetMobList = flags["targetMobList"]
 
-                allOnlyCheck = False
-                for attackSkill in attackList:
-                    if "All Only" in attackSkill.ruleDict:
-                        allOnlyCheck = True
-                
-                if mobCount in ["All", "Group", None] or allOnlyCheck == True : maxTargets = len(targetRoom.mobList)
-                else : maxTargets = mobCount
-                if combatSkill.maxTargets != "All" and maxTargets > combatSkill.maxTargets:
-                    maxTargets = combatSkill.maxTargets
-                
-                selfSkill = None
-                if combatSkill.healCheck == True and \
-                (allOnlyCheck == True \
-                or \
-                ((mobKey == "Self" or \
-                (mobKey == None and mobCount == None and (len(self.targetList) == 0 or self.healEnemies == False)) or \
-                (mobKey == "All" and directionKey == None)))):
-                    selfSkill = True
-
-                attackDisplayList = []
-                targetMobList = []
-                targetMob = None
-                mobKillList = []
-                if not ((mobKey == "Self" and allOnlyCheck == False) or (combatSkill.healCheck == True and mobKey == None and mobCount == None and len(self.targetList) > 0 and self.healEnemies == False and allOnlyCheck == False)):
-                    for i in range(len(attackList)):
-                        attackDisplayList.append({"Mob Data":None, "Killed Mob Data":None, "Count":0, "Kill Count":0, "Miss Count":0, "Attack Data":attackList[i]})
-                    if maxTargets > 0 and not (combatSkill.healCheck == True and mobKey == "Self" and allOnlyCheck == False):
-                        for mob in targetRoom.mobList:
-                            if mobKey == "All" or allOnlyCheck == True or \
-                            (mobKey != None and mobKey in mob.keyList) or \
-                            (mobKey == None and mob in self.targetList):
-                                if allOnlyCheck == True or \
-                                (not (self.healEnemies == False and combatSkill.healCheck == True and mob not in self.recruitList) and \
-                                not (self.teamDamage == False and combatSkill.healCheck == False and mob in self.recruitList)):
-                                    if allOnlyCheck == True or not (mobCount == "Group" and mob not in self.recruitList):
-                                        for i, attackSkill in enumerate(attackList):
-                                            hitCheck = False
-                                            if len(attackSkill.weaponDataList) in [0, 2]:
-                                                attackHitCheck, attackHitData = Combat.hitCheck(self, attackSkill, mob)
-                                                if attackHitCheck == False:
-                                                    attackDisplayList[i].update(attackHitData)
-                                                else:
-                                                    hitCheck = True
-                                            else:
-                                                for weapon in attackSkill.weaponDataList:
-                                                    if weapon != "Open Hand" and weapon.weaponType == "Gun" and weapon.isLoaded(1) == False:
-                                                        attackDisplayList[i]["Miss Check"] = "Out Of Ammo"
-                                                        attackDisplayList[i]["Weapon Data List"] = [attackSkill.weaponDataList[0]]
-                                                    else:
-                                                        attackHitCheck, attackHitData = Combat.hitCheck(self, attackSkill, mob)
-                                                        if attackHitCheck == False:
-                                                            attackDisplayList[i].update(attackHitData)
-                                                        else:
-                                                            hitCheck = True
-
-                                                        if weapon != "Open Hand" and weapon.weaponType == "Gun" and weapon.isLoaded(1) == True:
-                                                            weapon.shoot()
-                                                    
-                                            if attackDisplayList[i]["Mob Data"] == None:
-                                                attackDisplayList[i]["Mob Data"] = mob
-                                            elif attackDisplayList[i]["Mob Data"] != "Multiple" and attackDisplayList[i]["Mob Data"].num != mob.num:
-                                                attackDisplayList[i]["Mob Data"] = "Multiple"
-                                            if hitCheck == True:
-                                                attackDisplayList[i]["Count"] += 1
-                                            else:
-                                                attackDisplayList[i]["Miss Count"] += 1
-
-                                        targetMobList.append(mob)
-
-                                        if mob.currentHealth <= 0:
-                                            mobKillList.append(mob)
-                                            attackDisplayList[0]["Kill Count"] += 1
-                                            targetRoom.itemList.append(Item.createCorpse(mob))
-                                            if mob in self.targetList : del self.targetList[self.targetList.index(mob)]
-                                            if mob in self.recruitList : del self.recruitList[self.recruitList.index(mob)]
-                                            if attackDisplayList[0]["Killed Mob Data"] == None:
-                                                attackDisplayList[0]["Killed Mob Data"] = mob
-                                            elif attackDisplayList[0]["Killed Mob Data"] != "Multiple" and attackDisplayList[0]["Killed Mob Data"].num != mob.num:
-                                                attackDisplayList[0]["Killed Mob Data"] = "Multiple"
-                                        elif mob.currentHealth > 0 and combatSkill.healCheck == False and mob not in self.targetList and mob not in self.recruitList:
-                                            self.targetList.insert(0, mob)
-                                            if mob not in self.combatList : self.combatList.append(mob)
-
-                                        if targetMob == None:
-                                            targetMob = mob
-                                        elif targetMob != "Multiple" and targetMob.num != mob.num:
-                                            targetMob = "Multiple"
-                                        if allOnlyCheck != True and len(targetMobList) >= maxTargets:
-                                            break
-                    
-                for mob in mobKillList:
-                    if mob in targetRoom.mobList:
-                        del targetRoom.mobList[targetRoom.mobList.index(mob)]
-
-                if targetMob == None and "All Only" in combatSkill.ruleDict and selfSkill == None:
-                    if blankCheck == False : console.lineList.insert(0, {"Blank": True})
-                    console.lineList.insert(0, {"String": "Your " + combatSkill.name["String"] + " doesn't hit anyone.", "Code":"5w" + combatSkill.name["Code"] + "6w1y12w1y"})
-                elif len(targetMobList) == 0 and mobKey not in ["All", None, "Self"]:
+                if len(targetMobList) == 0 and mobKey not in ["All", None, "Self"]:
                     if blankCheck == False : console.lineList.insert(0, {"Blank": True})
                     console.lineList.insert(0, {"String": "You don't see them.", "Code":"7w1y10w1y"})
                 elif len(targetMobList) == 0 and mobKey == "All" and selfSkill == None:
@@ -2407,77 +2409,225 @@ class Player:
                         if blankCheck == False : console.lineList.insert(0, {"Blank": True})
                         console.lineList.insert(0, {"String": "You don't see anyone.", "Code":"7w1y12w1y"})
                 else:
-                    if selfSkill != None:
-                        displayString = "You heal yourself with " + combatSkill.name["String"] + "."
-                        displayCode = "23w" + combatSkill.name["Code"] + "1y"
+                    if blankCheck == False : console.lineList.insert(0, {"Blank": True})
+                    console.lineList.insert(0, {"String":"You prepare to " + combatSkill.name["String"] + ".", "Code":"15w" + combatSkill.name["Code"] + "1y"})
+                
+                    actionFlags = {"combatSkill":combatSkill, "targetRoom":targetRoom, "roomDistance":roomDistance, "mobKey":mobKey, "mobCount":mobCount, "directionKey":directionKey, "targetDirection":targetDirection}
+                    self.actionList.append(Action("Combat Skill", actionFlags))
+
+    def combatSkillCompleteAction(self, console, flags):
+        combatSkill = flags["combatSkill"]
+        targetRoom = flags["targetRoom"]
+        roomDistance = flags["roomDistance"]
+        mobKey = flags["mobKey"]
+        mobCount = flags["mobCount"]
+        directionKey = flags["directionKey"]
+        targetDirection = flags["targetDirection"]
+        flags = self.combatSkillFunction(self, combatSkill, targetRoom, roomDistance, mobKey, mobCount, directionKey, False)
+
+        selfSkill = flags["selfSkill"]
+        attackDisplayList = flags["attackDisplayList"]
+        targetMob = flags["targetMob"]
+        targetMobList = flags["targetMobList"]
+
+        blankCheck = False
+        if targetMob == None and "All Only" in combatSkill.ruleDict and selfSkill == None:
+            if blankCheck == False : console.lineList.insert(0, {"Blank": True})
+            console.lineList.insert(0, {"String": "Your " + combatSkill.name["String"] + " doesn't hit anyone.", "Code":"5w" + combatSkill.name["Code"] + "6w1y12w1y"})
+
+        elif selfSkill != None:
+            displayString = "You heal yourself with " + combatSkill.name["String"] + "."
+            displayCode = "23w" + combatSkill.name["Code"] + "1y"
+            if blankCheck == False : console.lineList.insert(0, {"Blank": True})
+            console.lineList.insert(0, {"String":displayString, "Code":displayCode})
+            blankCheck = True
+
+        if len(targetMobList) > 0:
+            directionString = ""
+            directionCode = ""
+            directionCountString = ""
+            directionCountCode = ""
+            if roomDistance > 0:
+                directionString = " to the " + targetDirection
+                directionCode = "8w" + str(len(targetDirection)) + "w"
+                directionCountString, directionCountCode = getCountString(roomDistance)
+                
+            for attackData in attackDisplayList:
+                if "Miss Check" in attackData:
+                    if attackData["Miss Check"] == "Out Of Ammo":
+                        gunString = attackData["Weapon Data List"][0].name["String"]
+                        gunCode = attackData["Weapon Data List"][0].name["Code"]
+                        displayString = "Your " + gunString + " *CLICKS* due to having no ammo."
+                        displayCode = "5w" + gunCode + "2y6w1y22w1y"
                         if blankCheck == False : console.lineList.insert(0, {"Blank": True})
-                        console.lineList.insert(0, {"String":displayString, "Code":displayCode})
+                        console.lineList.insert(0, {"String": displayString, "Code":displayCode})
+                        blankCheck = True
+                    elif attackData["Miss Check"] == "Miss Attack" and not (attackData["Mob Data"] == "Multiple" and attackData["Count"] > 0):
+                        countString = ""
+                        countCode = ""
+                        mobString = "the group"
+                        mobCode = "9w"
+                        if attackData["Mob Data"] != "Multiple":
+                            countString, countCode = getCountString(attackData["Miss Count"])
+                            mobString = attackData["Mob Data"].prefix + " " + attackData["Mob Data"].name["String"]
+                            mobCode = str(len(attackData["Mob Data"].prefix)) + "w1w" + attackData["Mob Data"].name["Code"]
+                        displayString = "Your " + attackData["Attack Data"].name["String"] + directionString + directionCountString + " misses " + mobString + "." + countString
+                        displayCode = "5w" + attackData["Attack Data"].name["Code"] + directionCode + directionCountCode + "8w" + mobCode + "1y" + countCode
+                        if blankCheck == False : console.lineList.insert(0, {"Blank": True})
+                        console.lineList.insert(0, {"String": displayString, "Code":displayCode})
                         blankCheck = True
 
-                    if len(targetMobList) > 0:
-                        directionString = ""
-                        directionCode = ""
-                        directionCountString = ""
-                        directionCountCode = ""
-                        if roomDistance > 0:
-                            directionString = " to the " + targetDirection
-                            directionCode = "8w" + str(len(targetDirection)) + "w"
-                            directionCountString, directionCountCode = getCountString(roomDistance)
-                            
-                        for attackData in attackDisplayList:
-                            if "Miss Check" in attackData:
-                                if attackData["Miss Check"] == "Out Of Ammo":
-                                    gunString = attackData["Weapon Data List"][0].name["String"]
-                                    gunCode = attackData["Weapon Data List"][0].name["Code"]
-                                    displayString = "Your " + gunString + " *CLICKS* due to having no ammo."
-                                    displayCode = "5w" + gunCode + "2y6w1y22w1y"
-                                    if blankCheck == False : console.lineList.insert(0, {"Blank": True})
-                                    console.lineList.insert(0, {"String": displayString, "Code":displayCode})
-                                    blankCheck = True
-                                elif attackData["Miss Check"] == "Miss Attack" and not (attackData["Mob Data"] == "Multiple" and attackData["Count"] > 0):
-                                    countString = ""
-                                    countCode = ""
-                                    mobString = "the group"
-                                    mobCode = "9w"
-                                    if attackData["Mob Data"] != "Multiple":
-                                        countString, countCode = getCountString(attackData["Miss Count"])
-                                        mobString = attackData["Mob Data"].prefix + " " + attackData["Mob Data"].name["String"]
-                                        mobCode = str(len(attackData["Mob Data"].prefix)) + "w1w" + attackData["Mob Data"].name["Code"]
-                                    displayString = "Your " + attackData["Attack Data"].name["String"] + directionString + directionCountString + " misses " + mobString + "." + countString
-                                    displayCode = "5w" + attackData["Attack Data"].name["Code"] + directionCode + directionCountCode + "8w" + mobCode + "1y" + countCode
-                                    if blankCheck == False : console.lineList.insert(0, {"Blank": True})
-                                    console.lineList.insert(0, {"String": displayString, "Code":displayCode})
-                                    blankCheck = True
+                if attackData["Count"] > 0:
+                    hitString = " hits"
+                    hitCode = "5w"
+                    if blankCheck == False : console.lineList.insert(0, {"Blank": True})
+                    blankCheck = True
+                    if attackData["Attack Data"].healCheck == True:
+                        hitString = " heals"
+                        hitCode = "6w"
 
-                            if attackData["Count"] > 0:
-                                hitString = " hits"
-                                hitCode = "5w"
-                                if blankCheck == False : console.lineList.insert(0, {"Blank": True})
-                                blankCheck = True
-                                if attackData["Attack Data"].healCheck == True:
-                                    hitString = " heals"
-                                    hitCode = "6w"
+                    if attackData["Mob Data"] == "Multiple":
+                        displayString = "Your " + attackData["Attack Data"].name["String"] + directionString + directionCountString + hitString + " the group!"
+                        displayCode = "5w" + attackData["Attack Data"].name["Code"] + directionCode + directionCountCode + hitCode + "10w1y"
+                        console.lineList.insert(0, {"String": displayString, "Code":displayCode})
+                    elif attackData["Mob Data"] != None:
+                        countString, countCode = getCountString(attackData["Count"])
+                        displayString = "Your " + attackData["Attack Data"].name["String"] + directionString + directionCountString + hitString + " " + attackData["Mob Data"].prefix.lower() + " " + attackData["Mob Data"].name["String"] + "!"
+                        displayCode = "5w" + attackData["Attack Data"].name["Code"] + directionCode + directionCountCode + hitCode + "1w" + str(len(attackData["Mob Data"].prefix)) + "w1w" + attackData["Mob Data"].name["Code"] + "1y"
+                        console.lineList.insert(0, {"String": displayString + countString, "Code":displayCode + countCode})
+            
+            if attackDisplayList[0]["Kill Count"] > 0:
+                countString, countCode = getCountString(attackData["Kill Count"])
+                if attackData["Killed Mob Data"] == "Multiple":
+                    displayString = "Your attack kills your targets!"
+                    displayCode = "30w1y"
+                    console.lineList.insert(0, {"String": displayString + countString, "Code":displayCode + countCode})
+                else:
+                    displayString = attackDisplayList[0]["Killed Mob Data"].prefix + " " + attackDisplayList[0]["Killed Mob Data"].name["String"] + " is DEAD!"
+                    displayCode = str(len(attackDisplayList[0]["Killed Mob Data"].prefix)) + "w1w" + attackDisplayList[0]["Killed Mob Data"].name["Code"] + "8w1y"
+                    console.lineList.insert(0, {"String": displayString + countString, "Code":displayCode + countCode})
 
-                                if attackData["Mob Data"] == "Multiple":
-                                    displayString = "Your " + attackData["Attack Data"].name["String"] + directionString + directionCountString + hitString + " the group!"
-                                    displayCode = "5w" + attackData["Attack Data"].name["Code"] + directionCode + directionCountCode + hitCode + "10w1y"
-                                    console.lineList.insert(0, {"String": displayString, "Code":displayCode})
-                                elif attackData["Mob Data"] != None:
-                                    countString, countCode = getCountString(attackData["Count"])
-                                    displayString = "Your " + attackData["Attack Data"].name["String"] + directionString + directionCountString + hitString + " " + attackData["Mob Data"].prefix.lower() + " " + attackData["Mob Data"].name["String"] + "!"
-                                    displayCode = "5w" + attackData["Attack Data"].name["Code"] + directionCode + directionCountCode + hitCode + "1w" + str(len(attackData["Mob Data"].prefix)) + "w1w" + attackData["Mob Data"].name["Code"] + "1y"
-                                    console.lineList.insert(0, {"String": displayString + countString, "Code":displayCode + countCode})
-                        
-                        if attackDisplayList[0]["Kill Count"] > 0:
-                            countString, countCode = getCountString(attackData["Kill Count"])
-                            if attackData["Killed Mob Data"] == "Multiple":
-                                displayString = "Your attack kills your targets!"
-                                displayCode = "30w1y"
-                                console.lineList.insert(0, {"String": displayString + countString, "Code":displayCode + countCode})
-                            else:
-                                displayString = attackDisplayList[0]["Killed Mob Data"].prefix + " " + attackDisplayList[0]["Killed Mob Data"].name["String"] + " is DEAD!"
-                                displayCode = str(len(attackDisplayList[0]["Killed Mob Data"].prefix)) + "w1w" + attackDisplayList[0]["Killed Mob Data"].name["Code"] + "8w1y"
-                                console.lineList.insert(0, {"String": displayString + countString, "Code":displayCode + countCode})
+    def combatSkillFunction(self, targetPlayer, combatSkill, targetRoom, roomDistance, mobKey, mobCount, directionKey, copyCheck):
+        if copyCheck == True:
+            targetPlayer = copy.deepcopy(targetPlayer)
+            combatSkill = copy.deepcopy(combatSkill)
+
+        attackList = []
+        mainAttackHand = targetPlayer.gearDict[targetPlayer.dominantHand]
+        offAttackHand = targetPlayer.gearDict[targetPlayer.getOppositeHand(targetPlayer.dominantHand)]
+        combatSkill.weaponDataList = []
+        if combatSkill.weaponAttackCheck(mainAttackHand, offAttackHand) == True:
+            attackList.append(combatSkill)
+            if len(combatSkill.weaponDataList) == 1 and (combatSkill.weaponDataList[0] == offAttackHand or (combatSkill.weaponDataList[0] == "Open Hand" and offAttackHand == None)):
+                offAttackHand = targetPlayer.gearDict[targetPlayer.dominantHand]
+        if combatSkill.offHandAttacks == True and len(combatSkill.weaponTypeList) != 2 and combatSkill.healCheck == False:
+            offAttackSkill = copy.deepcopy(targetPlayer.getRandomAttackSkill(offAttackHand, None, {"Distance":roomDistance, '"All" Attacks Disabled':True, "Disable Two-Handed Attacks":True, "Disable Healing":True}))
+            if isinstance(offAttackSkill, Skill) and offAttackSkill.weaponAttackCheck(offAttackHand) == True:
+                attackList.append(offAttackSkill)
+
+        allOnlyCheck = False
+        for attackSkill in attackList:
+            if "All Only" in attackSkill.ruleDict:
+                allOnlyCheck = True
+        
+        if mobCount in ["All", "Group", None] or allOnlyCheck == True : maxTargets = len(targetRoom.mobList)
+        else : maxTargets = mobCount
+        if combatSkill.maxTargets != "All" and maxTargets > combatSkill.maxTargets:
+            maxTargets = combatSkill.maxTargets
+        
+        selfSkill = None
+        if combatSkill.healCheck == True and \
+        (allOnlyCheck == True \
+        or \
+        ((mobKey == "Self" or \
+        (mobKey == None and mobCount == None and (len(targetPlayer.targetList) == 0 or targetPlayer.healEnemies == False)) or \
+        (mobKey == "All" and directionKey == None)))):
+            selfSkill = True
+
+        attackDisplayList = []
+        targetMobList = []
+        targetMob = None
+        mobKillList = []
+        if not ((mobKey == "Self" and allOnlyCheck == False) or (combatSkill.healCheck == True and mobKey == None and mobCount == None and len(targetPlayer.targetList) > 0 and targetPlayer.healEnemies == False and allOnlyCheck == False)):
+            for i in range(len(attackList)):
+                attackDisplayList.append({"Mob Data":None, "Killed Mob Data":None, "Count":0, "Kill Count":0, "Miss Count":0, "Attack Data":attackList[i]})
+            if maxTargets > 0 and not (combatSkill.healCheck == True and mobKey == "Self" and allOnlyCheck == False):
+                for mob in targetRoom.mobList:
+                    if copyCheck == True:
+                        mob = copy.deepcopy(mob)
+                    if mobKey == "All" or allOnlyCheck == True or \
+                    (mobKey != None and mobKey in mob.keyList) or \
+                    (mobKey == None and mob in targetPlayer.targetList):
+                        if allOnlyCheck == True or \
+                        (not (targetPlayer.healEnemies == False and combatSkill.healCheck == True and mob not in targetPlayer.recruitList) and \
+                        not (targetPlayer.teamDamage == False and combatSkill.healCheck == False and mob in targetPlayer.recruitList)):
+                            if allOnlyCheck == True or not (mobCount == "Group" and mob not in targetPlayer.recruitList):
+                                for i, attackSkill in enumerate(attackList):
+                                    hitCheck = False
+                                    if len(attackSkill.weaponDataList) in [0, 2]:
+                                        attackHitCheck, attackHitData = Combat.hitCheck(targetPlayer, attackSkill, mob) # ! #
+                                        if attackHitCheck == False:
+                                            attackDisplayList[i].update(attackHitData)
+                                        else:
+                                            hitCheck = True
+                                    else:
+                                        for weapon in attackSkill.weaponDataList:
+                                            if weapon != "Open Hand" and weapon.weaponType == "Gun" and weapon.isLoaded(1) == False:
+                                                attackDisplayList[i]["Miss Check"] = "Out Of Ammo"
+                                                attackDisplayList[i]["Weapon Data List"] = [attackSkill.weaponDataList[0]]
+                                            else:
+                                                attackHitCheck, attackHitData = Combat.hitCheck(targetPlayer, attackSkill, mob) # ! #
+                                                if attackHitCheck == False:
+                                                    attackDisplayList[i].update(attackHitData)
+                                                else:
+                                                    hitCheck = True
+
+                                                if weapon != "Open Hand" and weapon.weaponType == "Gun" and weapon.isLoaded(1) == True:
+                                                    weapon.shoot()
+                                            
+                                    if attackDisplayList[i]["Mob Data"] == None:
+                                        attackDisplayList[i]["Mob Data"] = mob
+                                    elif attackDisplayList[i]["Mob Data"] != "Multiple" and attackDisplayList[i]["Mob Data"].num != mob.num:
+                                        attackDisplayList[i]["Mob Data"] = "Multiple"
+                                    if hitCheck == True:
+                                        attackDisplayList[i]["Count"] += 1
+                                    else:
+                                        attackDisplayList[i]["Miss Count"] += 1
+
+                                targetMobList.append(mob)
+
+                                if mob.currentHealth <= 0:
+                                    mobKillList.append(mob)
+                                    attackDisplayList[0]["Kill Count"] += 1
+                                    targetRoom.itemList.append(Item.createCorpse(mob))
+                                    if mob in targetPlayer.targetList : del targetPlayer.targetList[targetPlayer.targetList.index(mob)]
+                                    if mob in targetPlayer.recruitList : del targetPlayer.recruitList[targetPlayer.recruitList.index(mob)]
+                                    if attackDisplayList[0]["Killed Mob Data"] == None:
+                                        attackDisplayList[0]["Killed Mob Data"] = mob
+                                    elif attackDisplayList[0]["Killed Mob Data"] != "Multiple" and attackDisplayList[0]["Killed Mob Data"].num != mob.num:
+                                        attackDisplayList[0]["Killed Mob Data"] = "Multiple"
+                                elif mob.currentHealth > 0 and combatSkill.healCheck == False and mob not in targetPlayer.targetList and mob not in targetPlayer.recruitList:
+                                    targetPlayer.targetList.insert(0, mob)
+                                    if mob not in targetPlayer.combatList : targetPlayer.combatList.append(mob)
+
+                                if targetMob == None:
+                                    targetMob = mob
+                                elif targetMob != "Multiple" and targetMob.num != mob.num:
+                                    targetMob = "Multiple"
+                                if allOnlyCheck != True and len(targetMobList) >= maxTargets:
+                                    break
+            
+        for mob in mobKillList:
+            if mob in targetRoom.mobList:
+                del targetRoom.mobList[targetRoom.mobList.index(mob)]
+
+        returnFlags = {}
+        returnFlags["targetMob"] = targetMob
+        returnFlags["selfSkill"] = selfSkill
+        returnFlags["targetMobList"] = targetMobList
+        returnFlags["attackDisplayList"] = attackDisplayList
+
+        return returnFlags
 
     def displayInventory(self, console, galaxyList, currentRoom, targetPocketKey):
         targetPocket = None
@@ -2702,7 +2852,6 @@ class Player:
 
             if blankCheck == False : console.lineList.insert(0, {"Blank": True})
             console.lineList.insert(0, {"String":"The hatch opens and closes as you step inside.", "Code":"45w1y"})
-            console.lineList.insert(0, {"Blank": True})
 
             spaceshipHatchRoom = targetSpaceship.areaList[self.area].roomList[self.room]
             spaceshipHatchRoom.display(console, galaxyList, self)

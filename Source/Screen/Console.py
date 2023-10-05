@@ -1,6 +1,7 @@
 import pygame
 from pygame import *
 from Components.Utility import writeColor
+from Components.Utility import wordWrap
 
 # Console Size - [59, 32] #
 # Character Size - [10, 18] #
@@ -44,3 +45,13 @@ class Console:
             self.displayLine = 0
         elif self.displayLine > len(self.lineList) - 32:
             self.displayLine = len(self.lineList) - 32
+
+    def write(self, displayString, displayCode, blankCheck=False):
+        if blankCheck == True:
+            self.lineList.insert(0, {"Blank": True})
+
+        if len(displayString) <= self.characterWidth:
+            self.lineList.insert(0, {"String":displayString, "Code":displayCode})
+        else:
+            for displayLine in wordWrap(displayString, displayCode, self.characterWidth):
+                self.lineList.insert(0, {"String":displayLine["String"], "Code":displayLine["Code"]})

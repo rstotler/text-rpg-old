@@ -19,19 +19,18 @@ from Components.Utility import appendKeyList
 
 # To Do List:
     # Basic Mob Speech
-    # Implement wordWrap()
+    # Implement wordWrap() In Player.py
     # Combat:
-    # -Time-Based Action
     # -Auto-Reload
     # -Mobs Counter-Attack
     # Make Player Lose Sight Of Mobs On Darkness
-    # Mob Updates/Movement
-    # Attack Command
     # Dodge Command
     # Parry Command
     # Fix Map Doors (Active Map)
     # Auto-Loot
     # Counter-Attack (Passive Skill)
+    # Move Direction '#'
+    # Launch/Land Command
 
 class Game:
 
@@ -47,8 +46,8 @@ class Game:
         self.frameTick = 0
         
         self.loadGame()
-        # self.inputBar.inputList = ["n", "w", "loot cab", "wear pis", "wear pis", "e", "s", "s", "reload"]
-        
+        self.inputBar.inputList = ["n", "n", "w", "loot cab", "wear pis", "wear pis", "e", "s", "s", "reload"]
+
     def loadGame(self):
         galaxyProtoMilkyWay = Galaxy()
         self.galaxyList.append(galaxyProtoMilkyWay)
@@ -403,7 +402,6 @@ class Game:
 
             # Look #
             elif len(input.split()) == 1 and input.lower().split()[0] in ["look", "loo", "lo", "l"]:
-                self.console.lineList.insert(0, {"Blank": True})
                 currentRoom.display(self.console, self.galaxyList, self.player)
 
             # Examine #
@@ -411,8 +409,7 @@ class Game:
                 self.player.targetList[0].lookDescription(self.console)
                 
             else:
-                self.console.lineList.insert(0, {"Blank": True})
-                self.console.lineList.insert(0, {"String": "Examine what?", "Code":"12w1y"})
+                self.console.write("Examine what?", "12w1y", True)
 
         # Target #
         elif input.lower().split()[0] in ["target", "targe", "targ", "tar", "ta", "t"]:
@@ -490,8 +487,7 @@ class Game:
                 self.player.targetCheck(self.console, self.galaxyList, currentRoom, targetMobKey, None, 1, None)
 
             else:
-                self.console.lineList.insert(0, {"Blank": True})
-                self.console.lineList.insert(0, {"String": "Target what?", "Code":"11w1y"})
+                self.console.write("Target what?", "11w1y", True)
 
         # Untarget #
         elif input.lower().split()[0] in ["untarget", "untarge", "untarg", "untar", "unta", "unt", "un", "u"]:
@@ -598,8 +594,7 @@ class Game:
                 self.player.openCloseTargetCheck(self.console, self.galaxyList, currentRoom, targetAction, ' '.join(input.lower().split()[1::]))
 
             else:
-                self.console.lineList.insert(0, {"Blank": True})
-                self.console.lineList.insert(0, {"String": targetAction + " what?", "Code":str(len(targetAction)) + "w5w1y"})
+                self.console.write(targetAction + " what?", str(len(targetAction)) + "w5w1y", True)
 
         # Lock/Unlock #
         elif input.lower().split()[0] in ["lock", "loc", "unlock", "unloc", "unlo"]:
@@ -619,8 +614,7 @@ class Game:
                 self.player.lockUnlockTargetCheck(self.console, self.galaxyList, currentRoom, targetAction, ' '.join(input.lower().split()[1::]))
 
             else:
-                self.console.lineList.insert(0, {"Blank": True})
-                self.console.lineList.insert(0, {"String": targetAction + " what?", "Code":str(len(targetAction)) + "w5w1y"})
+                self.console.write(targetAction + " what?", str(len(targetAction)) + "w5w1y", True)
 
         # Get #
         elif input.lower().split()[0] in ["get", "ge", "g"]:
@@ -692,8 +686,7 @@ class Game:
                 self.player.getCheck(self.console, self.galaxyList, currentRoom, targetItemKey, None, 1)
 
             else:
-                self.console.lineList.insert(0, {"Blank": True})
-                self.console.lineList.insert(0, {"String": "Get what?", "Code":"8w1y"})
+                self.console.write("Get what?", "8w1y", True)
 
         # Loot #
         elif input.lower().split()[0] in ["loot"]:
@@ -720,8 +713,7 @@ class Game:
                 self.player.getCheck(self.console, self.galaxyList, currentRoom, "All", ' '.join(input.lower().split()[1::]), "All")
 
             else:
-                self.console.lineList.insert(0, {"Blank": True})
-                self.console.lineList.insert(0, {"String": "Loot what?", "Code":"9w1y"})
+                self.console.write("Loot what?", "9w1y", True)
 
         # Empty #
 
@@ -757,8 +749,7 @@ class Game:
                 self.player.putCheck(self.console, self.galaxyList, currentRoom, targetItemKey, targetContainerKey, 1)
 
             else:
-                self.console.lineList.insert(0, {"Blank": True})
-                self.console.lineList.insert(0, {"String": "Put what in what?", "Code":"16w1y"})
+                self.console.write("Put what in what?", "16w1y", True)
 
         # Drop #
         elif input.lower().split()[0] in ["drop", "dro", "dr"]:
@@ -788,8 +779,7 @@ class Game:
                 self.player.dropCheck(self.console, self.galaxyList, currentRoom, targetItemKey, 1)
 
             else:
-                self.console.lineList.insert(0, {"Blank": True})
-                self.console.lineList.insert(0, {"String": "Drop what?", "Code":"9w1y"})
+                self.console.write("Drop what?", "9w1y", True)
         
         # Wear #
         elif input.lower().split()[0] in ["wear", "wea"]:
@@ -819,8 +809,7 @@ class Game:
                 self.player.wearCheck(self.console, targetItemKey, 1)
 
             else:
-                self.console.lineList.insert(0, {"Blank": True})
-                self.console.lineList.insert(0, {"String": "Wear what?", "Code":"9w1y"})
+                self.console.write("Wear what?", "9w1y", True)
         
         # Wield #
         elif input.lower().split()[0] in ["wield", "wiel", "wie" "wi", "hold", "hol", "ho"]:
@@ -846,8 +835,7 @@ class Game:
                 self.player.wieldCheck(self.console, ' '.join(input.lower().split()[1::]), None, 1)
 
             else:
-                self.console.lineList.insert(0, {"Blank": True})
-                self.console.lineList.insert(0, {"String": "Wield what?", "Code":"10w1y"})
+                self.console.write("Wield what?", "10w1y", True)
 
         # Remove #
         elif input.lower().split()[0] in ["remove", "remov", "remo", "rem"]:
@@ -881,8 +869,7 @@ class Game:
                 self.player.removeCheck(self.console, targetItemKey, 1)
 
             else:
-                self.console.lineList.insert(0, {"Blank": True})
-                self.console.lineList.insert(0, {"String": "Remove what?", "Code":"11w1y"})
+                self.console.write("Remove what?", "11w1y", True)
 
         ## Combat Commands ##
         # Attack #
@@ -1047,36 +1034,36 @@ class Game:
             if len(input.split()) > 2 and (input.lower().split()[1] in ["left", "lef", "le", "l", "right", "righ", "rig", "ri", "r"] or (stringIsNumber(input.split()[1]) and int(input.split()[1] > 0))):
                 reloadSlot = input.lower().split()[1]
                 ammoKey = ' '.join(input.lower().split()[2::])
-                self.player.reloadCheck(self.console, self.galaxyList, self.player, currentRoom, None, reloadSlot, ammoKey)
+                self.player.reloadCheck(self.console, self.galaxyList, currentRoom, None, reloadSlot, ammoKey)
 
             # Reload All Ammo #
             elif len(input.split()) > 2 and input.lower().split()[1] == "all":
                 ammoKey = ' '.join(input.lower().split()[2::])
-                self.player.reloadCheck(self.console, self.galaxyList, self.player, currentRoom, "All", "All", ammoKey)
+                self.player.reloadCheck(self.console, self.galaxyList, currentRoom, "All", "All", ammoKey)
 
             # Reload Weapon Ammo #
             elif len(input.split()) > 2:
                 reloadKey = input.lower().split()[1]
                 ammoKey = ' '.join(input.lower().split()[2::])
-                self.player.reloadCheck(self.console, self.galaxyList, self.player, currentRoom, reloadKey, None, ammoKey)
+                self.player.reloadCheck(self.console, self.galaxyList, currentRoom, reloadKey, None, ammoKey)
 
             # Reload All #
             elif len(input.split()) == 2 and input.lower().split()[1] == "all":
-                self.player.reloadCheck(self.console, self.galaxyList, self.player, currentRoom, "All", "All", None)
+                self.player.reloadCheck(self.console, self.galaxyList, currentRoom, "All", "All", None)
 
             # Reload Left/Right #
             elif len(input.split()) == 2 and (input.lower().split()[1] in ["left", "lef", "le", "l", "right", "righ", "rig", "ri", "r"] or (stringIsNumber(input.split()[1]) and int(input.split()[1] > 0))):
                 reloadSlot = input.lower().split()[1]
-                self.player.reloadCheck(self.console, self.galaxyList, self.player, currentRoom, None, reloadSlot, None)
+                self.player.reloadCheck(self.console, self.galaxyList, currentRoom, None, reloadSlot, None)
 
             # Reload Weapon/Ammo #
             elif len(input.split()) == 2:
                 reloadKey = input.lower().split()[1]
-                self.player.reloadCheck(self.console, self.galaxyList, self.player, currentRoom, reloadKey, None, None)
+                self.player.reloadCheck(self.console, self.galaxyList, currentRoom, reloadKey, None, None)
 
             # Reload #
             else:
-                self.player.reloadCheck(self.console, self.galaxyList, self.player, currentRoom, "All", None, None)
+                self.player.reloadCheck(self.console, self.galaxyList, currentRoom, "All", None, None)
 
         # Unload #
         elif input.lower().split()[0] in ["unload", "unloa", "unlo", "unl"]:
@@ -1084,25 +1071,25 @@ class Game:
             # Unload All Ammo #
             if len(input.split()) > 2 and input.lower().split()[1] == "all":
                 ammoKey = ' '.join(input.lower().split()[2::])
-                self.player.unloadCheck(self.console, self.galaxyList, self.player, currentRoom, "All", None, ammoKey)
+                self.player.unloadCheck(self.console, self.galaxyList, currentRoom, "All", None, ammoKey)
 
             # Unload All #
             elif len(input.split()) == 2 and input.lower().split()[1] == "all":
-                self.player.unloadCheck(self.console, self.galaxyList, self.player, currentRoom, "All", None, None)
+                self.player.unloadCheck(self.console, self.galaxyList, currentRoom, "All", None, None)
 
             # Unload Left/Right #
             elif len(input.split()) == 2 and (input.lower().split()[1] in ["left", "lef", "le", "l", "right", "righ", "rig", "ri", "r"] or (stringIsNumber(input.split()[1]) and int(input.split()[1]) > 0)):
                 unloadSlotKey = input.lower().split()[1]
-                self.player.unloadCheck(self.console, self.galaxyList, self.player, currentRoom, None, unloadSlotKey, None)
+                self.player.unloadCheck(self.console, self.galaxyList, currentRoom, None, unloadSlotKey, None)
 
             # Unload Weapon #
             elif len(input.split()) > 1:
                 unloadKey = ' '.join(input.lower().split()[1::])
-                self.player.unloadCheck(self.console, self.galaxyList, self.player, currentRoom, unloadKey, None, None)
+                self.player.unloadCheck(self.console, self.galaxyList, currentRoom, unloadKey, None, None)
 
             # Unload #
             else:
-                self.player.unloadCheck(self.console, self.galaxyList, self.player, currentRoom, "All", "All", None)
+                self.player.unloadCheck(self.console, self.galaxyList, currentRoom, "All", "All", None)
 
         # Recruit/Tame [Needs Testing] #
         elif input.lower().split()[0] in ["tame", "tam", "recruit", "recrui", "recru", "recr", "rec"]:
@@ -1219,8 +1206,7 @@ class Game:
                 self.player.boardCheck(self.console, self.map, self.galaxyList, currentRoom, ' '.join(input.lower().split()[1::]))
             
             else:
-                self.console.lineList.insert(0, {"Blank": True})
-                self.console.lineList.insert(0, {"String": "Board what?", "Code":"10w1y"})
+                self.console.write("Board what?", "10w1y", True)
 
         # Launch #
 
@@ -1257,30 +1243,26 @@ class Game:
 
         # Craft/Create #
 
-        ## Config Commands ##
+        ## Config/Setting Commands ##
         # Auto Loot #
         elif input.lower().split()[0] == "autoloot" or (len(input.split()) == 2 and input.lower().split()[0] == "auto" and input.lower().split()[1] == "loot"):
             self.player.autoLoot = not self.player.autoLoot
-            self.console.lineList.insert(0, {"Blank": True})
-            self.console.lineList.insert(0, {"String": "Setting changed.", "Code":"15w1y"})
+            self.console.write("Setting changed.", "15w1y", True)
 
         # Auto Reload #
         elif input.lower().split()[0] == "autoreload" or (len(input.split()) == 2 and input.lower().split()[0] == "auto" and input.lower().split()[1] == "reload"):
             self.player.autoReload = not self.player.autoReload
-            self.console.lineList.insert(0, {"Blank": True})
-            self.console.lineList.insert(0, {"String": "Setting changed.", "Code":"15w1y"})
+            self.console.write("Setting changed.", "15w1y", True)
 
         # Team Damage #
         elif input.lower().split()[0] == "teamdamage" or (len(input.split()) == 2 and input.lower().split()[0] == "team" and input.lower().split()[1] == "damage"):
             self.player.teamDamage = not self.player.teamDamage
-            self.console.lineList.insert(0, {"Blank": True})
-            self.console.lineList.insert(0, {"String": "Setting changed.", "Code":"15w1y"})
+            self.console.write("Setting changed.", "15w1y", True)
 
         # Heal Enemies #
         elif input.lower().split()[0] == "healenemies" or (len(input.split()) == 2 and input.lower().split()[0] == "heal" and input.lower().split()[1] == "enemies"):
             self.player.healEnemies = not self.player.healEnemies
-            self.console.lineList.insert(0, {"Blank": True})
-            self.console.lineList.insert(0, {"String": "Setting changed.", "Code":"15w1y"})
+            self.console.write("Setting changed.", "15w1y", True)
 
         ## God Commands ##
         # Manifest #
@@ -1306,13 +1288,11 @@ class Game:
             else : inputCheck = False
 
             if inputCheck == False:
-                self.console.lineList.insert(0, {"Blank": True})
-                self.console.lineList.insert(0, {"String": "Manifest what?", "Code":"13w1y"})
+                self.console.write("Manifest what?", "13w1y", True)
 
         ## Emotes ##
         elif input.lower().split()[0] in self.player.emoteList:
             self.player.emote(self.console, input.lower())
 
         else:
-            self.console.lineList.insert(0, {"Blank": True})
-            self.console.lineList.insert(0, {"String": "Huh?", "Code":"3w1y"})
+            self.console.write("Huh?", "3w1y", True)
