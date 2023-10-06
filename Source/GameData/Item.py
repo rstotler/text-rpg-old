@@ -13,6 +13,7 @@ class Item:
         self.prefix = "A"
         self.name = {"String":"Debug Item"}
         self.roomDescription = {"String":"is laying on the ground.", "Code":"23w1y"}
+        self.description = {"String":"You see nothing special.", "Code":"23w1y"}
         self.keyList = []
 
         self.weight = 1.0
@@ -289,21 +290,20 @@ class Item:
             self.roomDescription["Code"] = str(len(self.roomDescription["String"])) + "w"
 
     def lookDescription(self, console, lookDistance=0, passwordCheck=False):
-        console.lineList.insert(0, {"Blank": True})
-        console.lineList.insert(0, {"String": "You look at " + self.prefix.lower() + " " + self.name["String"] + ".", "Code":"12w" + str(len(self.prefix)) + "w1w" + self.name["Code"] + "1y"})
+        console.write("You look at " + self.prefix.lower() + " " + self.name["String"] + ".", "12w" + str(len(self.prefix)) + "w1w" + self.name["Code"] + "1y", True)
         
         if "Glowing" in self.flags and self.flags["Glowing"] == True:
-            console.lineList.insert(0, {"String": "It's glowing.", "Code":"2w1y9w1y"})
+            console.write("It's glowing.", "2w1y9w1y")
         elif self.containerList == None:
-            console.lineList.insert(0, {"String": "You see nothing special.", "Code":"23w1y"})
+            console.write(self.description["String"], self.description["Code"])
 
         if self.containerList != None and lookDistance == 0:
             if self.containerPassword != None and passwordCheck == False:
-                console.lineList.insert(0, {"String": "It's locked.", "Code":"2w1y8w1y"})
+                console.write("It's locked.", "2w1y8w1y")
             elif len(self.containerList) == 0:
-                console.lineList.insert(0, {"String": "It's empty.", "Code":"2w1y7w1y"})
+                console.write("It's empty.", "2w1y7w1y")
             else:
-                console.lineList.insert(0, {"String": "It contains:", "Code":"11w1y"})
+                console.write("It contains:", "11w1y")
                 displayList = []
                 for item in self.containerList:
                     if item.ranged == True:
@@ -334,11 +334,11 @@ class Item:
                     if "Count" in itemData : countNum = itemData["Count"]
                     countString, countCode = getCountString(countNum)
                     weaponStatusString, weaponStatusCode = itemData["ItemData"].getWeaponStatusString()
-                    console.lineList.insert(0, {"String":displayString + weaponStatusString + modString + countString, "Code":displayCode + weaponStatusCode + modCode + countCode})
+                    console.write(displayString + weaponStatusString + modString + countString, displayCode + weaponStatusCode + modCode + countCode)
             
         elif self.ranged == True:
             displayString, displayCode = self.getWeaponStatusString()
-            console.lineList.insert(0, {"String": "Rounds:" + displayString, "Code":"6w1y" + displayCode})
+            console.write("Rounds:" + displayString, "6w1y" + displayCode)
 
     def getWeight(self, multiplyQuantity=True):
         if self.quantity == None:
@@ -455,9 +455,16 @@ class Item:
     @staticmethod
     def createCorpse(targetMob):
         corpseItem = Item(666)
-        corpseItem.prefix = "The corpse of"
-        corpseItem.name["String"] = targetMob.prefix.lower() + " " + targetMob.name["String"]
-        corpseItem.name["Code"] = str(len(targetMob.prefix)) + "w1w" + targetMob.name["Code"]
+
+        if targetMob.num == None:
+            corpseItem.prefix = "Your"
+            corpseItem.name["String"] = "corpse"
+            corpseItem.name["Code"] = "6w"
+            appendKeyList(corpseItem.keyList, "your corpse")
+        else:
+            corpseItem.prefix = "The corpse of"
+            corpseItem.name["String"] = targetMob.prefix.lower() + " " + targetMob.name["String"]
+            corpseItem.name["Code"] = str(len(targetMob.prefix)) + "w1w" + targetMob.name["Code"]
         for item in targetMob.getAllItemList():
             corpseItem.containerList.append(item)
         appendKeyList(corpseItem.keyList, corpseItem.name["String"].lower())

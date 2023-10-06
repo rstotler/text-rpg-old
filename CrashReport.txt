@@ -1,11 +1,13 @@
 Traceback (most recent call last):
   File "D:\Codes\Python\Universe\Source\Screen\InputBar.py", line 50, in processInput
     game.processInputBarCommand(self.input)
-  File "D:\Codes\Python\Universe\Source\Game.py", line 414, in processInputBarCommand
-    self.console.write("Examine what?", "12w1y")
-TypeError: write() takes 2 positional arguments but 3 were given
+  File "D:\Codes\Python\Universe\Source\Game.py", line 998, in processInputBarCommand
+    self.player.combatSkillCheck(self.console, self.galaxyList, self.player, currentRoom, combatSkill, mobCount, mobKey, None, None)
+  File "D:\Codes\Python\Universe\Source\GameData\Player.py", line 2404, in combatSkillCheck
+    print(len(currentRoom))
+TypeError: object of type 'Room' has no len()
 
-Input: exa
+Input: shoot dro
 Player Loc: [0, 0, 1, 0, 1]
 Player Spaceship: None
 Player Targets: 0
