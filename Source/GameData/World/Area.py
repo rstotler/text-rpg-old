@@ -1,4 +1,4 @@
-import copy
+import copy, random
 from GameData.World.Room import Room
 
 class Area:
@@ -9,6 +9,14 @@ class Area:
         self.size = [0, 0]
         
         self.name = {"String":"", "Code":""}
+
+        self.flavorTextTick = 200 + random.randrange(200)
+
+    def update(self, console):
+        self.flavorTextTick -= 1
+        if self.flavorTextTick <= 0:
+            self.flavorTextTick = 200 + random.randrange(200)
+            console.write("You hear some squeaking sounds.", "30w1y", True)
 
     def zeroCoordinates(self, galaxyList):
         def examineRoomData(currentLoc, targetRoom, examinedRoomNumList):

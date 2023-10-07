@@ -29,13 +29,13 @@ class Player:
         self.actionList = []
         self.combatSkillList = [Skill(1), Skill(2), Skill(3), Skill(4), Skill(5), Skill(6), Skill(7), Skill(8), Skill(9), Skill(11), Skill(12), Skill(13)]
 
-        self.currentHealth = 3
+        self.currentHealth = 30
 
         self.maxLookDistance = 3
         self.maxTargetDistance = 2
-        self.targetList = [] # Not Used For Mobs
+        self.targetList = []
         self.recruitList = []
-        self.combatList = [] # Player - Contains Other Mobs, Mobs - Also Only Contains Other Mobs
+        self.combatList = []
 
         self.itemDict = {"Armor": [], "Weapon":[], "Ammo":[], "Misc": []}
         self.gearDict = {"Head":None, "Face":None, "Neck":[None, None], "Body Under":None, "Body Over":None, "About Body":None, "Hands":None, "Finger":[None, None], "Legs Under":None, "Legs Over":None, "Feet":None, "Left Hand":None, "Right Hand":None}
@@ -45,10 +45,17 @@ class Player:
 
         self.autoLoot = False
         self.autoReload = False
+        self.autoCombat = False
         self.teamDamage = True
         self.healEnemies = True
 
         self.debugDualWield = False
+
+        # Mob-Specific Variables #
+        self.speechTickMax = 3
+        self.speechTick = 0
+        self.speechIndex = 0
+        self.speechList = []
 
         if num != None:
             self.loadMob(num)
@@ -59,38 +66,48 @@ class Player:
         # Mob Update #
         if self.num != None:
             if self in player.combatList:
-                distanceToPlayer, directionToPlayer, unused = Room.getTargetRange(galaxyList, currentRoom, player, self.maxTargetDistance)
-                if distanceToPlayer != -1:
-                    maxSkillRange = -1
-                    firstSkillChoiceList = []
-                    for skill in self.getCombatSkillList():
-                        if skill.ruleCheck({"Distance":distanceToPlayer, "Disable Healing":True}) == True:
-                            if self.skillAvailableCheck(skill) == True:
-                                if len(skill.weaponTypeList) > 0 and skill.weaponTypeList[0] == "Gun" and ((self.gearDict[self.dominantHand] != None and self.gearDict[self.dominantHand].weaponType == "Gun" and self.gearDict[self.dominantHand].isEmpty(True) == True) and (self.gearDict[self.getOppositeHand(self.dominantHand)] == None or (self.gearDict[self.getOppositeHand(self.dominantHand)] != None and self.gearDict[self.getOppositeHand(self.dominantHand)].weaponType == "Gun" and self.gearDict[self.getOppositeHand(self.dominantHand)].isEmpty(True) == True))):
-                                    pass # No Ammo
-                                else:
-                                    if skill.maxRange > maxSkillRange:
-                                        maxSkillRange = skill.maxRange
-                                    firstSkillChoiceList.append(skill)
-                    skillChoiceList = []
-                    for skill in firstSkillChoiceList:
-                        if skill.maxRange == maxSkillRange:
-                            skillChoiceList.append(skill)
+                if len(self.actionList) == 0:
+                    distanceToPlayer, directionToPlayer, unused = Room.getTargetRange(galaxyList, currentRoom, player, self.maxTargetDistance)
+                    if distanceToPlayer != -1:
+                        skillChoiceList = []
+                        maxSkillRange = -1
+                        for skill in self.getCombatSkillList():
+                            if skill.ruleCheck({"Distance":distanceToPlayer, "Disable Healing":True}) == True:
+                                if self.skillAvailableCheck(skill) == True:
+                                    if len(skill.weaponTypeList) > 0 and skill.weaponTypeList[0] == "Gun" and ((self.gearDict[self.dominantHand] != None and self.gearDict[self.dominantHand].weaponType == "Gun" and self.gearDict[self.dominantHand].isEmpty(True) == True) and (self.gearDict[self.getOppositeHand(self.dominantHand)] == None or (self.gearDict[self.getOppositeHand(self.dominantHand)] != None and self.gearDict[self.getOppositeHand(self.dominantHand)].weaponType == "Gun" and self.gearDict[self.getOppositeHand(self.dominantHand)].isEmpty(True) == True))):
+                                        pass # No Ammo
+                                    else:
+                                        skillChoiceList.append(skill)
+                                        if skill.maxRange > maxSkillRange:
+                                            maxSkillRange = skill.maxRange
 
-                    # Chase Player, Next Room Locked Door Check #
-                    if len(skillChoiceList) == 0 and distanceToPlayer > 0:
-                        if not (currentRoom.door[directionToPlayer] != None and currentRoom.door[directionToPlayer]["Status"] == "Locked" and "Password" in currentRoom.door[directionToPlayer] and self.hasKey(currentRoom.door[directionToPlayer]["Password"]) == False):
-                            self.moveCheck(console, map, galaxyList, player, currentRoom, directionToPlayer.lower())
+                        # Chase Player, Next Room Locked Door Check #
+                        if distanceToPlayer > 0:
+                            if not (currentRoom.door[directionToPlayer] != None and currentRoom.door[directionToPlayer]["Status"] == "Locked" and "Password" in currentRoom.door[directionToPlayer] and self.hasKey(currentRoom.door[directionToPlayer]["Password"]) == False):
+                                self.moveCheck(console, map, galaxyList, player, currentRoom, directionToPlayer.lower())
 
-                    # Use Skill #
-                    elif len(skillChoiceList) > 0 and len(self.actionList) == 0:
-                        targetSkill = random.choice(skillChoiceList)
-                        directionKey = None
-                        directionCount = None
-                        if directionToPlayer != None:
-                            directionKey = directionToPlayer
-                            directionCount = distanceToPlayer
-                        self.combatSkillCheck(console, galaxyList, player, currentRoom, targetSkill, 1, "Player", directionKey, directionCount)
+                        # Use Skill #
+                        elif len(skillChoiceList) > 0:
+                            targetSkill = random.choice(skillChoiceList)
+                            directionKey = None
+                            directionCount = None
+                            if directionToPlayer != None:
+                                directionKey = directionToPlayer
+                                directionCount = distanceToPlayer
+                            self.combatSkillCheck(console, galaxyList, player, currentRoom, targetSkill, 1, "Player", directionKey, directionCount)
+
+            else:
+
+                # Speech #
+                if currentRoom.sameRoomCheck(player) == True and len(self.speechList) > 0:
+                    self.speechTick += 1
+                    if self.speechTick >= self.speechTickMax:
+                        self.sayCheck(console, self.speechList[self.speechIndex])
+                        self.speechTick = 0
+                        self.speechIndex += 1
+                        if self.speechIndex >= len(self.speechList):
+                            self.speechIndex = 0
+                            self.speechTick =  -40
 
     def updateAction(self, console, player):
         if len(self.actionList) > 0:
@@ -135,16 +152,13 @@ class Player:
             else : countCode = "2r" + str(len(str(i))) + "w11w1r"
 
         if messageType == None and count > self.maxLookDistance:
-            console.lineList.insert(0, {"Blank": True})
-            console.lineList.insert(0, {"String":"You can't see that far." + countString, "Code":"7w1y14w1y" + countCode})
+            console.write("You can't see that far." + countString, "7w1y14w1y" + countCode, True)
         elif messageType != None:
-            console.lineList.insert(0, {"Blank": True})
             if messageType == "Can't See Further":
-                console.lineList.insert(0, {"String":"You can't see any farther to the " + lookDir + "." + countString, "Code":"7w1y25w" + str(len(lookDir)) + "w1y" + countCode})
+                console.write("You can't see any farther to the " + lookDir + "." + countString, "7w1y25w" + str(len(lookDir)) + "w1y" + countCode, True)
             elif messageType == "View Obstructed":
-                console.lineList.insert(0, {"String":"Your view to the " + lookDir + " is obstructed." + countString, "Code":"17w" + str(len(lookDir)) + "w14w1y" + countCode})
+                console.write("Your view to the " + lookDir + " is obstructed." + countString, "17w" + str(len(lookDir)) + "w14w1y" + countCode, True)
         if lookCheck:
-            console.lineList.insert(0, {"Blank": True})
             currentRoom.display(console, galaxyList, self)
     
     def lookTargetCheck(self, console, galaxyList, currentRoom, lookDir, count, lookTarget):
@@ -173,8 +187,7 @@ class Player:
                     lookCount += 1
                     
         if messageType == "Can't See Further":
-            console.lineList.insert(0, {"Blank": True})
-            console.lineList.insert(0, {"String": "There is nothing there.", "Code":"22w1y"})
+            console.write("There is nothing there.", "22w1y", True)
         elif messageType == "View Obstructed":
             countString = ""
             countCode = ""
@@ -186,11 +199,9 @@ class Player:
                     sCode = "1w"
                 countString = " (" + str(lookCount) + " Room" + sString + " Away)"
                 countCode = "2r" + str(len(str(lookCount))) + "w5w" + sCode + "5w1r"
-            console.lineList.insert(0, {"Blank": True})
-            console.lineList.insert(0, {"String": "Your view to the " + lookDir + " is obstructed." + countString, "Code":"17w" + str(len(lookDir)) + "w14w1y" + countCode})
+            console.write("Your view to the " + lookDir + " is obstructed." + countString, "17w" + str(len(lookDir)) + "w14w1y" + countCode, True)
             
             if lookCount > 0:
-                console.lineList.insert(0, {"Blank": True})
                 currentRoom.display(console, galaxyList, self)
 
         else:
@@ -201,11 +212,9 @@ class Player:
                 roomTarget = currentRoom.getTargetObject(lookTarget)
 
             if currentRoom.isLit(galaxyList, self) == False and not (isinstance(roomTarget, Item) and roomTarget.containerList != None and roomTarget.lightInContainerCheck() == True):
-                console.lineList.insert(0, {"Blank": True})
-                console.lineList.insert(0, {"String": "It's too dark to see.", "Code":"2w1y17w1y"})
+                console.write("It's too dark to see.", "2w1y17w1y", True)
             elif roomTarget == None:
-                console.lineList.insert(0, {"Blank": True})
-                console.lineList.insert(0, {"String": "You don't see anything like that.", "Code":"7w1y24w1y"})
+                console.write("You don't see anything like that.", "7w1y24w1y", True)
             else:
                 if isinstance(roomTarget, Item):
                     passwordCheck = False
@@ -218,23 +227,19 @@ class Player:
     def lookItemInContainerCheck(self, console, currentRoom, targetItemKey, targetContainerKey):
         targetContainer = currentRoom.getTargetObject(targetContainerKey)
         if targetContainer == None:
-            console.lineList.insert(0, {"Blank": True})
-            console.lineList.insert(0, {"String": "You can't find it.", "Code":"7w1y9w1y"})
+            console.write("You can't find it.", "7w1y9w1y", True)
         elif isinstance(targetContainer, Item) == False or targetContainer.containerList == None:
-            console.lineList.insert(0, {"Blank": True})
-            console.lineList.insert(0, {"String": "That's not a container!", "Code":"4w1y17w1y"})
+            console.write("That's not a container!", "4w1y17w1y", True)
         else:
             containerItem = targetContainer.getContainerItem(targetItemKey)
             if containerItem == None:
-                console.lineList.insert(0, {"Blank": True})
-                console.lineList.insert(0, {"String": "You don't see anything like that.", "Code":"7w1y24w1y"})
+                console.write("You don't see anything like that.", "7w1y24w1y", True)
             else:
                 containerItem.lookDescription(console)
 
     def targetCheck(self, console, galaxyList, currentRoom, targetMobKey, targetDirKey, targetMobCount, targetDirCount):
         if targetDirCount != None and targetDirCount > self.maxLookDistance:
-            console.lineList.insert(0, {"Blank": True})
-            console.lineList.insert(0, {"String":"You can't see that far.", "Code":"7w1y14w1y"})
+            console.write("You can't see that far.", "7w1y14w1y", True)
         
         else:
             targetRoom = currentRoom
@@ -272,8 +277,7 @@ class Player:
                         roomCount += 1
             
             if messageType == "Can't See Further":
-                console.lineList.insert(0, {"Blank": True})
-                console.lineList.insert(0, {"String":"There is nothing there.", "Code":"22w1y"})
+                console.write("There is nothing there.", "22w1y", True)
             elif messageType == "View Obstructed":
                 countString = ""
                 countCode = ""
@@ -285,8 +289,7 @@ class Player:
                         sCode = "1w"
                     countString = " (" + str(roomCount) + " Room" + sString + " Away)"
                     countCode = "2r" + str(len(str(roomCount))) + "w5w" + sCode + "5w1r"
-                console.lineList.insert(0, {"Blank": True})
-                console.lineList.insert(0, {"String":"Your view to the " + targetDir + " is obstructed." + countString, "Code":"17w" + str(len(targetDir)) + "w14w1y" + countCode})
+                console.write("Your view to the " + targetDir + " is obstructed." + countString, "17w" + str(len(targetDir)) + "w14w1y" + countCode, True)
         
             else:
                 targetMob = None
@@ -294,11 +297,9 @@ class Player:
                     targetMob = targetRoom.getTargetObject(targetMobKey)
 
                 if targetMobKey != "All" and targetMob == None:
-                    console.lineList.insert(0, {"Blank": True})
-                    console.lineList.insert(0, {"String": "You don't see them.", "Code":"7w1y10w1y"})
+                    console.write("You don't see them.", "7w1y10w1y", True)
                 elif targetMob != None and hasattr(targetMob, "dominantHand") == False:
-                    console.lineList.insert(0, {"Blank": True})
-                    console.lineList.insert(0, {"String":"You can't target that.", "Code":"7w1y13w1y"})
+                    console.write("You can't target that.", "7w1y13w1y", True)
                 
                 else:
                     targetMob = None
@@ -328,11 +329,9 @@ class Player:
                                     break
 
                     if targetCount == 0 and (alreadyTargetingCheck == True or recruitedCheck):
-                        console.lineList.insert(0, {"Blank": True})
-                        console.lineList.insert(0, {"String":"You are already targeting them.", "Code":"30w1y"})
+                        console.write("You are already targeting them.", "30w1y", True)
                     elif targetCount == 0:
-                        console.lineList.insert(0, {"Blank": True})
-                        console.lineList.insert(0, {"String":"You don't see them.", "Code":"7w1y10w1y"})
+                        console.write("You don't see them.", "7w1y10w1y", True)
                     
                     elif targetMob != "Multiple":
                         displayString = "You narrow your vision on " + targetMob.prefix.lower() + " " + targetMob.name["String"] + "."
@@ -352,8 +351,7 @@ class Player:
                                 dirCode = dirCode[0:-2]
                                 dirCountString = " (" + str(roomCount) + ")."
                                 dirCountCode = "2r" + str(len(str(roomCount))) + "w1r1y"
-                        console.lineList.insert(0, {"Blank": True})
-                        console.lineList.insert(0, {"String":displayString + targetCountString + dirString + dirCountString, "Code":displayCode + targetCountCode + dirCode + dirCountCode})
+                        console.write(displayString + targetCountString + dirString + dirCountString, displayCode + targetCountCode + dirCode + dirCountCode, True)
                     
                     else:
                         displayString = "You focus your attention on the group."
@@ -372,13 +370,11 @@ class Player:
                                 dirCode = dirCode[0:-2]
                                 dirCountString = " (" + str(roomCount) + ")."
                                 dirCountCode = "2r" + str(len(str(roomCount))) + "w1r1y"
-                        console.lineList.insert(0, {"Blank": True})
-                        console.lineList.insert(0, {"String":displayString + dirString + dirCountString, "Code":displayCode + dirCode + dirCountCode})
+                        console.write(displayString + dirString + dirCountString, displayCode + dirCode + dirCountCode, True)
 
     def untargetCheck(self, console, galaxyList, currentRoom, targetMobKey, targetDirKey, targetMobCount, targetDirCount):
         if targetDirCount != None and targetDirCount > self.maxLookDistance:
-            console.lineList.insert(0, {"Blank": True})
-            console.lineList.insert(0, {"String":"You can't see that far.", "Code":"7w1y14w1y"})
+            console.write("You can't see that far.", "7w1y14w1y", True)
         
         else:
             targetRoom = currentRoom
@@ -416,8 +412,7 @@ class Player:
                         roomCount += 1
             
             if messageType == "Can't See Further":
-                console.lineList.insert(0, {"Blank": True})
-                console.lineList.insert(0, {"String":"There is nothing there.", "Code":"22w1y"})
+                console.write("There is nothing there.", "22w1y", True)
             elif messageType == "View Obstructed":
                 countString = ""
                 countCode = ""
@@ -429,20 +424,17 @@ class Player:
                         sCode = "1w"
                     countString = " (" + str(roomCount) + " Room" + sString + " Away)"
                     countCode = "2r" + str(len(str(roomCount))) + "w5w" + sCode + "5w1r"
-                console.lineList.insert(0, {"Blank": True})
-                console.lineList.insert(0, {"String":"Your view to the " + targetDir + " is obstructed." + countString, "Code":"17w" + str(len(targetDir)) + "w14w1y" + countCode})
+                console.write("Your view to the " + targetDir + " is obstructed." + countString, "17w" + str(len(targetDir)) + "w14w1y" + countCode, True)
         
             else:
                 targetMob = None
                 if targetDirKey != None and targetMobKey != "All":
                     targetMob = targetRoom.getTargetObject(targetMobKey)
                     if targetMob == None:
-                        console.lineList.insert(0, {"Blank": True})
-                        console.lineList.insert(0, {"String": "You don't see them.", "Code":"7w1y10w1y"})
+                        console.write("You don't see them.", "7w1y10w1y", True)
                         return
                     elif hasattr(targetMob, "dominantHand") == False:
-                        console.lineList.insert(0, {"Blank": True})
-                        console.lineList.insert(0, {"String":"You can't target that.", "Code":"7w1y13w1y"})
+                        console.write("You can't target that.", "7w1y13w1y", True)
                         return
                                 
                 targetList = targetRoom.mobList
@@ -476,20 +468,15 @@ class Player:
                     targetMob = targetRoom.getTargetObject(targetMobKey, ["Mobs"])
 
                 if targetCount > 1 and targetMobKey == "All":
-                    console.lineList.insert(0, {"Blank": True})
-                    console.lineList.insert(0, {"String":"You take a breath out and relax your mind.", "Code":"41w1y"})
+                    console.write("You take a breath out and relax your mind.", "41w1y", True)
                 elif targetMob == "Multiple" and len(targetRoomList) > 1:
-                    console.lineList.insert(0, {"Blank": True})
-                    console.lineList.insert(0, {"String":"You relax your mind a little.", "Code":"28w1y"})
+                    console.write("You relax your mind a little.", "28w1y", True)
                 elif targetCount == 0 and targetDirKey == None and targetMobKey == "All":
-                    console.lineList.insert(0, {"Blank": True})
-                    console.lineList.insert(0, {"String":"You aren't targeting anyone.", "Code":"8w1y18w1y"})
+                    console.write("You aren't targeting anyone.", "8w1y18w1y", True)
                 elif targetCount == 0 and targetMob == None:
-                    console.lineList.insert(0, {"Blank": True})
-                    console.lineList.insert(0, {"String":"You don't see them.", "Code":"7w1y10w1y"})
+                    console.write("You don't see them.", "7w1y10w1y", True)
                 elif targetCount == 0:
-                    console.lineList.insert(0, {"Blank": True})
-                    console.lineList.insert(0, {"String":"You aren't targeting them.", "Code":"8w1y16w1y"})
+                    console.write("You aren't targeting them.", "8w1y16w1y", True)
                 
                 elif targetMob != "Multiple":
                     if targetDirKey == None and targetDirCount == None and targetMob not in targetRoom.mobList and len(targetRoomList) == 1:
@@ -515,8 +502,7 @@ class Player:
                             dirCode = dirCode[0:-2]
                             dirCountString = " (" + str(roomCount) + ")."
                             dirCountCode = "2r" + str(len(str(roomCount))) + "w1r1y"
-                    console.lineList.insert(0, {"Blank": True})
-                    console.lineList.insert(0, {"String":displayString + targetCountString + dirString + dirCountString, "Code":displayCode + targetCountCode + dirCode + dirCountCode})
+                    console.write(displayString + targetCountString + dirString + dirCountString, displayCode + targetCountCode + dirCode + dirCountCode, True)
                 
                 else:
                     displayString = "You stop targeting the group."
@@ -535,8 +521,7 @@ class Player:
                             dirCode = dirCode[0:-2]
                             dirCountString = " (" + str(roomCount) + ")."
                             dirCountCode = "2r" + str(len(str(roomCount))) + "w1r1y"
-                    console.lineList.insert(0, {"Blank": True})
-                    console.lineList.insert(0, {"String":displayString + dirString + dirCountString, "Code":displayCode + dirCode + dirCountCode})
+                    console.write(displayString + dirString + dirCountString, displayCode + dirCode + dirCountCode, True)
 
     def moveCheck(self, console, map, galaxyList, player, currentRoom, targetDirKey):
         if targetDirKey.lower() in ["north", "nort", "nor", "no", "n"] : targetDir = "North"
@@ -546,16 +531,13 @@ class Player:
         
         if currentRoom.door[targetDir] != None and currentRoom.door[targetDir]["Type"] == "Manual" and currentRoom.door[targetDir]["Status"] in ["Closed", "Locked"]:
             if self.num == None:
-                console.lineList.insert(0, {"Blank": True})
-                console.lineList.insert(0, {"String": "The door is closed.", "Code":"18w1y"})
+                console.write("The door is closed.", "18w1y", True)
         elif currentRoom.door[targetDir] != None and currentRoom.door[targetDir]["Type"] == "Automatic" and currentRoom.door[targetDir]["Status"] == "Locked" and "Password" in currentRoom.door[targetDir] and self.hasKey(currentRoom.door[targetDir]["Password"]) == False:
             if self.num == None:
-                console.lineList.insert(0, {"Blank": True})
-                console.lineList.insert(0, {"String": "You lack the proper key.", "Code":"23w1y"})
+                console.write("You lack the proper key.", "23w1y", True)
         elif currentRoom.exit[targetDir] == None:
             if self.num == None:
-                console.lineList.insert(0, {"Blank": True})
-                console.lineList.insert(0, {"String": "You can't go that way!", "Code":"7w1y13w1y"})
+                console.write("You can't go that way!", "7w1y13w1y", True)
 
         else:
             mobString = self.prefix + " " + self.name["String"]
@@ -563,14 +545,11 @@ class Player:
             if len(self.actionList) > 0:
                 self.actionList = []
                 if self.num == None:
-                    console.lineList.insert(0, {"Blank": True})
-                    console.lineList.insert(0, {"String": "You stop what you're doing and move.", "Code":"17w1y17w1y"})
+                    console.write("You stop what you're doing and move.", "17w1y17w1y", True)
                 elif currentRoom.sameRoomCheck(player):
-                    console.lineList.insert(0, {"Blank": True})
-                    console.lineList.insert(0, {"String":mobString + " stops what they're doing and moves " + targetDir + ".", "Code":mobCode + "16w1y19w" + str(len(targetDir)) + "w1y"})
+                    console.write(mobString + " stops what they're doing and moves " + targetDir + ".", mobCode + "16w1y19w" + str(len(targetDir)) + "w1y", True)
             elif self.num != None and currentRoom.sameRoomCheck(player) and not (currentRoom.door[targetDir] != None and currentRoom.door[targetDir]["Type"] == "Automatic"):
-                console.lineList.insert(0, {"Blank": True})
-                console.lineList.insert(0, {"String":mobString + " moves " + targetDir + ".", "Code":mobCode + "7w" + str(len(targetDir)) + "w1y"})
+                console.write(mobString + " moves " + targetDir + ".", mobCode + "7w" + str(len(targetDir)) + "w1y", True)
 
             currentArea = Room.getAreaAndRoom(galaxyList, self)[0]
             targetArea, targetRoom, unusedDistance, unusedMessage = Room.getTargetRoomFromStartRoom(galaxyList, currentArea, currentRoom, targetDir, 1, True)
@@ -581,6 +560,7 @@ class Player:
                 self.area = targetRoom.area
                 self.room = targetRoom.room
             else:
+                oldArea = self.area
                 self.galaxy = targetRoom.galaxy
                 self.system = targetRoom.system
                 self.planet = targetRoom.planet
@@ -588,8 +568,11 @@ class Player:
                 self.room = targetRoom.room
                 if self.spaceship != None:
                     self.spaceship = None
-                    if self.num == None:
+
+                if self.num == None:
+                    if self.spaceship != None or self.area != oldArea:
                         map.loadMap(targetArea)
+                        targetArea.flavorTextTick = 0
                 
                 if self.num == None or targetRoom.sameRoomCheck(player) == True or currentRoom.sameRoomCheck(player) == True:
                     if currentRoom.door[targetDir] != None and currentRoom.door[targetDir]["Type"] == "Automatic":
@@ -597,8 +580,7 @@ class Player:
                         if currentRoom.exit[targetDir] == "Spaceship Exit":
                             doorString = "hatch"
                         if self.num == None:
-                            console.lineList.insert(0, {"Blank": True})
-                            console.lineList.insert(0, {"String": "The " + doorString + " opens and closes as you walk through.", "Code":"4w" + str(len(doorString)) + "w37w1y"})
+                            console.write("The " + doorString + " opens and closes as you walk through.", "4w" + str(len(doorString)) + "w37w1y", True)
                         else:
                             displayDirection = targetDir
                             leavesString = " leaves"
@@ -610,10 +592,15 @@ class Player:
                             console.write(displayString, displayCode, True)
                         automaticDoorCheck = True
 
+            if self.num == None:
+                for mob in targetRoom.mobList:
+                    mob.speechTick = 0
+
             if self.num != None:
                 if self in currentRoom.mobList:
                     del currentRoom.mobList[currentRoom.mobList.index(self)]
                 targetRoom.mobList.append(self)
+                self.actionList.append(Action("Buffer Action", {}, 3))
 
             delTargetList = []
             delMobData = None
@@ -639,22 +626,19 @@ class Player:
                 if delMobData != "Multiple":
                     displayString = "You lose sight of " + delMobData.prefix.lower() + " " + delMobData.name["String"] + countString + " to the " + loseSightDir + "."
                     displayCode = "18w" + str(len(delMobData.prefix)) + "w1w" + delMobData.name["Code"] + countCode + "8w" + str(len(loseSightDir)) + "w1y"
-                    console.lineList.insert(0, {"Blank": True})
-                    console.lineList.insert(0, {"String":displayString, "Code":displayCode})
+                    console.write(displayString, displayCode, True)
                 else:
                     someString = "some"
                     if len(self.targetList) == 0:
                         someString = "your"
                     displayString = "You lose sight of " + someString + " targets" + countString + " to the " + loseSightDir + "."
                     displayCode = "18w" + str(len(someString)) + "w8w" + countCode + "8w" + str(len(loseSightDir)) + "w1y"
-                    console.lineList.insert(0, {"Blank": True})
-                    console.lineList.insert(0, {"String":displayString, "Code":displayCode})
+                    console.write(displayString, displayCode, True)
 
             elif self.num != None and targetRoom.sameRoomCheck(player) == True and automaticDoorCheck == False:
                 displayString = self.prefix + " " + self.name["String"] + " enters from the " + Room.getOppositeDirection(targetDir) + "."
                 displayCode = str(len(self.prefix)) + "w1w" + self.name["Code"] + "17w" + str(len(Room.getOppositeDirection(targetDir))) + "w1y"
-                console.lineList.insert(0, {"Blank": True})
-                console.lineList.insert(0, {"String":displayString, "Code":displayCode})
+                console.write(displayString, displayCode, True)
 
     def openCloseDoorCheck(self, console, galaxyList, player, currentRoom, targetAction, targetDir):
         targetDoorAction = targetAction
@@ -662,21 +646,17 @@ class Player:
             targetDoorAction = "Closed"
 
         if currentRoom.door[targetDir] == None:
-            console.lineList.insert(0, {"Blank": True})
-            console.lineList.insert(0, {"String":"There is no door in that direction.", "Code":"34w1y"})
+            console.write("There is no door in that direction.", "34w1y", True)
         elif currentRoom.door[targetDir]["Type"] == "Automatic":
-            console.lineList.insert(0, {"Blank": True})
-            console.lineList.insert(0, {"String":"That door is automatic.", "Code":"22w1y"})
+            console.write("That door is automatic.", "22w1y", True)
         elif currentRoom.door[targetDir]["Status"] == targetDoorAction or (targetDoorAction == "Closed" and currentRoom.door[targetDir]["Status"] == "Locked"):
-            console.lineList.insert(0, {"Blank": True})
-            console.lineList.insert(0, {"String":"It's already " + targetDoorAction.lower() + ".", "Code":"2w1y10w" + str(len(targetDoorAction)) + "w1y"})
+            console.write("It's already " + targetDoorAction.lower() + ".", "2w1y10w" + str(len(targetDoorAction)) + "w1y", True)
         
         else:
             blankCheck = self.stopActions(console, galaxyList, player)
 
             if targetDoorAction == "Open" and currentRoom.door[targetDir]["Status"] == "Locked" and self.hasKey(currentRoom.door[targetDir]["Password"]) == False:
-                if blankCheck == False : console.lineList.insert(0, {"Blank": True})
-                console.lineList.insert(0, {"String":"It's locked.", "Code":"2w1y8w1y"})
+                console.write("It's locked.", "2w1y8w1y", blankCheck == False)
             else:
                 unlockString = ""
                 unlockCode = ""
@@ -703,8 +683,7 @@ class Player:
                         if otherRoomExitDir != None:
                             otherRoom.door[otherRoomExitDir]["Status"] = targetDoorAction
 
-                if blankCheck == False : console.lineList.insert(0, {"Blank": True})
-                console.lineList.insert(0, {"String":"You " + unlockString + targetAction.lower() + " the door to the " + targetDir + ".", "Code":"4w" + unlockCode + str(len(targetAction)) + "w17w" + str(len(targetDir)) + "w1y"})
+                console.write("You " + unlockString + targetAction.lower() + " the door to the " + targetDir + ".", "4w" + unlockCode + str(len(targetAction)) + "w17w" + str(len(targetDir)) + "w1y", blankCheck == False)
 
     def lockUnlockDoorCheck(self, console, galaxyList, player, currentRoom, targetAction, targetDir):
         if targetAction == "Lock":
@@ -713,27 +692,22 @@ class Player:
             targetActionStatus = "Closed"
 
         if currentRoom.door[targetDir] == None:
-            console.lineList.insert(0, {"Blank": True})
-            console.lineList.insert(0, {"String":"There is no door in that direction.", "Code":"34w1y"})
+            console.write("There is no door in that direction.", "34w1y", True)
         elif "Password" not in currentRoom.door[targetDir]:
             haveString = "require a key"
             if targetAction == "Lock":
                 haveString = "have a lock"
-            console.lineList.insert(0, {"Blank": True})
-            console.lineList.insert(0, {"String":"That door doesn't " + haveString + ".", "Code":"15w1y2w" + str(len(haveString)) + "w1y"})
+            console.write("That door doesn't " + haveString + ".", "15w1y2w" + str(len(haveString)) + "w1y", True)
         elif currentRoom.door[targetDir]["Type"] == "Automatic":
-            console.lineList.insert(0, {"Blank": True})
-            console.lineList.insert(0, {"String":"That door " + targetAction.lower() + "s automatically.", "Code":"10w" + str(len(targetAction)) + "w15w1y"})
+            console.write("That door " + targetAction.lower() + "s automatically.", "10w" + str(len(targetAction)) + "w15w1y", True)
         elif currentRoom.door[targetDir]["Status"] == targetActionStatus:
-            console.lineList.insert(0, {"Blank": True})
-            console.lineList.insert(0, {"String":"It's already " + targetAction.lower() + "ed.", "Code":"2w1y10w" + str(len(targetAction)) + "w2w1y"})
+            console.write("It's already " + targetAction.lower() + "ed.", "2w1y10w" + str(len(targetAction)) + "w2w1y", True)
         
         else:
             blankCheck = self.stopActions(console, galaxyList, player)
 
             if self.hasKey(currentRoom.door[targetDir]["Password"]) == False:
-                if blankCheck == False : console.lineList.insert(0, {"Blank": True})
-                console.lineList.insert(0, {"String":"You lack the key.", "Code":"16w1y"})
+                console.write("You lack the key.", "16w1y", blankCheck == False)
             else:
                 closeString = ""
                 closeCode = ""
@@ -760,8 +734,7 @@ class Player:
                         if otherRoomExitDir != None:
                             otherRoom.door[otherRoomExitDir]["Status"] = targetActionStatus
                         
-                if blankCheck == False : console.lineList.insert(0, {"Blank": True})
-                console.lineList.insert(0, {"String":"You " + closeString + targetAction.lower() + " the door to the " + targetDir + ".", "Code":"4w" + closeCode + str(len(targetAction)) + "w17w" + str(len(targetDir)) + "w1y"})
+                console.write("You " + closeString + targetAction.lower() + " the door to the " + targetDir + ".", "4w" + closeCode + str(len(targetAction)) + "w17w" + str(len(targetDir)) + "w1y", blankCheck == False)
 
     def openCloseTargetCheck(self, console, galaxyList, currentRoom, targetAction, targetObjectKey):
         targetObject = currentRoom.getTargetObject(targetObjectKey)
@@ -769,31 +742,23 @@ class Player:
             targetObject, playerItemLocation = self.getTargetItem(targetObjectKey)
 
         if currentRoom.isLit(galaxyList, self) == False:
-            console.lineList.insert(0, {"Blank": True})
-            console.lineList.insert(0, {"String": "It's too dark to see.", "Code":"2w1y17w1y"})
+            console.write("It's too dark to see.", "2w1y17w1y", True)
         elif targetObject == None:
-            console.lineList.insert(0, {"Blank": True})
-            console.lineList.insert(0, {"String": "You don't see anything like that.", "Code":"7w1y24w1y"})
-        
+            console.write("You don't see anything like that.", "7w1y24w1y", True)
         elif hasattr(targetObject, "dominantHand") == True:
-            console.lineList.insert(0, {"Blank": True})
-            console.lineList.insert(0, {"String": "You can't " + targetAction.lower() + " that!", "Code":"7w1y2w" + str(len(targetAction)) + "w5w1y"})
+            console.write("You can't " + targetAction.lower() + " that!", "7w1y2w" + str(len(targetAction)) + "w5w1y", True)
         
         elif isinstance(targetObject, Spaceship):
             if targetObject.hatchPassword != None and self.hasKey(targetObject.hatchPassword) == False:
-                console.lineList.insert(0, {"Blank": True})
-                console.lineList.insert(0, {"String": "It's locked.", "Code":"2w1y8w1y"})
+                console.write("It's locked.", "2w1y8w1y", True)
             else:
-                console.lineList.insert(0, {"Blank": True})
-                console.lineList.insert(0, {"String": "The hatch " + targetAction.lower() + "s automatically.", "Code":"10w" + str(len(targetAction)) + "w15w1y"})
+                console.write("The hatch " + targetAction.lower() + "s automatically.", "10w" + str(len(targetAction)) + "w15w1y", True)
             
         elif isinstance(targetObject, Item):
             if targetObject.containerList == None:
-                console.lineList.insert(0, {"Blank": True})
-                console.lineList.insert(0, {"String": "It doesn't " + targetAction.lower() + ".", "Code":"8w1y2w" + str(len(targetAction)) + "w1y"})
+                console.write("It doesn't " + targetAction.lower() + ".", "8w1y2w" + str(len(targetAction)) + "w1y", True)
             else:
-                console.lineList.insert(0, {"Blank": True})
-                console.lineList.insert(0, {"String":"There is no need to " + targetAction.lower() + " it.", "Code":"20w" + str(len(targetAction)) + "w3w1y"})
+                console.write("There is no need to " + targetAction.lower() + " it.", "20w" + str(len(targetAction)) + "w3w1y", True)
             
     def lockUnlockTargetCheck(self, console, galaxyList, currentRoom, targetAction, targetObjectKey):
         targetObject = currentRoom.getTargetObject(targetObjectKey)
@@ -801,31 +766,24 @@ class Player:
             targetObject, playerItemLocation = self.getTargetItem(targetObjectKey)
             
         if currentRoom.isLit(galaxyList, self) == False:
-            console.lineList.insert(0, {"Blank": True})
-            console.lineList.insert(0, {"String": "It's too dark to see.", "Code":"2w1y17w1y"})
+            console.write("It's too dark to see.", "2w1y17w1y", True)
         elif targetObject == None:
-            console.lineList.insert(0, {"Blank": True})
-            console.lineList.insert(0, {"String": "You don't see anything like that.", "Code":"7w1y24w1y"})
+            console.write("You don't see anything like that.", "7w1y24w1y", True)
         
         elif hasattr(targetObject, "dominantHand") == True:
-            console.lineList.insert(0, {"Blank": True})
-            console.lineList.insert(0, {"String": "You can't " + targetAction.lower() + " that!", "Code":"7w1y2w" + str(len(targetAction)) + "w5w1y"})
+            console.write("You can't " + targetAction.lower() + " that!", "7w1y2w" + str(len(targetAction)) + "w5w1y", True)
         
         elif isinstance(targetObject, Spaceship):
             if targetObject.hatchPassword == None:
-                console.lineList.insert(0, {"Blank": True})
-                console.lineList.insert(0, {"String": "The hatch doesn't have a lock.", "Code":"15w1y13w1y"})
+                console.write("The hatch doesn't have a lock.", "15w1y13w1y", True)
             else:
-                console.lineList.insert(0, {"Blank": True})
-                console.lineList.insert(0, {"String": "The hatch " + targetAction.lower() + "s automatically.", "Code":"10w" + str(len(targetAction)) + "w15w1y"})
+                console.write("The hatch " + targetAction.lower() + "s automatically.", "10w" + str(len(targetAction)) + "w15w1y", True)
         
         elif isinstance(targetObject, Item):
             if targetObject.containerList == None:
-                console.lineList.insert(0, {"Blank": True})
-                console.lineList.insert(0, {"String": "It doesn't " + targetAction.lower() + ".", "Code":"8w1y2w" + str(len(targetAction)) + "w1y"})
+                console.write("It doesn't " + targetAction.lower() + ".", "8w1y2w" + str(len(targetAction)) + "w1y", True)
             else:
-                console.lineList.insert(0, {"Blank": True})
-                console.lineList.insert(0, {"String":"There is no need to " + targetAction.lower() + " it.", "Code":"20w" + str(len(targetAction)) + "w3w1y"})
+                console.write("There is no need to " + targetAction.lower() + " it.", "20w" + str(len(targetAction)) + "w3w1y", True)
 
     def getCheck(self, console, galaxyList, player, currentRoom, targetItemKey, targetContainerKey, count):
         blankCheck = self.stopActions(console, galaxyList, player)
@@ -841,8 +799,7 @@ class Player:
                     itemList = currentRoom.getTargetObject(targetContainerKey)
 
         if targetContainerKey not in [None, "All"] and itemList != None and (isinstance(itemList, Item) == False or itemList.containerList == None):
-            if blankCheck == False : console.lineList.insert(0, {"Blank": True})
-            console.lineList.insert(0, {"String":"That's not a container!", "Code":"4w1y17w1y"})
+            console.write("That's not a container!", "4w1y17w1y", blankCheck == False)
         else:
             if targetItemKey == "All" and (targetContainerKey in ["All", None]) and count == "All":
                 combinedItemList = currentRoom.itemList
@@ -872,8 +829,7 @@ class Player:
                                 break
             
             if itemList == None or (targetItemKey != "All" and getItem == None):
-                if blankCheck == False : console.lineList.insert(0, {"Blank": True})
-                console.lineList.insert(0, {"String":"You can't find it.", "Code":"7w1y9w1y"})
+                console.write("You can't find it.", "7w1y9w1y", blankCheck == False)
 
             else:
                 if itemList == "All Room Containers":
@@ -885,8 +841,7 @@ class Player:
                     itemCount = len(itemList)
 
                 if targetContainerKey == "All" and itemCount == 0:
-                    if blankCheck == False : console.lineList.insert(0, {"Blank": True})
-                    console.lineList.insert(0, {"String":"There is nothing to loot.", "Code":"24w1y"})
+                    console.write("There is nothing to loot.", "24w1y", blankCheck == False)
                 
                 else:
                     getCount = 0
@@ -974,17 +929,13 @@ class Player:
                         
                     if getCount == 0:
                         if tooMuchWeightCheck == True:
-                            if blankCheck == False : console.lineList.insert(0, {"Blank": True})
-                            console.lineList.insert(0, {"String":"You can't carry that much weight.", "Code":"7w1y24w1y"})
+                            console.write("You can't carry that much weight.", "7w1y24w1y", blankCheck == False)
                         elif noGetCheck == True:
-                            if blankCheck == False : console.lineList.insert(0, {"Blank": True})
-                            console.lineList.insert(0, {"String":"You can't pick that up.", "Code":"7w1y14w1y"})
+                            console.write("You can't pick that up.", "7w1y14w1y", blankCheck == False)
                         elif itemCount == 0:
-                            if blankCheck == False : console.lineList.insert(0, {"Blank": True})
-                            console.lineList.insert(0, {"String":"There is nothing to get.", "Code":"23w1y"})
+                            console.write("There is nothing to get.", "23w1y", blankCheck == False)
                         else:
-                            if blankCheck == False : console.lineList.insert(0, {"Blank": True})
-                            console.lineList.insert(0, {"String":"You can't pick anything up.", "Code":"7w1y18w1y"})
+                            console.write("You can't pick anything up.", "7w1y18w1y", blankCheck == False)
                     else:
                         if targetContainerKey == "All" and getCount > 1 and (count == "All" or len(getContainerIndexList) > 1):
                             modString = ""
@@ -992,22 +943,18 @@ class Player:
                             if tooMuchWeightCheck == False and targetItemKey == "All":
                                 modString = "every corner of "
                                 modCode = "16w"
-                            if blankCheck == False : console.lineList.insert(0, {"Blank": True})
-                            console.lineList.insert(0, {"String":"You loot " + modString + "the place.", "Code":"9w" + modCode + "9w1y"})
+                            consonle.write("You loot " + modString + "the place.", "9w" + modCode + "9w1y", blankCheck == False)
                         elif targetContainerKey == None and getItem == "Multiple" and getCount > 1 and getCount == itemCount:
-                            if blankCheck == False : console.lineList.insert(0, {"Blank": True})
-                            console.lineList.insert(0, {"String":"You pick everything up.", "Code":"22w1y"})
+                            console.write("You pick everything up.", "22w1y", blankCheck == False)
                         elif getItem == "Multiple":
                             if targetContainerKey == "All" : totalContainerCount = len(combinedItemList)
                             else:
                                 if playerItemLocation != None : totalContainerCount = len(self.getAllItemList([playerItemLocation]))
                                 else : totalContainerCount = len(currentRoom.itemList)
                             if targetContainerKey != None and getContainerIndexList[-1] < totalContainerCount:
-                                if blankCheck == False : console.lineList.insert(0, {"Blank": True})
-                                console.lineList.insert(0, {"String":"You get some things out of " + targetContainer.prefix.lower() + " " + targetContainer.name["String"] + ".", "Code":"27w" + str(len(targetContainer.prefix)) + "w1w" + targetContainer.name["Code"] + "1y"})
+                                console.write("You get some things out of " + targetContainer.prefix.lower() + " " + targetContainer.name["String"] + ".", "27w" + str(len(targetContainer.prefix)) + "w1w" + targetContainer.name["Code"] + "1y", blankCheck == False)
                             else:
-                                if blankCheck == False : console.lineList.insert(0, {"Blank": True})
-                                console.lineList.insert(0, {"String":"You pick some things up.", "Code":"23w1y"})
+                                console.write("You pick some things up.", "23w1y", blankCheck == False)
                         elif getItem != "Multiple":
                             countString, countCode = getCountString(getCount)
                             fromString = ""
@@ -1036,8 +983,7 @@ class Player:
                                 itemNameCode = "8w"
                             getString = "You " + pickUpString + itemNameString + countString + fromString + "."
                             getCode = "4w" + pickUpCode + itemNameCode + countCode + fromCode + "1y"
-                            if blankCheck == False : console.lineList.insert(0, {"Blank": True})
-                            console.lineList.insert(0, {"String":getString, "Code":getCode})
+                            console.write(getString, getCode, blankCheck == False)
          
     def putCheck(self, console, galaxyList, player, currentRoom, targetItemKey, targetContainerKey, count):
         blankCheck = self.stopActions(console, galaxyList, player)
@@ -1047,11 +993,9 @@ class Player:
             targetContainer = currentRoom.getTargetObject(targetContainerKey, ["Mobs", "Items", "Spaceships"])
     
         if targetContainer == None:
-            if blankCheck == False : console.lineList.insert(0, {"Blank": True})
-            console.lineList.insert(0, {"String":"You can't find it.", "Code":"7w1y9w1y"})
+            console.write("You can't find it.", "7w1y9w1y", blankCheck == False)
         elif isinstance(targetContainer, Item) == False or targetContainer.containerList == None:
-            if blankCheck == False : console.lineList.insert(0, {"Blank": True})
-            console.lineList.insert(0, {"String":"That's not a container!", "Code":"4w1y17w1y"})
+            console.write("That's not a container!", "4w1y17w1y", blankCheck == False)
         
         else:
             putItem = None
@@ -1065,14 +1009,11 @@ class Player:
                             putItem = item
 
             if targetItemKey != "All" and putItem == None:
-                if blankCheck == False : console.lineList.insert(0, {"Blank": True})
-                console.lineList.insert(0, {"String":"You can't find it.", "Code":"7w1y9w1y"})
+                console.write("You can't find it.", "7w1y9w1y", blankCheck == False)
             elif targetItemKey != "All" and putItem == targetContainer:
-                if blankCheck == False : console.lineList.insert(0, {"Blank": True})
-                console.lineList.insert(0, {"String":"You can't put something inside itself.", "Code":"7w1y29w1y"})
+                console.write("You can't put something inside itself.", "7w1y29w1y", blankCheck == False)
             elif inventorySize == 0:
-                if blankCheck == False : console.lineList.insert(0, {"Blank": True})
-                console.lineList.insert(0, {"String":"You don't have anything to put in.", "Code":"7w1y25w1y"})
+                console.write("You don't have anything to put in.", "7w1y25w1y", blankCheck == False)
 
             else:
                 putCount = 0
@@ -1127,11 +1068,9 @@ class Player:
                         break
 
                 if putCount == 0 and len(self.getAllItemList(["Inventory"])) > 0 and targetItemKey != "All":
-                    if blankCheck == False : console.lineList.insert(0, {"Blank": True})
-                    console.lineList.insert(0, {"String":"It won't fit.", "Code":"6w1y5w1y"})
+                    console.write("It won't fit.", "6w1y5w1y", blankCheck == False)
                 elif putCount == 0:
-                    if blankCheck == False : console.lineList.insert(0, {"Blank": True})
-                    console.lineList.insert(0, {"String":"You don't have anything to put in.", "Code":"7w1y25w1y"})
+                    console.write("You don't have anything to put in.", "7w1y25w1y", blankCheck == False)
                 elif putItem == "Multiple":
                     targetContainerString = targetContainer.prefix.lower() + " " + targetContainer.name["String"]
                     targetContainerCode = str(len(targetContainer.prefix)) + "w1w" + targetContainer.name["Code"]
@@ -1140,8 +1079,7 @@ class Player:
                         targetContainerCode = "9w"
                     displayString = "You put some things in " + targetContainerString + "."
                     displayCode = "23w" + targetContainerCode + "1y"
-                    if blankCheck == False : console.lineList.insert(0, {"Blank": True})
-                    console.lineList.insert(0, {"String":displayString, "Code":displayCode})
+                    console.write(displayString, displayCode, blankCheck == False)
                 else:
                     countString, countCode = getCountString(putCount)
                     targetContainerString = targetContainer.prefix.lower() + " " + targetContainer.name["String"]
@@ -1151,8 +1089,7 @@ class Player:
                         targetContainerCode = "9w"
                     displayString = "You put " + putItem.prefix.lower() + " " + putItem.name["String"] + countString + " in " + targetContainerString + "."
                     displayCode = "8w" + str(len(putItem.prefix)) + "w1w" + putItem.name["Code"] + countCode + "4w" + targetContainerCode + "1y"
-                    if blankCheck == False : console.lineList.insert(0, {"Blank": True})
-                    console.lineList.insert(0, {"String":displayString, "Code":displayCode})
+                    console.write(displayString, displayCode, blankCheck == False)
                 
     def dropCheck(self, console, galaxyList, player, currentRoom, targetItemKey, count, pocketKey=None):
         blankCheck = self.stopActions(console, galaxyList, player)
@@ -1173,8 +1110,7 @@ class Player:
                     break
 
         if targetItemKey != "All" and dropItem == None:
-            if blankCheck == False : console.lineList.insert(0, {"Blank": True})
-            console.lineList.insert(0, {"String":"You can't find it.", "Code":"7w1y9w1y"})
+            console.write("You can't find it.", "7w1y9w1y", blankCheck == False)
 
         else:
             dropCount = 0
@@ -1231,14 +1167,11 @@ class Player:
                     del self.itemDict[pocket][i]
 
             if dropCount == 0:
-                if blankCheck == False : console.lineList.insert(0, {"Blank": True})
-                console.lineList.insert(0, {"String":"You aren't carrying anything.", "Code":"8w1y19w1y"})
+                console.write("You aren't carrying anything.", "8w1y19w1y", blankCheck == False)
             elif dropCount > 1 and dropCount == inventoryCount:
-                if blankCheck == False : console.lineList.insert(0, {"Blank": True})
-                console.lineList.insert(0, {"String":"You drop everything on the ground.", "Code":"33w1y"})    
+                console.write("You drop everything on the ground.", "33w1y", blankCheck == False)    
             elif dropItem == "Multiple":
-                if blankCheck == False : console.lineList.insert(0, {"Blank": True})
-                console.lineList.insert(0, {"String":"You drop some things on the ground.", "Code":"34w1y"})
+                console.write("You drop some things on the ground.", "34w1y", blankCheck == False)
             elif dropItem != None:
                 itemNameString = dropItem.prefix.lower() + " " + dropItem.name["String"]
                 itemNameCode = str(len(dropItem.prefix)) + "w1w" + dropItem.name["Code"]
@@ -1248,8 +1181,7 @@ class Player:
                 countString, countCode = getCountString(dropCount)
                 dropString = "You drop " + itemNameString + " on the ground." + countString
                 dropCode = "9w" + itemNameCode + "14w1y" + countCode
-                if blankCheck == False : console.lineList.insert(0, {"Blank": True})
-                console.lineList.insert(0, {"String":dropString, "Code":dropCode})
+                console.write(dropString, dropCode, blankCheck == False)
 
     def switchCheck(self, console):
         oldHand = self.dominantHand
@@ -1267,16 +1199,13 @@ class Player:
         if targetWeapon != None:
             displayString = "You switch " + targetWeapon.prefix.lower() + " " + targetWeapon.name["String"] + " to your " + newHand.lower() + "."
             displayCode = "11w" + str(len(targetWeapon.prefix)) + "w1w" + targetWeapon.name["Code"] + "9w" + str(len(newHand)) + "w1y"
-            console.lineList.insert(0, {"Blank": True})
-            console.lineList.insert(0, {"String":displayString, "Code":displayCode})
+            console.write(displayString, displayCode, True)
         else:
-            console.lineList.insert(0, {"Blank": True})
-            console.lineList.insert(0, {"String":"You switch your handedness to your " + self.dominantHand.lower() + ".", "Code":"35w" + str(len(self.dominantHand)) + "w1y"})
+            console.write("You switch your dominant hand to your " + self.dominantHand.lower() + ".", "38w" + str(len(self.dominantHand)) + "w1y", True)
 
     def reloadCheck(self, console, galaxyList, player, currentRoom, reloadKey, reloadSlotKey, ammoKey):
         if currentRoom.isLit(galaxyList, self) == False:
-            console.lineList.insert(0, {"Blank": True})
-            console.lineList.insert(0, {"String": "It's too dark to see.", "Code":"2w1y17w1y"})
+            console.write("It's too dark to see.", "2w1y17w1y", True)
 
         else:
             blankCheck = self.stopActions(console, galaxyList, player)
@@ -1347,28 +1276,22 @@ class Player:
                         break 
 
             if reloadKey not in ["All", None] and len(reloadList) == 0 and targetItem != None and targetItem.ranged == False:
-                if blankCheck == False : console.lineList.insert(0, {"Blank": True})
-                console.lineList.insert(0, {"String":"You can't reload that.", "Code":"7w1y13w1y"})
+                console.write("You can't reload that.", "7w1y13w1y", blankCheck == True)
             elif alreadyReloadedCheck == True:
                 displayString = "It's already loaded."
                 displayCode = "2w1y16w1y"
                 if len(reloadList) > 1:
                     displayString = "Your weapons are already loaded."
                     displayCode = "31w1y"
-                if blankCheck == False : console.lineList.insert(0, {"Blank": True})
-                console.lineList.insert(0, {"String":displayString, "Code":displayCode})
+                console.write(displayString, displayCode, blankCheck == False)
             elif reloadKey == "All" and len(reloadList) == 0:
-                if blankCheck == False : console.lineList.insert(0, {"Blank": True})
-                console.lineList.insert(0, {"String":"You don't have anything to reload.", "Code":"7w1y25w1y"})
+                console.write("You don't have anything to reload.", "7w1y25w1y", blankCheck == False)
             elif reloadKey not in ["All", None] and len(reloadList) == 0 and targetItem == None:
-                if blankCheck == False : console.lineList.insert(0, {"Blank": True})
-                console.lineList.insert(0, {"String":"You can't find it.", "Code":"7w1y9w1y"})
+                console.write("You can't find it.", "7w1y9w1y", blankCheck == False)
             elif (reloadSlot != None or reloadKey not in ["All", None]) and len(reloadList) == 0 and targetItem != None and not (reloadKey not in ["All", None] and reloadSlotKey == None and ammoKey == None):
-                if blankCheck == False : console.lineList.insert(0, {"Blank": True})
-                console.lineList.insert(0, {"String":"You can't reload that.", "Code":"7w1y13w1y"})
+                console.write("You can't reload that.", "7w1y13w1y", blankCheck == False)
             elif reloadSlot != None and len(reloadList) == 0 and targetItem == None:
-                if blankCheck == False : console.lineList.insert(0, {"Blank": True})
-                console.lineList.insert(0, {"String":"You aren't holding anything.", "Code":"8w1y18w1y"})
+                console.write("You aren't holding anything.", "8w1y18w1y", blankCheck == False)
 
             else:
                 flags = self.reloadFunction(copy.deepcopy(self), copy.deepcopy(reloadList), reloadTargetShiftCheck, reloadKey, ammoKey)
@@ -1384,43 +1307,33 @@ class Player:
                     if requireWeapon.shellCapacity == None:
                         displayString = "You don't have a " + requireWeapon.ammoType + " magazine."
                         displayCode = "7w1y9w" + str(len(requireWeapon.ammoType)) + "w9w1y"
-                    if blankCheck == False : console.lineList.insert(0, {"Blank": True})
-                    console.lineList.insert(0, {"String":displayString, "Code":displayCode})
+                    console.write(displayString, displayCode, blankCheck == False)
                 elif reloadCount == 0 and reloadKey != "All":
                     if ammoKey != None and targetAmmo == None:
-                        if blankCheck == False : console.lineList.insert(0, {"Blank": True})
-                        console.lineList.insert(0, {"String":"You don't have that ammo.", "Code":"7w1y16w1y"})
+                        console.write("You don't have that ammo.", "7w1y16w1y", blankCheck == False)
                     elif ammoKey == None and targetAmmo == None:
-                        if blankCheck == False : console.lineList.insert(0, {"Blank": True})
-                        console.lineList.insert(0, {"String":"You don't have any ammo.", "Code":"7w1y15w1y"})
+                        console.write("You don't have any ammo.", "7w1y15w1y", blankCheck == False)
                     else:
-                        if blankCheck == False : console.lineList.insert(0, {"Blank": True})
-                        console.lineList.insert(0, {"String":"It's already loaded.", "Code":"2w1y16w1y"})
+                        console.write("It's already loaded.", "2w1y16w1y", blankCheck == False)
                 elif reloadCount == 0 and reloadKey == "All":
                     if ammoKey != None and targetAmmo == None:
-                        if blankCheck == False : console.lineList.insert(0, {"Blank": True})
-                        console.lineList.insert(0, {"String":"You don't have that ammo.", "Code":"7w1y16w1y"})
+                        console.write("You don't have that ammo.", "7w1y16w1y", blankCheck == False)
                     elif ammoKey == None and targetAmmo == None:
-                        if blankCheck == False : console.lineList.insert(0, {"Blank": True})
-                        console.lineList.insert(0, {"String":"You don't have any ammo.", "Code":"7w1y15w1y"})
+                        console.write("You don't have any ammo.", "7w1y15w1y", blankCheck == False)
                     elif gunInventoryCount == 1:
-                        if blankCheck == False : console.lineList.insert(0, {"Blank": True})
-                        console.lineList.insert(0, {"String":"It's already loaded.", "Code":"2w1y16w1y"})
+                        console.write("It's already loaded.", "2w1y16w1y", blankCheck == False)
                     else:
-                        if blankCheck == False : console.lineList.insert(0, {"Blank": True})
-                        console.lineList.insert(0, {"String":"Your weapons are already loaded.", "Code":"31w1y"})
+                        console.write("Your weapons are already loaded.", "31w1y", blankCheck == False)
                 elif reloadCount == 0 and ammoCheck == False:
                     thatString = "any"
                     if ammoKey != None:
                         thatString = "that"
-                    if blankCheck == False : console.lineList.insert(0, {"Blank": True})
-                    console.lineList.insert(0, {"String":"You don't have " + thatString + " ammo.", "Code":"7w1y7w" + str(len(thatString)) + "w5w1y"})
+                    console.write("You don't have " + thatString + " ammo.", "7w1y7w" + str(len(thatString)) + "w5w1y", blankCheck == False)
                 elif reloadWeapon == "Multiple":
                     actionFlags = {"Reload List":reloadList, "Reload Target Shift Check":reloadTargetShiftCheck, "Reload Key":reloadKey, "Ammo Key":ammoKey}
                     self.actionList.append(Action("Reload", actionFlags))
                     
-                    if blankCheck == False : console.lineList.insert(0, {"Blank": True})
-                    console.lineList.insert(0, {"String":"You start reloading some weapons..", "Code":"32w2y"})
+                    console.write("You start reloading some weapons..", "32w2y", blankCheck == True)
                 elif reloadWeapon != None:
                     actionFlags = {"Reload List":reloadList, "Reload Target Shift Check":reloadTargetShiftCheck, "Reload Key":reloadKey, "Ammo Key":ammoKey}
                     self.actionList.append(Action("Reload", actionFlags))
@@ -1430,8 +1343,7 @@ class Player:
                     if reloadWeapon != "Multiple" and reloadCount > 1:
                         countString = " (" + str(reloadCount) + ")"
                         countCode = "2r" + str(len(str(reloadCount))) + "w1r"
-                    if blankCheck == False : console.lineList.insert(0, {"Blank": True})
-                    console.lineList.insert(0, {"String":"You start reloading " + reloadWeapon.prefix.lower() + " " + reloadWeapon.name["String"] + ".." + countString, "Code":"20w" + str(len(reloadWeapon.prefix)) + "w1w" + reloadWeapon.name["Code"] + "2y" + countCode})
+                    console.write("You start reloading " + reloadWeapon.prefix.lower() + " " + reloadWeapon.name["String"] + ".." + countString, "20w" + str(len(reloadWeapon.prefix)) + "w1w" + reloadWeapon.name["Code"] + "2y" + countCode, blankCheck == False)
 
     def reloadCompleteAction(self, console, flags):
         reloadList = flags["Reload List"]
@@ -1451,13 +1363,11 @@ class Player:
             if reloadCount > 1:
                 countString = " (" + str(reloadCount) + ")"
                 countCode = "2r" + str(len(str(reloadCount))) + "w1y"
-            console.lineList.insert(0, {"Blank": True})
-            console.lineList.insert(0, {"String":displayString + countString, "Code":displayCode + countCode})
+            console.write(displayString + countString, displayCode + countCode, True)
         else:
             displayString = "You finish reloading."
             displayCode = "20w1y"
-            console.lineList.insert(0, {"Blank": True})
-            console.lineList.insert(0, {"String":displayString, "Code":displayCode})
+            console.write(displayString, displayCode, True)
         
     def reloadFunction(self, targetPlayer, reloadList, reloadTargetShiftCheck, reloadKey, ammoKey):
         magazineCheck = False
@@ -1591,8 +1501,7 @@ class Player:
 
     def unloadCheck(self, console, galaxyList, player, currentRoom, unloadKey, unloadSlotKey, ammoKey):
         if currentRoom.isLit(galaxyList, self) == False:
-            console.lineList.insert(0, {"Blank": True})
-            console.lineList.insert(0, {"String": "It's too dark to see.", "Code":"2w1y17w1y"})
+            console.write("It's too dark to see.", "2w1y17w1y", True)
 
         else:
             blankCheck = self.stopActions(console, galaxyList, player)
@@ -1668,28 +1577,22 @@ class Player:
                         break
 
             if unloadKey not in ["All", None] and len(unloadList) == 0 and targetItem != None and targetItem.ranged == False:
-                if blankCheck == False : console.lineList.insert(0, {"Blank": True})
-                console.lineList.insert(0, {"String":"You can't unload that.", "Code":"7w1y13w1y"})
+                console.write("You can't unload that.", "7w1y13w1y", blankCheck == False)
             elif alreadyUnloadedCheck == True:
                 displayString = "It's already unloaded."
                 displayCode = "2w1y18w1y"
                 if len(unloadList) > 1:
                     displayString = "Your weapons are already unloaded."
                     displayCode = "33w1y"
-                if blankCheck == False : console.lineList.insert(0, {"Blank": True})
-                console.lineList.insert(0, {"String":displayString, "Code":displayCode})
+                console.write(displayString, displayCode, blankCheck == False)
             elif unloadKey == "All" and len(unloadList) == 0:
-                if blankCheck == False : console.lineList.insert(0, {"Blank": True})
-                console.lineList.insert(0, {"String":"You don't have anything to unload.", "Code":"7w1y25w1y"})
+                console.write("You don't have anything to unload.", "7w1y25w1y", blankCheck == False)
             elif unloadKey not in ["All", None] and len(unloadList) == 0 and targetItem == None:
-                if blankCheck == False : console.lineList.insert(0, {"Blank": True})
-                console.lineList.insert(0, {"String":"You can't find it.", "Code":"7w1y9w1y"})
+                console.write("You can't find it.", "7w1y9w1y", blankCheck == False)
             elif (unloadSlot != None or unloadKey not in ["All", None]) and len(unloadList) == 0 and targetItem != None and not (unloadKey not in ["All", None] and unloadSlotKey == None and ammoKey == None):
-                if blankCheck == False : console.lineList.insert(0, {"Blank": True})
-                console.lineList.insert(0, {"String":"You can't unload that.", "Code":"7w1y13w1y"})
+                console.write("You can't unload that.", "7w1y13w1y", blankCheck == False)
             elif unloadSlot != None and len(unloadList) == 0 and targetItem == None:
-                if blankCheck == False : console.lineList.insert(0, {"Blank": True})
-                console.lineList.insert(0, {"String":"You aren't holding anything.", "Code":"8w1y18w1y"})
+                console.write("You aren't holding anything.", "8w1y18w1y", blankCheck == False)
 
             else:
                 flags = self.unloadFunction(copy.deepcopy(self), copy.deepcopy(unloadList), roomItem, ammoKey)
@@ -1699,26 +1602,20 @@ class Player:
                 shellCount = flags["shellCount"]
 
                 if ammoKey != None and unloadCount == 0:
-                    if blankCheck == False : console.lineList.insert(0, {"Blank": True})
-                    console.lineList.insert(0, {"String":"You can't find that ammo.", "Code":"7w1y16w1y"})
+                    console.write("You can't find that ammo.", "7w1y16w1y", blankCheck == False)
                 elif unloadCount == 0 and tooMuchWeightCheck == True:
-                    if blankCheck == False : console.lineList.insert(0, {"Blank": True})
-                    console.lineList.insert(0, {"String":"You can't carry that much weight.", "Code":"7w1y24w1y"})
+                    console.write("You can't carry that much weight.", "7w1y24w1y", blankCheck == False)
                 elif unloadKey not in ["All", None] and unloadCount == 0 and len(unloadList) == 0:
-                    if blankCheck == False : console.lineList.insert(0, {"Blank": True})
-                    console.lineList.insert(0, {"String":"You can't unload that.", "Code":"7w1y13w1y"})
+                    console.write("You can't unload that.", "7w1y13w1y", blankCheck == False)
                 elif unloadKey not in ["All", None] and unloadCount == 0 and unloadList[0].isEmpty():
-                    if blankCheck == False : console.lineList.insert(0, {"Blank": True})
-                    console.lineList.insert(0, {"String":"It's already unloaded.", "Code":"2w1y18w1y"})
+                    console.write("It's already unloaded.", "2w1y18w1y", blankCheck == False)
                 elif unloadKey == "All" and unloadCount == 0 and unloadList[0].isEmpty():
-                    if blankCheck == False : console.lineList.insert(0, {"Blank": True})
-                    console.lineList.insert(0, {"String":"Your weapons are already unloaded.", "Code":"33w1y"})
+                    console.write("Your weapons are already unloaded.", "33w1y", blankCheck == False)
                 elif unloadWeapon == "Multiple":
                     actionFlags = {"unloadList":unloadList, "roomItem":roomItem, "ammoKey":ammoKey, "shellCount":shellCount}
                     self.actionList.append(Action("Unload", actionFlags))
 
-                    if blankCheck == False : console.lineList.insert(0, {"Blank": True})
-                    console.lineList.insert(0, {"String":"You start unloading some weapons..", "Code":"32w2y"})
+                    console.write("You start unloading some weapons..", "32w2y", blankCheck == False)
                 elif unloadWeapon != None:
                     actionFlags = {"unloadList":unloadList, "roomItem":roomItem, "ammoKey":ammoKey, "shellCount":shellCount}
                     self.actionList.append(Action("Unload", actionFlags))
@@ -1728,8 +1625,7 @@ class Player:
                     if unloadWeapon != "Multiple" and unloadCount > 1:
                         countString = " (" + str(unloadCount) + ")"
                         countCode = "2r" + str(len(str(unloadCount))) + "w1r"
-                    if blankCheck == False : console.lineList.insert(0, {"Blank": True})
-                    console.lineList.insert(0, {"String":"You start unloading " + unloadWeapon.prefix.lower() + " " + unloadWeapon.name["String"] + ".." + countString, "Code":"20w" + str(len(unloadWeapon.prefix)) + "w1w" + unloadWeapon.name["Code"] + "2y" + countCode})
+                    console.write("You start unloading " + unloadWeapon.prefix.lower() + " " + unloadWeapon.name["String"] + ".." + countString, "20w" + str(len(unloadWeapon.prefix)) + "w1w" + unloadWeapon.name["Code"] + "2y" + countCode, blankCheck == False)
 
     def unloadCompleteAction(self, console, flags):
         unloadList = flags["unloadList"]
@@ -1745,8 +1641,7 @@ class Player:
         shellCount = flags["shellCount"]
 
         if unloadWeapon == "Multiple" or magazineCount > 1:
-            console.lineList.insert(0, {"Blank": True})
-            console.lineList.insert(0, {"String":"You finish unloading your weapons.", "Code":"33w1y"})
+            console.write("You finish unloading your weapons.", "33w1y", True)
 
         else:
             countString = ""
@@ -1770,8 +1665,7 @@ class Player:
                 if magazineCount > 1:
                     unloadString = "some magazines"
                     unloadCode = "14w"
-            console.lineList.insert(0, {"Blank": True})
-            console.lineList.insert(0, {"String":"You unload " + unloadString + " from " + unloadWeapon.prefix.lower() + " " + unloadWeapon.name["String"] + "." + countString, "Code":"11w" + unloadCode + "6w" + str(len(unloadWeapon.prefix)) + "w1w" + unloadWeapon.name["Code"] + "1y" + countCode})
+            console.write("You unload " + unloadString + " from " + unloadWeapon.prefix.lower() + " " + unloadWeapon.name["String"] + "." + countString, "11w" + unloadCode + "6w" + str(len(unloadWeapon.prefix)) + "w1w" + unloadWeapon.name["Code"] + "1y" + countCode, True)
 
     def unloadFunction(self, targetPlayer, unloadList, roomItem, ammoKey):
         unloadWeapon = None
@@ -1870,17 +1764,14 @@ class Player:
 
     def recruitCheck(self, console, galaxyList, player, currentRoom, mobKey, mobCount):
         if currentRoom.isLit(galaxyList, player) == False:
-            console.lineList.insert(0, {"Blank": True})
-            console.lineList.insert(0, {"String": "It's too dark to see.", "Code":"2w1y17w1y"})
+            console.write("It's too dark to see.", "2w1y17w1y", True)
         elif mobKey in ["All", None] and len(currentRoom.mobList) == 0:
-            console.lineList.insert(0, {"Blank": True})
-            console.lineList.insert(0, {"String": "There is no one here.", "Code":"20w1y"})
+            console.write("There is no one here.", "20w1y", True)
         elif mobKey == None and len(self.targetList) == 0:
-            console.lineList.insert(0, {"Blank": True})
-            console.lineList.insert(0, {"String": "You aren't targeting anyone.", "Code":"8w1y18w1y"})
+            console.write("You aren't targeting anyone.", "8w1y18w1y", True)
         
         else:
-            blankCheck =self.stopActions(console, galaxyList, player)
+            blankCheck = self.stopActions(console, galaxyList, player)
 
             if mobCount in ["All", None]:
                 maxRecruitCount = len(currentRoom.mobList)
@@ -1916,36 +1807,30 @@ class Player:
                     currentRoom.mobList.append(mob)
 
             if mobKey not in ["All", None] and len(recruitList) == 0 and alreadyInGroupCheck == False and currentlyFightingCheck == False:
-                if blankCheck == False : console.lineList.insert(0, {"Blank": True})
-                console.lineList.insert(0, {"String":"You don't see them.", "Code":"7w1y10w1y"})
+                console.write("You don't see them.", "7w1y10w1y", blankCheck == False)
             elif len(recruitList) == 0 and alreadyInGroupCheck == True:
                 themString = "everyone here"
                 themCode = "13w"
                 if mobCount in [1, None]:
                     themString = "them"
                     themCode = "4w"
-                if blankCheck == False : console.lineList.insert(0, {"Blank": True})
-                console.lineList.insert(0, {"String":"You've already recruited " + themString + ".", "Code":"3w1y21w" + themCode + "1y"})
+                console.write("You've already recruited " + themString + ".", "3w1y21w" + themCode + "1y", blankCheck == False)
             elif len(recruitList) == 0 and currentlyFightingCheck == True:
-                if blankCheck == False : console.lineList.insert(0, {"Blank": True})
-                console.lineList.insert(0, {"String":"You can't recruit if you're fighting!", "Code":"7w1y16w1y11w1y"})
+                console.write("You can't recruit if you're fighting!", "7w1y16w1y11w1y", blankCheck == False)
             elif recruitMob == "Multiple":
-                console.lineList.insert(0, {"Blank": True})
-                console.lineList.insert(0, {"String":"You welcome some new members to the group.", "Code":"41w1y"})
+                console.write("You welcome some new members to the group.", "41w1y", blankCheck == False)
             else:
                 displayString = "You welcome " + recruitMob.prefix.lower() + " " + recruitMob.name["String"] + " to the group."
                 displayCode = "12w" + str(len(recruitMob.prefix)) + "w1w" + recruitMob.name["Code"] + "13w1y"
                 countString, countCode = getCountString(len(recruitList))
-                if blankCheck == False : console.lineList.insert(0, {"Blank": True})
-                console.lineList.insert(0, {"String":displayString + countString, "Code":displayCode + countCode})
+                console.write(displayString + countString, displayCode + countCode, blankCheck == False)
 
     def disbandCheck(self, console, galaxyList, player, currentRoom, mobKey, mobCount):
         pass
 
     def stopCheck(self, console, galaxyList, player):
         if len(self.actionList) == 0:
-            console.lineList.insert(0, {"Blank": True})
-            console.lineList.insert(0, {"String": "You aren't doing anything.", "Code":"8w1y16w1y"})
+            console.write("You aren't doing anything.", "8w1y16w1y", True)
         else:
             self.stopActions(console, galaxyList, player)
            
@@ -1966,11 +1851,9 @@ class Player:
                         break
         
         if targetItemKey != "All" and otherItem != None:
-            if blankCheck == False : console.lineList.insert(0, {"Blank": True})
-            console.lineList.insert(0, {"String":"You can't wear that.", "Code":"7w1y11w1y"})
+            console.write("You can't wear that.", "7w1y11w1y", blankCheck == False)
         elif targetItemKey != "All" and wearItem == None:
-            if blankCheck == False : console.lineList.insert(0, {"Blank": True})
-            console.lineList.insert(0, {"String":"You can't find it.", "Code":"7w1y9w1y"})
+            console.write("You can't find it.", "7w1y9w1y", blankCheck == False)
         elif targetItemKey != "All" and wearItem.pocket == "Weapon":
             tempCount = count
             if tempCount == "All":
@@ -2051,22 +1934,17 @@ class Player:
 
             # Messages #
             if wearCount == 0 and len(self.itemDict["Armor"]) == 0:
-                if blankCheck == False : console.lineList.insert(0, {"Blank": True})
-                console.lineList.insert(0, {"String":"You don't have any gear to wear.", "Code":"7w1y23w1y"})    
+                console.write("You don't have any gear to wear.", "7w1y23w1y", blankCheck == False)    
             elif wearCount == 0:
-                if blankCheck == False : console.lineList.insert(0, {"Blank": True})
-                console.lineList.insert(0, {"String":"You are already wearing something.", "Code":"33w1y"})    
+                console.write("You are already wearing something.", "33w1y", blankCheck == False)    
             elif len(previousWornItemList) > 0 and wearCount > 1:
-                if blankCheck == False : console.lineList.insert(0, {"Blank": True})
-                console.lineList.insert(0, {"String":"You switch around some of your gear.", "Code":"35w1y"})
+                console.write("You switch around some of your gear.", "35w1y", blankCheck == False)
             elif len(previousWornItemList) == 0 and wearCount > 1 and wearItem == "Multiple":
-                if blankCheck == False : console.lineList.insert(0, {"Blank": True})
-                console.lineList.insert(0, {"String":"You put on some armor.", "Code":"21w1y"})
+                console.write("You put on some armor.", "21w1y", blankCheck == False)
             elif len(previousWornItemList) == 1 and isinstance(wearItem, Item):
                 wearString = "You remove " + previousWornItemList[0].prefix.lower() + " " + previousWornItemList[0].name["String"] + " and wear " + wearItem.prefix.lower() + " " + wearItem.name["String"] + "."
                 wearCode = "11w" + str(len(previousWornItemList[0].prefix)) + "w1w" + previousWornItemList[0].name["Code"] + "10w" + str(len(wearItem.prefix)) + "w1w" + wearItem.name["Code"] + "1y"
-                if blankCheck == False : console.lineList.insert(0, {"Blank": True})
-                console.lineList.insert(0, {"String":wearString, "Code":wearCode})
+                console.write(wearString, wearCode, blankCheck == False)
             elif len(previousWornItemList) == 0 and isinstance(wearItem, Item):
                 wearString = "You wear " + wearItem.prefix.lower() + " " + wearItem.name["String"] + " on your " + wearItem.gearSlot.lower() + "."
                 wearCode = "9w" + str(len(wearItem.prefix)) + "w1w" + wearItem.name["Code"] + "9w" + str(len(wearItem.gearSlot)) + "w1y"
@@ -2075,8 +1953,7 @@ class Player:
                 if wearItem != "Multiple" and wearCount > 1:
                     countString = " (" + str(wearCount) + ")"
                     countCode = "2r" + str(len(str(wearCount))) + "w1r"
-                if blankCheck == False : console.lineList.insert(0, {"Blank": True})
-                console.lineList.insert(0, {"String":wearString + countString, "Code":wearCode + countCode})
+                console.write(wearString + countString, wearCode + countCode, blankCheck == False)
 
             # Wield Check #
             if targetItemKey == "All" and count == "All":
@@ -2097,17 +1974,13 @@ class Player:
 
         if targetItemKey == "All" and (wieldItem == None or wieldItem.pocket != "Weapon"):
             if blankCheck == True:
-                if actionBlankCheck == False : console.lineList.insert(0, {"Blank": True})
-                console.lineList.insert(0, {"String":"You don't have anything to wield.", "Code":"7w1y24w1y"})
+                console.write("You don't have anything to wield.", "7w1y24w1y", actionBlankCheck == False)
         elif wieldItem == None and checkItem != None and checkItem.pocket != "Weapon":
-            if blankCheck == True and actionBlankCheck == False : console.lineList.insert(0, {"Blank": True})
-            console.lineList.insert(0, {"String":"You can't wield that.", "Code":"7w1y12w1y"})
+            console.write("You can't wield that.", "7w1y12w1y", blankCheck == True and actionBlankCheck == False)
         elif wieldItem == None:
-            if blankCheck == True and actionBlankCheck == False : console.lineList.insert(0, {"Blank": True})
-            console.lineList.insert(0, {"String":"You can't find it.", "Code":"7w1y9w1y"})
+            console.write("You can't find it.", "7w1y9w1y", blankCheck == True and actionBlankCheck == False)
         elif wieldItem.pocket != "Weapon":
-            if blankCheck == True and actionBlankCheck == False : console.lineList.insert(0, {"Blank": True})
-            console.lineList.insert(0, {"String":"You can't wield that.", "Code":"7w1y12w1y"})
+            console.write("You can't wield that.", "7w1y12w1y", blankCheck == True and actionBlankCheck == False)
 
         else:
             targetGearSlot = None
@@ -2174,15 +2047,12 @@ class Player:
 
             if wieldCount == 0:
                 if blankCheck == True:
-                    if actionBlankCheck == False : console.lineList.insert(0, {"Blank": True})
-                    console.lineList.insert(0, {"String":"You're already holding something.", "Code":"3w1y28w1y"})
+                    console.write("You're already holding something.", "3w1y28w1y", actionBlankCheck == False)
             elif wieldItem == "Multiple":
                 if slotItem == None:
-                    if blankCheck == True and actionBlankCheck == False : console.lineList.insert(0, {"Blank": True})
-                    console.lineList.insert(0, {"String":"You hold some weapons in your hands.", "Code":"35w1y"})
+                    console.write("You hold some weapons in your hands.", "35w1y", blankCheck == True and actionBlankCheck == False)
                 else:
-                    if blankCheck == True and actionBlankCheck == False : console.lineList.insert(0, {"Blank": True})
-                    console.lineList.insert(0, {"String":"You switch some weapons around.", "Code":"30w1y"})
+                    console.write("You switch some weapons around.", "30w1y", blankCheck == True and actionBlankCheck == False)
             elif slotItem == None:
                 countString = ""
                 countCode = ""
@@ -2197,8 +2067,7 @@ class Player:
                         handsCode = "5w"
                 displayString = "You hold " + wieldItem.prefix.lower() + " " + wieldItem.name["String"] + countString + " in your " + handsString + "."
                 displayCode = "9w" + str(len(wieldItem.prefix)) + "w1w" + wieldItem.name["Code"] + countCode + "9w" + handsCode + "1y"
-                if blankCheck == True and actionBlankCheck == False : console.lineList.insert(0, {"Blank": True})
-                console.lineList.insert(0, {"String":displayString, "Code":displayCode})
+                console.write(displayString, displayCode, blankCheck == True and actionBlankCheck == False)
             else:
                 slotString = "some gear"
                 slotCode = "9w"
@@ -2225,8 +2094,7 @@ class Player:
                         wieldCountCode = "2r1w1r"
                 displayString = "You remove " + slotString + slotCountString + " and wield " + wieldString + "." + wieldCountString
                 displayCode = "11w" + slotCode + slotCountCode + "11w" + wieldCode + "1y" + wieldCountCode
-                if blankCheck == True and actionBlankCheck == False : console.lineList.insert(0, {"Blank": True})
-                console.lineList.insert(0, {"String":displayString, "Code":displayCode})
+                console.write(displayString, displayCode, blankCheck == True and actionBlankCheck == False)
                            
     def removeCheck(self, console, galaxyList, player, targetItemKey, count, targetGearSlotIndex=None):
         blankCheck = self.stopActions(console, galaxyList, player)
@@ -2262,8 +2130,7 @@ class Player:
                             break
         
         if targetItemKey != "All" and removeItem == None:
-            if blankCheck == False : console.lineList.insert(0, {"Blank": True})
-            console.lineList.insert(0, {"String":"You can't find it.", "Code":"7w1y9w1y"})
+            console.write("You can't find it.", "7w1y9w1y", blankCheck == False)
 
         else:
             removeCount = 0
@@ -2323,19 +2190,16 @@ class Player:
             if removeCount == 0:
                 displayMessage = "You have nothing to remove."
                 displayCode = "26w1y"
-                if blankCheck == False : console.lineList.insert(0, {"Blank": True})
-                console.lineList.insert(0, {"String":displayMessage, "Code":displayCode})
+                console.write(displayMessage, displayCode, blankCheck == False)
             elif targetItemKey == "All" and count == "All":
                 displayString = "You remove all of your gear."
                 displayCode = "27w1y"
                 if random.randrange(10) == 0:
                     displayString = "You strip down to your birthday suit."
                     displayCode = "36w1y"
-                if blankCheck == False : console.lineList.insert(0, {"Blank": True})
-                console.lineList.insert(0, {"String":displayString, "Code":displayCode})
+                console.write(displayString, displayCode, blankCheck == False)
             elif removeItem == "Multiple":
-                if blankCheck == False : console.lineList.insert(0, {"Blank": True})
-                console.lineList.insert(0, {"String":"You remove some gear.", "Code":"20w1y"})
+                console.write("You remove some gear.", "20w1y", blankCheck == False)
             elif isinstance(removeItem, Item):
                 countString, countCode = getCountString(removeCount)
                 holdingString = " remove"
@@ -2346,13 +2210,35 @@ class Player:
                     handString = " in your " + gearSlot.lower()
                 displayString = "You" + holdingString + " " + removeItem.prefix + " " + removeItem.name["String"] + handString + "." + countString
                 displayCode = "3w" + str(len(holdingString)) + "w1w" + str(len(removeItem.prefix)) + "w1w" + removeItem.name["Code"] + str(len(handString)) + "w1y" + countCode
-                if blankCheck == False : console.lineList.insert(0, {"Blank": True})
-                console.lineList.insert(0, {"String":displayString, "Code":displayCode})
+                console.write(displayString, displayCode, blankCheck == False)
+
+    def sayCheck(self, console, sayKey):
+        sayString = "say"
+        if sayKey["String"][-1] == '?':
+            sayString = "ask"
+        userString = "You " + sayString
+        userCode = "7w"
+        if self.num != None:
+            userString = self.prefix + " " + self.name["String"] + " says"
+            userCode = str(len(self.prefix)) + "w1w" + self.name["Code"] + "5w"
+        targetString = userString + ", '"
+        targetCode = userCode + "3y"
+        periodString = '.'
+        if sayKey["String"][-1] == '.':
+            sayKey["String"] = ' '.join(sayKey["String"].split()[0:-1] + [sayKey["String"].split()[-1].replace('.', '')])
+        elif sayKey["String"][-1] == '?':
+            sayKey["String"] = ' '.join(sayKey["String"].split()[0:-1] + [sayKey["String"].split()[-1].replace('?', '')])
+            periodString = "?"
+        elif sayKey["String"][-1] == '!':
+            sayKey["String"] = ' '.join(sayKey["String"].split()[0:-1] + [sayKey["String"].split()[-1].replace('!', '')])
+            periodString = "!"
+        displayString = targetString + sayKey["String"] + periodString + "'"
+        displayCode = targetCode + str(len(sayKey["String"])) + "w1y" + "1y"
+        console.write(displayString, displayCode, True)
 
     def attackCheck(self, console, galaxyList, player, currentRoom, mobKey):
         if mobKey == None and len(self.targetList) == 0:
-            console.lineList.insert(0, {"Blank": True})
-            console.lineList.insert(0, {"String":"Attack who?", "Code":"10w1y"})
+            console.write("Attack who?", "10w1y", True)
         
         else:
             distance = 0
@@ -2366,14 +2252,12 @@ class Player:
                         directionKey = targetDirection.lower()
                         directionCount = targetDistance
 
-            randomCombatSkill = self.getRandomAttackSkill(self.gearDict[self.dominantHand], self.gearDict[self.getOppositeHand(self.dominantHand)], {"Distance":distance})
+            randomCombatSkill, unused = self.getRandomAttackSkill(self.gearDict[self.dominantHand], self.gearDict[self.getOppositeHand(self.dominantHand)], {"Distance":distance})
 
             if randomCombatSkill == None:
-                console.lineList.insert(0, {"Blank": True})
-                console.lineList.insert(0, {"String":"You can't attack from here!", "Code":"7w1y18w1y"})
+                console.write("You can't attack from here!", "7w1y18w1y", True)
             elif randomCombatSkill == "Reload":
-                console.lineList.insert(0, {"Blank": True})
-                console.lineList.insert(0, {"String":"You need to reload first.", "Code":"24w1y"})
+                console.write("You need to reload first.", "24w1y", True)
 
             elif isinstance(randomCombatSkill, Skill):
                 self.combatSkillCheck(console, galaxyList, player, currentRoom, randomCombatSkill, 1, mobKey, directionKey, directionCount)
@@ -2381,24 +2265,19 @@ class Player:
     def combatSkillCheck(self, console, galaxyList, player, currentRoom, combatSkill, mobCount, mobKey, directionKey, directionCount):
         if self.skillAvailableCheck(combatSkill) == False:
             if self.num == None:
-                console.lineList.insert(0, {"Blank": True})
-                console.lineList.insert(0, {"String": "You can't use that now.", "Code":"7w1y14w1y"})
+                console.write("You can't use that now.", "7w1y14w1y", True)
         elif mobKey == None and directionKey == None and len(self.targetList) == 0 and "All Only" not in combatSkill.ruleDict and combatSkill.healCheck == False:
             if self.num == None:
-                console.lineList.insert(0, {"Blank": True})
-                console.lineList.insert(0, {"String": "You aren't targeting anyone.", "Code":"8w1y18w1y"})
+                console.write("You aren't targeting anyone.", "8w1y18w1y", True)
         elif ((directionCount != None and directionCount > combatSkill.maxRange) or (mobKey == None and len(self.targetList) > 0 and Room.getTargetRange(galaxyList, currentRoom, self.targetList[0], combatSkill.maxRange)[0] == -1)):
             if self.num == None:
-                console.lineList.insert(0, {"Blank": True})
-                console.lineList.insert(0, {"String": "That's too far.", "Code":"4w1y9w1y"})
+                console.write("That's too far.", "4w1y9w1y", True)
         elif mobKey == None and "From Another Room" in combatSkill.ruleDict and Room.getTargetRange(galaxyList, currentRoom, self.targetList[0], combatSkill.maxRange)[0] == 0:
             if self.num == None:
-                console.lineList.insert(0, {"Blank": True})
-                console.lineList.insert(0, {"String": "You're too close!", "Code":"3w1y12w1y"})
+                console.write("You're too close!", "3w1y12w1y", True)
         elif mobKey == "Self" and combatSkill.healCheck == False:
             if self.num == None:
-                console.lineList.insert(0, {"Blank": True})
-                console.lineList.insert(0, {"String": "You can't use it on yourself.", "Code":"7w1y20w1y"})
+                console.write("You can't use it on yourself.", "7w1y20w1y", True)
         
         else:
             message = None
@@ -2409,47 +2288,43 @@ class Player:
                 targetArea, targetRoom = Room.getAreaAndRoom(galaxyList, self.targetList[0])
                 roomDistance, targetDirection, message = Room.getTargetRange(galaxyList, currentRoom, self.targetList[0], self.maxTargetDistance)
             elif directionCount != None:
-                if directionKey[0] == "n" : targetDirection = "North"
-                elif directionKey[0] == "e" : targetDirection = "East"
-                elif directionKey[0] == "s" : targetDirection = "South"
+                if directionKey[0].lower() == "n" : targetDirection = "North"
+                elif directionKey[0].lower() == "e" : targetDirection = "East"
+                elif directionKey[0].lower() == "s" : targetDirection = "South"
                 else : targetDirection = "West"
                 targetArea, targetRoom = Room.getAreaAndRoom(galaxyList, targetRoom)
                 targetArea, targetRoom, roomDistance, message = Room.getTargetRoomFromStartRoom(galaxyList, targetArea, targetRoom, targetDirection, directionCount, True)
-
+            
             if message == "No Exit":
                 if self.num == None:
-                    console.lineList.insert(0, {"Blank": True})
-                    console.lineList.insert(0, {"String": "There is nothing there.", "Code":"22w1y"})
+                    console.write("There is nothing there.", "22w1y", True)
             elif message == "Door Is Closed":
                 if self.num == None:
-                    console.lineList.insert(0, {"Blank": True})
-                    console.lineList.insert(0, {"String": "The door is closed.", "Code":"18w1y"})
+                    console.write("The door is closed.", "18w1y", True)
             
             else:
                 blankCheck = self.stopActions(console, galaxyList, player)
                 
-                flags = self.combatSkillFunction(player, combatSkill, currentRoom, targetRoom, roomDistance, mobKey, mobCount, directionKey, True)
+                flags = self.combatSkillFunction(player, combatSkill, currentRoom, targetRoom, roomDistance, mobKey, mobCount, directionKey, True, {})
                 targetMob = flags["targetMob"]
                 selfSkill = flags["selfSkill"]
                 targetMobList = flags["targetMobList"]
+                attackList = flags["attackList"]
 
                 if len(targetMobList) == 0 and mobKey not in ["All", None, "Self"]:
-                    if blankCheck == False : console.lineList.insert(0, {"Blank": True})
-                    console.lineList.insert(0, {"String": "You don't see them.", "Code":"7w1y10w1y"})
+                    console.write("You don't see them.", "7w1y10w1y", blankCheck == False)
                 elif len(targetMobList) == 0 and mobKey == "All" and selfSkill == None:
                     if directionKey != None:
-                        if blankCheck == False : console.lineList.insert(0, {"Blank": True})
-                        console.lineList.insert(0, {"String": "You don't see anyone there.", "Code":"7w1y18w1y"})
+                        console.write("You don't see anyone there.", "7w1y18w1y", blankCheck == False)
                     else:
-                        if blankCheck == False : console.lineList.insert(0, {"Blank": True})
-                        console.lineList.insert(0, {"String": "You don't see anyone.", "Code":"7w1y12w1y"})
+                        console.write("You don't see anyone.", "7w1y12w1y", blankCheck == False)
                 else:
                     if self.num == None:
                         console.write("You prepare to " + combatSkill.name["String"] + "..", "15w" + combatSkill.name["Code"] + "2y", blankCheck == False)
                     elif currentRoom.sameRoomCheck(player) == True:
                         console.write(self.prefix + " " + self.name["String"] + " prepares to attack..", str(len(self.prefix)) + "w1w" + self.name["Code"] + "19w2y", blankCheck == False)
                 
-                    actionFlags = {"combatSkill":combatSkill, "currentRoom":currentRoom, "targetRoom":targetRoom, "roomDistance":roomDistance, "mobKey":mobKey, "mobCount":mobCount, "directionKey":directionKey, "targetDirection":targetDirection}
+                    actionFlags = {"combatSkill":combatSkill, "currentRoom":currentRoom, "targetRoom":targetRoom, "roomDistance":roomDistance, "mobKey":mobKey, "mobCount":mobCount, "directionKey":directionKey, "targetDirection":targetDirection, "attackList":attackList}
                     self.actionList.append(Action("Combat Skill", actionFlags))
 
     def combatSkillCompleteAction(self, console, player, flags):
@@ -2461,7 +2336,7 @@ class Player:
         directionKey = flags["directionKey"]
         targetDirection = flags["targetDirection"]
         currentRoom = flags["currentRoom"]
-        flags = self.combatSkillFunction(player, combatSkill, currentRoom, targetRoom, roomDistance, mobKey, mobCount, directionKey, False)
+        flags = self.combatSkillFunction(player, combatSkill, currentRoom, targetRoom, roomDistance, mobKey, mobCount, directionKey, False, flags)
 
         selfSkill = flags["selfSkill"]
         attackDisplayList = flags["attackDisplayList"]
@@ -2476,7 +2351,8 @@ class Player:
 
         blankCheck = False
         if targetMob == None and "All Only" in combatSkill.ruleDict and selfSkill == None:
-            console.write(targetUserString + combatSkill.name["String"] + " doesn't hit anyone.", targetUserCode + combatSkill.name["Code"] + "6w1y12w1y", blankCheck == False)
+            if not (self.num != None and targetRoom.sameRoomCheck(player) == False):
+                console.write(targetUserString + combatSkill.name["String"] + " doesn't hit anyone.", targetUserCode + combatSkill.name["Code"] + "6w1y12w1y", blankCheck == False)
 
         elif selfSkill != None:
             healString = "You heal yourself with "
@@ -2486,7 +2362,7 @@ class Player:
                 healCode = str(len(self.prefix)) + "w1w" + self.name["Code"] + "21w"
             displayString = healString + combatSkill.name["String"] + "."
             displayCode = healCode + combatSkill.name["Code"] + "1y"
-            if not (self.num != None and currentRoom.sameRoomCheck(player) == False):
+            if not (self.num != None and targetRoom.sameRoomCheck(player) == False):
                 console.write(displayString, displayCode, blankCheck == False)
                 blankCheck = True
 
@@ -2495,9 +2371,14 @@ class Player:
             directionCode = ""
             directionCountString = ""
             directionCountCode = ""
+            toTheString = " to the "
             if roomDistance > 0:
-                directionString = " to the " + targetDirection
-                directionCode = "8w" + str(len(targetDirection)) + "w"
+                targetDirectionString = targetDirection
+                if self.num != None and targetRoom.sameRoomCheck(player) == True:
+                    targetDirectionString = Room.getOppositeDirection(targetDirection)
+                    toTheString = " from the "
+                directionString = toTheString + targetDirectionString
+                directionCode = str(len(toTheString)) + "w" + str(len(targetDirectionString)) + "w"
                 directionCountString, directionCountCode = getCountString(roomDistance)
 
             for attackData in attackDisplayList:
@@ -2519,12 +2400,12 @@ class Player:
                             countString, countCode = getCountString(attackData["Miss Count"])
                             mobString = attackData["Mob Data"].prefix + " " + attackData["Mob Data"].name["String"]
                             mobCode = str(len(attackData["Mob Data"].prefix)) + "w1w" + attackData["Mob Data"].name["Code"]
-                            if attackData["Mob Data"].num == None:
+                            if attackData["Mob Data"].num == None and len(targetMobList) == 1:
                                 mobString = "you"
                                 mobCode = "3w"
                         displayString = targetUserString + attackData["Attack Data"].name["String"] + directionString + directionCountString + " misses " + mobString + "." + countString
                         displayCode = targetUserCode + attackData["Attack Data"].name["Code"] + directionCode + directionCountCode + "8w" + mobCode + "1y" + countCode
-                        if not (self.num != None and currentRoom.sameRoomCheck(player) == False):
+                        if not (self.num != None and targetRoom.sameRoomCheck(player) == False):
                             console.write(displayString, displayCode, blankCheck == False)
                             blankCheck = True
 
@@ -2541,7 +2422,8 @@ class Player:
                     if attackData["Mob Data"] == "Multiple":
                         displayString = targetUserString + attackData["Attack Data"].name["String"] + directionString + directionCountString + hitString + " the group!"
                         displayCode = targetUserCode + attackData["Attack Data"].name["Code"] + directionCode + directionCountCode + hitCode + "10w1y"
-                        console.lineList.insert(0, {"String": displayString, "Code":displayCode})
+                        if not (self.num != None and targetRoom.sameRoomCheck(player) == False):
+                            console.write(displayString, displayCode)
                     elif attackData["Mob Data"] != None:
                         countString, countCode = getCountString(attackData["Count"])
                         targetEnemyString = attackData["Mob Data"].prefix.lower() + " " + attackData["Mob Data"].name["String"]
@@ -2551,7 +2433,7 @@ class Player:
                             targetEnemyCode = "3w"
                         displayString = targetUserString + attackData["Attack Data"].name["String"] + directionString + directionCountString + hitString + " " + targetEnemyString + "!"
                         displayCode = targetUserCode + attackData["Attack Data"].name["Code"] + directionCode + directionCountCode + hitCode + "1w" + targetEnemyCode + "1y"
-                        if not (self.num != None and currentRoom.sameRoomCheck(player) == False):
+                        if not (self.num != None and targetRoom.sameRoomCheck(player) == False):
                             console.write(displayString + countString, displayCode + countCode)
             
             if attackDisplayList[0]["Kill Count"] > 0:
@@ -2562,7 +2444,7 @@ class Player:
                         yourString = "their"
                     displayString = targetUserString + "attack kills " + yourString + " targets!"
                     displayCode = targetUserCode + "13w" + str(len(yourString)) + "w8w1y"
-                    if not (self.num != None and currentRoom.sameRoomCheck(player) == False):
+                    if not (self.num != None and targetRoom.sameRoomCheck(player) == False):
                         console.write(displayString + countString, displayCode + countCode)
                 else:
                     displayString = attackDisplayList[0]["Killed Mob Data"].prefix + " " + attackDisplayList[0]["Killed Mob Data"].name["String"] + " is DEAD!"
@@ -2573,31 +2455,48 @@ class Player:
                     if not (attackDisplayList[0]["Killed Mob Data"].num != None and self.num != None and currentRoom.sameRoomCheck(player) == False):
                         console.write(displayString + countString, displayCode + countCode)
 
-    def combatSkillFunction(self, player, combatSkill, currentRoom, targetRoom, roomDistance, mobKey, mobCount, directionKey, copyCheck):
+    def combatSkillFunction(self, player, combatSkill, currentRoom, targetRoom, roomDistance, mobKey, mobCount, directionKey, copyCheck, flags):
+        attackDisplayList = []                
+
         targetPlayer = self
         if copyCheck == True:
             targetPlayer = copy.deepcopy(self)
             combatSkill = copy.deepcopy(combatSkill)
 
-        attackList = []
-        mainAttackHand = targetPlayer.gearDict[targetPlayer.dominantHand]
-        offAttackHand = targetPlayer.gearDict[targetPlayer.getOppositeHand(targetPlayer.dominantHand)]
-        combatSkill.weaponDataList = []
-        if combatSkill.weaponAttackCheck(mainAttackHand, offAttackHand) == True:
-            attackList.append(combatSkill)
-            if len(combatSkill.weaponDataList) == 1 and (combatSkill.weaponDataList[0] == offAttackHand or (combatSkill.weaponDataList[0] == "Open Hand" and offAttackHand == None)):
-                offAttackHand = targetPlayer.gearDict[targetPlayer.dominantHand]
-        if combatSkill.offHandAttacks == True and len(combatSkill.weaponTypeList) != 2 and combatSkill.healCheck == False:
-            offAttackSkill = copy.deepcopy(targetPlayer.getRandomAttackSkill(offAttackHand, None, {"Distance":roomDistance, '"All" Attacks Disabled':True, "Disable Two-Handed Attacks":True, "Disable Healing":True}))
-            if isinstance(offAttackSkill, Skill) and offAttackSkill.weaponAttackCheck(offAttackHand) == True:
-                attackList.append(offAttackSkill)
+        if "attackList" in flags:
+            attackList = flags["attackList"]
+        else:
+            attackList = []
+            mainAttackHand = targetPlayer.gearDict[targetPlayer.dominantHand]
+            offAttackHand = targetPlayer.gearDict[targetPlayer.getOppositeHand(targetPlayer.dominantHand)]
+            combatSkill.weaponDataList = []
+            if combatSkill.weaponAttackCheck(mainAttackHand, offAttackHand) == True:
+                attackList.append(combatSkill)
+                if len(combatSkill.weaponDataList) == 1 and (combatSkill.weaponDataList[0] == offAttackHand or (combatSkill.weaponDataList[0] == "Open Hand" and offAttackHand == None)):
+                    offAttackHand = targetPlayer.gearDict[targetPlayer.dominantHand]
+            if combatSkill.offHandAttacks == True and len(combatSkill.weaponTypeList) != 2 and combatSkill.healCheck == False:
+                offHandFlagList = {"Distance":roomDistance, "Disable Two-Handed Attacks":True, '"All" Attacks Disabled':True, "Disable Healing":True}
+                if self.num == None:
+                    offHandFlagList["Disable Weaponless Skills"] = True
+                else:
+                    offHandFlagList["Disable No Off-Hand Attack Attacks"] = True
+                offAttackSkill, offAttackMessage = copy.deepcopy(targetPlayer.getRandomAttackSkill(offAttackHand, None, offHandFlagList))
+                if offAttackSkill != None and offAttackSkill.weaponAttackCheck(offAttackHand) == True:
+                    attackList.append(offAttackSkill)
 
+        for skill in attackList:
+            displayData = {"Mob Data":None, "Killed Mob Data":None, "Count":0, "Kill Count":0, "Miss Count":0, "Attack Data":skill}
+            attackDisplayList.append(displayData)
+            
         allOnlyCheck = False
         for attackSkill in attackList:
             if "All Only" in attackSkill.ruleDict:
                 allOnlyCheck = True
         
-        if mobCount in ["All", "Group", None] or allOnlyCheck == True : maxTargets = len(targetRoom.mobList)
+        if mobCount in ["All", "Group", None] or allOnlyCheck == True:
+            maxTargets = len(targetRoom.mobList)
+            if self.num != None and targetRoom.sameRoomCheck(player) == True:
+                maxTargets += 1
         else : maxTargets = mobCount
         if combatSkill.maxTargets != "All" and maxTargets > combatSkill.maxTargets:
             maxTargets = combatSkill.maxTargets
@@ -2611,91 +2510,100 @@ class Player:
         (mobKey == "All" and directionKey == None)))):
             selfSkill = True
 
-        attackDisplayList = []
         targetMobList = []
         targetMob = None
         mobKillList = []
         if not ((mobKey == "Self" and allOnlyCheck == False) or (combatSkill.healCheck == True and mobKey == None and mobCount == None and len(targetPlayer.targetList) > 0 and targetPlayer.healEnemies == False and allOnlyCheck == False)):
-            for i in range(len(attackList)):
-                attackDisplayList.append({"Mob Data":None, "Killed Mob Data":None, "Count":0, "Kill Count":0, "Miss Count":0, "Attack Data":attackList[i]})
             if maxTargets > 0 and not (combatSkill.healCheck == True and mobKey == "Self" and allOnlyCheck == False):
                 if copyCheck == True:
                     targetRoom = copy.deepcopy(targetRoom)
-                targetList = targetRoom.mobList
-                if targetPlayer.num != None and mobKey == "Player":
-                    targetList = [player]
+                if targetPlayer.num != None and targetRoom.sameRoomCheck(player) == True:
+                    targetList = [player] + targetRoom.mobList
+                else:
+                    targetList = targetRoom.mobList
                 for mob in targetList:
-                    if copyCheck == True:
-                        mob = copy.deepcopy(mob)
-                    if mobKey == "All" or allOnlyCheck == True or \
-                    (mobKey != None and mobKey in mob.keyList) or \
-                    (mobKey == None and mob in targetPlayer.targetList) or \
-                    (targetPlayer.num != None and mobKey == "Player"):
-                        if allOnlyCheck == True or \
-                        (not (targetPlayer.healEnemies == False and combatSkill.healCheck == True and mob not in targetPlayer.recruitList) and \
-                        not (targetPlayer.teamDamage == False and combatSkill.healCheck == False and mob in targetPlayer.recruitList)):
-                            if allOnlyCheck == True or not (mobCount == "Group" and mob not in targetPlayer.recruitList):
-                                for i, attackSkill in enumerate(attackList):
-                                    hitCheck = False
-                                    if len(attackSkill.weaponDataList) in [0, 2]:
-                                        attackHitCheck, attackHitData = Combat.hitCheck(targetPlayer, attackSkill, mob)
-                                        if attackHitCheck == False:
-                                            attackDisplayList[i].update(attackHitData)
-                                        else:
-                                            hitCheck = True
-                                    else:
-                                        for weapon in attackSkill.weaponDataList:
-                                            if weapon != "Open Hand" and weapon.weaponType == "Gun" and weapon.isLoaded(1) == False:
-                                                attackDisplayList[i]["Miss Check"] = "Out Of Ammo"
-                                                attackDisplayList[i]["Weapon Data List"] = [attackSkill.weaponDataList[0]]
+                    if mob != self:
+                        if copyCheck == True:
+                            mob = copy.deepcopy(mob)
+                        if mobKey == "All" or allOnlyCheck == True or \
+                        (mobKey != None and mobKey in mob.keyList) or \
+                        (mobKey == None and mob in targetPlayer.targetList) or \
+                        (targetPlayer.num != None and mobKey == "Player" and mob.num == None):
+                            if allOnlyCheck == True or \
+                            (not (targetPlayer.healEnemies == False and combatSkill.healCheck == True and mob not in targetPlayer.recruitList) and \
+                            not (targetPlayer.teamDamage == False and combatSkill.healCheck == False and mob in targetPlayer.recruitList)):
+                                if allOnlyCheck == True or not (mobCount == "Group" and mob not in targetPlayer.recruitList):
+                                    for i, attackSkill in enumerate(attackList):
+                                        hitCheck = False
+                                        if len(attackSkill.weaponDataList) in [0, 2]:
+                                            attackHitCheck, attackHitData = Combat.hitCheck(targetPlayer, attackSkill, mob)
+                                            if attackHitCheck == False:
+                                                attackDisplayList[i].update(attackHitData)
                                             else:
-                                                attackHitCheck, attackHitData = Combat.hitCheck(targetPlayer, attackSkill, mob)
-                                                if attackHitCheck == False:
-                                                    attackDisplayList[i].update(attackHitData)
+                                                hitCheck = True
+                                        else:
+                                            for weapon in attackSkill.weaponDataList:
+                                                if weapon != "Open Hand" and weapon.weaponType == "Gun" and weapon.isLoaded(1) == False:
+                                                    attackDisplayList[i]["Miss Check"] = "Out Of Ammo"
+                                                    attackDisplayList[i]["Weapon Data List"] = [attackSkill.weaponDataList[0]]
                                                 else:
-                                                    hitCheck = True
+                                                    attackHitCheck, attackHitData = Combat.hitCheck(targetPlayer, attackSkill, mob)
+                                                    if attackHitCheck == False:
+                                                        attackDisplayList[i].update(attackHitData)
+                                                    else:
+                                                        hitCheck = True
 
-                                                if weapon != "Open Hand" and weapon.weaponType == "Gun" and weapon.isLoaded(1) == True:
-                                                    weapon.shoot()
-                                            
-                                    if attackDisplayList[i]["Mob Data"] == None:
-                                        attackDisplayList[i]["Mob Data"] = mob
-                                    elif attackDisplayList[i]["Mob Data"] != "Multiple" and attackDisplayList[i]["Mob Data"].num != mob.num:
-                                        attackDisplayList[i]["Mob Data"] = "Multiple"
-                                    if hitCheck == True:
-                                        attackDisplayList[i]["Count"] += 1
-                                    else:
-                                        attackDisplayList[i]["Miss Count"] += 1
+                                                    if weapon != "Open Hand" and weapon.weaponType == "Gun" and weapon.isLoaded(1) == True:
+                                                        weapon.shoot()
+                                                
+                                        if attackDisplayList[i]["Mob Data"] == None:
+                                            attackDisplayList[i]["Mob Data"] = mob
+                                        elif attackDisplayList[i]["Mob Data"] != "Multiple" and attackDisplayList[i]["Mob Data"].num != mob.num:
+                                            attackDisplayList[i]["Mob Data"] = "Multiple"
+                                        if hitCheck == True:
+                                            attackDisplayList[i]["Count"] += 1
+                                        else:
+                                            attackDisplayList[i]["Miss Count"] += 1
 
-                                targetMobList.append(mob)
+                                    targetMobList.append(mob)
 
-                                if copyCheck == False:
-                                    if mob.currentHealth <= 0:
-                                        mobKillList.append(mob)
-                                        attackDisplayList[0]["Kill Count"] += 1
-                                        if copyCheck == False:
-                                            targetRoom.itemList.append(Item.createCorpse(mob))
-                                            if mob in targetPlayer.targetList : del targetPlayer.targetList[targetPlayer.targetList.index(mob)]
-                                            if mob in targetPlayer.recruitList : del targetPlayer.recruitList[targetPlayer.recruitList.index(mob)]
-                                        if attackDisplayList[0]["Killed Mob Data"] == None:
-                                            attackDisplayList[0]["Killed Mob Data"] = mob
-                                        elif attackDisplayList[0]["Killed Mob Data"] != "Multiple" and attackDisplayList[0]["Killed Mob Data"].num != mob.num:
-                                            attackDisplayList[0]["Killed Mob Data"] = "Multiple"
-                                    elif targetPlayer.num == None and mob.currentHealth > 0 and combatSkill.healCheck == False and mob not in targetPlayer.targetList and mob not in targetPlayer.recruitList:
-                                        targetPlayer.targetList.insert(0, mob)
-                                        if mob not in targetPlayer.combatList : targetPlayer.combatList.append(mob)
+                                    if copyCheck == False:
+                                        if mob.currentHealth <= 0:
+                                            mobKillList.append(mob)
+                                            attackDisplayList[0]["Kill Count"] += 1
+                                            if attackDisplayList[0]["Killed Mob Data"] == None:
+                                                attackDisplayList[0]["Killed Mob Data"] = mob
+                                            elif attackDisplayList[0]["Killed Mob Data"] != "Multiple" and attackDisplayList[0]["Killed Mob Data"].num != mob.num:
+                                                attackDisplayList[0]["Killed Mob Data"] = "Multiple"
+                                        elif targetPlayer.num == None and mob.currentHealth > 0:
+                                            if mob not in targetPlayer.targetList:
+                                                targetPlayer.targetList.insert(0, mob)
+                                            if combatSkill.healCheck == False:
+                                                if mob in targetPlayer.recruitList:
+                                                    del targetPlayer.recruitList[targetPlayer.recruitList.index(mob)]
+                                                if mob not in targetPlayer.combatList and \
+                                                not ("Miss Check" in attackDisplayList[0] and attackDisplayList[0]["Miss Check"] == "Out Of Ammo" and (len(attackDisplayList) == 1 or ("Miss Check" in attackDisplayList[1] and attackDisplayList[1]["Miss Check"] == "Out Of Ammo")) and targetRoom.sameRoomCheck(player) == False):
+                                                    targetPlayer.combatList.append(mob)
 
-                                if targetMob == None:
-                                    targetMob = mob
-                                elif targetMob != "Multiple" and targetMob.num != mob.num:
-                                    targetMob = "Multiple"
-                                if allOnlyCheck != True and len(targetMobList) >= maxTargets:
-                                    break
+                                    if targetMob == None:
+                                        targetMob = mob
+                                    elif targetMob != "Multiple" and targetMob.num != mob.num:
+                                        targetMob = "Multiple"
+                                    if allOnlyCheck != True and len(targetMobList) >= maxTargets:
+                                        break
             
         if copyCheck == False:
             for mob in mobKillList:
+                if mob in targetPlayer.targetList:
+                    del targetPlayer.targetList[targetPlayer.targetList.index(mob)]
+                if mob in targetPlayer.recruitList:
+                    del targetPlayer.recruitList[targetPlayer.recruitList.index(mob)]
+                if mob in targetPlayer.combatList:
+                    del targetPlayer.recruitList[targetPlayer.recruitList.index(mob)]
                 if mob in targetRoom.mobList:
+                    targetRoom.itemList.append(Item.createCorpse(mob))
                     del targetRoom.mobList[targetRoom.mobList.index(mob)]
+
                 elif mob.num == None:
                     mob.currentHealth = 3
                     mob.combatList = []
@@ -2716,6 +2624,7 @@ class Player:
         returnFlags["targetMobList"] = targetMobList
         returnFlags["attackDisplayList"] = attackDisplayList
         returnFlags["currentRoom"] = currentRoom
+        returnFlags["attackList"] = attackList
 
         return returnFlags
 
@@ -2731,8 +2640,7 @@ class Player:
             targetPocket = "Misc"
 
         if targetPocket not in self.itemDict:
-            console.lineList.insert(0, {"Blank": True})
-            console.lineList.insert(0, {"String":"Open which bag? (Gear, Weapon, Ammo, Misc.)", "Code":"14w2y1r4w2y6w2y4w2y4w1y1r"})
+            console.write("Open which bag? (Gear, Weapon, Ammo, Misc.)", "14w2y1r4w2y6w2y4w2y4w1y1r", True)
 
         else:
             displayList = []
@@ -2776,12 +2684,11 @@ class Player:
                     underlineCode = underlineCode + "1y"
                 else:
                     underlineCode = underlineCode + "1dy"
-            console.lineList.insert(0, {"Blank": True})
-            console.lineList.insert(0, {"String": targetPocketDisplayString + " Bag", "Code": targetPocketDisplayCode + "4w"})
-            console.lineList.insert(0, {"String": underlineString, "Code": underlineCode})
+            console.write(targetPocketDisplayString + " Bag", targetPocketDisplayCode + "4w", True)
+            console.write(underlineString, underlineCode)
 
             if len(self.itemDict[targetPocket]) == 0:
-                console.lineList.insert(0, {"String": "-Empty", "Code": "1y5w"})
+                console.write("-Empty", "1y5w")
             elif currentRoom.isLit(galaxyList, self) == False and self.lightInBagCheck(targetPocket) == False:
                 inventoryCount = 0
                 for displayItemData in displayList:
@@ -2790,7 +2697,7 @@ class Player:
                     else:
                         inventoryCount += 1
                 countString, countCode = getCountString(inventoryCount)
-                console.lineList.insert(0, {"String": "-Something" + countString, "Code": "1y9w" + countCode})
+                console.write("-Something" + countString, "1y9w" + countCode)
             else:
                 for displayItemData in displayList:
                     item = displayItemData["ItemData"]
@@ -2805,12 +2712,11 @@ class Player:
                     itemDisplayString = item.prefix + " " + item.name["String"]
                     itemDisplayCode = str(len(item.prefix)) + "w1w" + item.name["Code"]
                     weaponStatusString, weaponStatusCode = item.getWeaponStatusString()
-                    console.lineList.insert(0, {"String":itemDisplayString + weaponStatusString + countString + modString, "Code":itemDisplayCode + weaponStatusCode + countCode + modCode})
+                    console.write(itemDisplayString + weaponStatusString + countString + modString, itemDisplayCode + weaponStatusCode + countCode + modCode)
 
     def displaySkills(self, console):
-        console.lineList.insert(0, {"Blank": True})
-        console.lineList.insert(0, {"String":"Skill List:", "Code":"10w1y"})
-        console.lineList.insert(0, {"String":"--=======--", "Code":"1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y"})
+        console.write("Skill List:", "10w1y", True)
+        console.write("--=======--", "1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y")
 
         columnWidth = 25
         displayString = ""
@@ -2828,7 +2734,7 @@ class Player:
                         displayString += " "
                         displayCode += "1w"
                 if i % 2 == 1 or i == len(self.getCombatSkillList()) - 1:
-                    console.lineList.insert(0, {"String":displayString, "Code":displayCode})
+                    console.write(displayString, displayCode)
                     displayString = ""
                     displayCode = ""
                 displayedList.append(skill.name["String"])
@@ -2836,9 +2742,8 @@ class Player:
     def displayGear(self, console, galaxyList, currentRoom):
         gearSlotDisplayDict = {"Body Under":{"String":"(Under) Body", "Code":"1r5w2r4w"}, "Body Over":{"String":"(Over) Body", "Code":"1r4w2r4w"}, "Legs Under":{"String":"(Under) Legs", "Code":"1r5w2r4w"}, "Legs Over":{"String":"(Over) Legs", "Code":"1r4w2r4w"}, "Left Hand":{"String":"L-Hand", "Code":"1w1y4w"}, "Right Hand":{"String":"R-Hand", "Code":"1w1y4w"}}
 
-        console.lineList.insert(0, {"Blank": True})
-        console.lineList.insert(0, {"String":"Worn Gear", "Code":"1w4ddw1w3ddw"})
-        console.lineList.insert(0, {"String":"--=====--", "Code":"1y1dy1y1dy1y1dy1y1dy1y"})
+        console.write("Worn Gear", "1w4ddw1w3ddw", True)
+        console.write("--=====--", "1y1dy1y1dy1y1dy1y1dy1y")
         for gearSlot in self.gearDict:
             gearSlotString = gearSlot
             if gearSlot in gearSlotDisplayDict and "String" in gearSlotDisplayDict[gearSlot]:
@@ -2889,32 +2794,36 @@ class Player:
                         if "Code" in targetSlot.name:
                             gearCode = targetSlot.name["Code"]
                     weaponStatusString, weaponStatusCode = targetSlot.getWeaponStatusString()
-                console.lineList.insert(0, {"String":gearSlotString + ": " + gearString + weaponStatusString + modString, "Code":gearSlotCode + "2y" + gearCode + weaponStatusCode + modCode})
+                console.write(gearSlotString + ": " + gearString + weaponStatusString + modString, gearSlotCode + "2y" + gearCode + weaponStatusCode + modCode)
 
     def displayStatus(self, console):
-        console.lineList.insert(0, {"Blank": True})
-        console.lineList.insert(0, {"String":"Character Status", "Code":"1w9ddw1w5ddw"})
-        console.lineList.insert(0, {"String":"---==========---", "Code":"1y1dy1y1dy1y1dy1y1dy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1r"})
+        console.write("Character Status", "1w9ddw1w5ddw", True)
+        console.write("---==========---", "1y1dy1y1dy1y1dy1y1dy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1r")
 
         autoLootString  = "[ ]"
         if self.autoLoot == True:
             autoLootString = "[X]"
-        console.lineList.insert(0, {"String":autoLootString + " - Auto Loot", "Code":"1y1dr1y3y9w"})
+        console.write(autoLootString + " - Auto Loot", "1y1dr1y3y9w")
 
         autoReloadString  = "[ ]"
         if self.autoReload == True:
             autoReloadString = "[X]"
-        console.lineList.insert(0, {"String":autoReloadString + " - Auto Reload", "Code":"1y1dr1y3y11w"})
+        console.write(autoReloadString + " - Auto Reload", "1y1dr1y3y11w")
+        
+        autoCombatString  = "[ ]"
+        if self.autoCombat == True:
+            autoCombatString = "[X]"
+        console.write(autoCombatString + " - Auto Combat", "1y1dr1y3y11w")
         
         teamDamageString  = "[ ]"
         if self.teamDamage == True:
             teamDamageString = "[X]"
-        console.lineList.insert(0, {"String":teamDamageString + " - Team Damage", "Code":"1y1dr1y3y11w"})
+        console.write(teamDamageString + " - Team Damage", "1y1dr1y3y11w")
         
         healEnemiesString  = "[ ]"
         if self.healEnemies == True:
             healEnemiesString = "[X]"
-        console.lineList.insert(0, {"String":healEnemiesString + " - Heal Enemies", "Code":"1y1dr1y3y12w"})
+        console.write(healEnemiesString + " - Heal Enemies", "1y1dr1y3y12w")
         
     def boardCheck(self, console, map, galaxyList, player, currentRoom, targetSpaceshipKey):
         blankCheck = self.stopActions(console, galaxyList, player)
@@ -2926,22 +2835,18 @@ class Player:
                 break
 
         if self.spaceship != None:
-            if blankCheck == False : console.lineList.insert(0, {"Blank": True})
-            console.lineList.insert(0, {"String":"You are already inside.", "Code":"22w1y"})
+            console.write("You are already inside.", "22w1y", blankCheck == False)
         elif targetSpaceship == None:
-            if blankCheck == False : console.lineList.insert(0, {"Blank": True})
-            console.lineList.insert(0, {"String":"You don't see anything like that.", "Code":"7w1y24w1y"})
+            console.write("You don't see anything like that.", "7w1y24w1y", blankCheck == False)
         elif targetSpaceship.hatchPassword != None and self.hasKey(targetSpaceship.hatchPassword) == False:
-            if blankCheck == False : console.lineList.insert(0, {"Blank": True})
-            console.lineList.insert(0, {"String":"You lack the proper key.", "Code":"23w1y"})
+            console.write("You lack the proper key.", "23w1y", blankCheck == False)
         
         else:
             self.spaceship = targetSpaceship.num
             self.area = targetSpaceship.hatchLocation[0]
             self.room = targetSpaceship.hatchLocation[1]
 
-            if blankCheck == False : console.lineList.insert(0, {"Blank": True})
-            console.lineList.insert(0, {"String":"The hatch opens and closes as you step inside.", "Code":"45w1y"})
+            console.write("The hatch opens and closes as you step inside.", "45w1y", blankCheck == False)
 
             spaceshipHatchRoom = targetSpaceship.areaList[self.area].roomList[self.room]
             spaceshipHatchRoom.display(console, galaxyList, self)
@@ -2973,12 +2878,10 @@ class Player:
                     manifestTarget = newMob
 
         if manifestTarget == None:
-            console.lineList.insert(0, {"Blank": True})
-            console.lineList.insert(0, {"String": "You wave your hand and nothing happens.", "Code":"38w1y"})
+            console.write("You wave your hand and nothing happens.", "38w1y", True)
         else:
             countString, countCode = getCountString(targetCount)
-            console.lineList.insert(0, {"Blank": True})
-            console.lineList.insert(0, {"String": "You wave your hand and " + manifestTarget.prefix.lower() + " " + manifestTarget.name["String"] + " appears." + countString, "Code":"23w" + str(len(manifestTarget.prefix)) + "w1w" + manifestTarget.name["Code"] + "8w1y" + countCode})
+            console.write("You wave your hand and " + manifestTarget.prefix.lower() + " " + manifestTarget.name["String"] + " appears." + countString, "23w" + str(len(manifestTarget.prefix)) + "w1w" + manifestTarget.name["Code"] + "8w1y" + countCode, True)
 
     # Utility Functions #
     def getTargetItem(self, targetItemKey, includeList=["Inventory", "Gear"]):
@@ -3088,16 +2991,17 @@ class Player:
         for skill in self.getCombatSkillList():
             if skill.ruleCheck(ruleCheckFlags) == True:
                 if self.skillAvailableCheck(skill, targetWeapon) == True:
-                    if len(skill.weaponTypeList) == 0:
+                    if len(skill.weaponTypeList) == 0 and "Disable Weaponless Skills" in ruleCheckFlags:
                         pass
-                    elif skill.weaponTypeList[0] == "Gun" and ((targetWeapon != None and targetWeapon.weaponType == "Gun" and targetWeapon.isEmpty(True) == True) and (secondWeapon == None or (secondWeapon != None and secondWeapon.weaponType == "Gun" and secondWeapon.isEmpty(True) == True))):
+                    elif len(skill.weaponTypeList) > 0 and skill.weaponTypeList[0] == "Gun" and ((targetWeapon != None and targetWeapon.weaponType == "Gun" and targetWeapon.isEmpty(True) == True) and (secondWeapon == None or (secondWeapon != None and secondWeapon.weaponType == "Gun" and secondWeapon.isEmpty(True) == True))):
                         returnMessage = "Reload"
+                        skillList.append(skill)
                     else:
                         skillList.append(skill)
                     
         if len(skillList) > 0:
-            return random.choice(skillList)
-        return returnMessage
+            return random.choice(skillList), returnMessage
+        return None, returnMessage
 
     def skillAvailableCheck(self, combatSkill, targetWeapon="Unused"):
         # Weapon Checks & Gear Skill Check #
@@ -3190,38 +3094,27 @@ class Player:
 
     def emote(self, console, input):
         if input in ["hmm", "hm"]:
-            console.lineList.insert(0, {"Blank": True})
-            console.lineList.insert(0, {"String":"You scratch your chin and go, 'Hmm..'", "Code":"28w3y3w3y"})
+            console.write("You scratch your chin and go, 'Hmm..'", "28w3y3w3y", True)
         elif input in "nod":
-            console.lineList.insert(0, {"Blank": True})
-            console.lineList.insert(0, {"String":"You nod your head in agreement.", "Code":"30w1y"})
+            console.write("You nod your head in agreement.", "30w1y", True)
         elif input == "nodnod":
-            console.lineList.insert(0, {"Blank": True})
-            console.lineList.insert(0, {"String":"You nodnod.", "Code":"10w1y"})
+            console.write("You nodnod.", "10w1y", True)
         elif input == "tap":
-            console.lineList.insert(0, {"Blank": True})
-            console.lineList.insert(0, {"String":"You tap your foot impatiently..", "Code":"29w2y"})
+            console.write("You tap your foot impatiently..", "29w2y", True)
         elif input == "boggle":
-            console.lineList.insert(0, {"Blank": True})
-            console.lineList.insert(0, {"String":"You boggle in complete incomprehension.", "Code":"38w1y"})
+            console.write("You boggle in complete incomprehension.", "38w1y", True)
         elif input == "jump":
-            console.lineList.insert(0, {"Blank": True})
-            console.lineList.insert(0, {"String":"You jump up and down.", "Code":"20w1y"})
+            console.write("You jump up and down.", "20w1y", True)
         elif input == "ahah":
-            console.lineList.insert(0, {"Blank": True})
-            console.lineList.insert(0, {"String":"Comprehension dawns upon you.", "Code":"28w1y"})
+            console.write("Comprehension dawns upon you.", "28w1y", True)
         elif input == "gasp":
-            console.lineList.insert(0, {"Blank": True})
-            console.lineList.insert(0, {"String":"You gasp!", "Code":"8w1y"})
+            console.write("You gasp!", "8w1y", True)
         elif input in ["haha", "lol"]:
-            console.lineList.insert(0, {"Blank": True})
-            console.lineList.insert(0, {"String":"You laugh out loud!", "Code":"18w1y"})
+            console.write("You laugh out loud!", "18w1y", True)
         elif input == "cheer":
-            console.lineList.insert(0, {"Blank": True})
-            console.lineList.insert(0, {"String":"And the peasants rejoiced.", "Code":"25w1y"})
+            console.write("And the peasants rejoiced.", "25w1y", True)
         elif input == "smile":
-            console.lineList.insert(0, {"Blank": True})
-            console.lineList.insert(0, {"String":"You smile happily.", "Code":"17w1y"})
+            console.write("You smile happily.", "17w1y", True)
         elif input == "swear":
             swearString = "@#$%"
             displayString = "!"
@@ -3239,22 +3132,20 @@ class Player:
                     displayCode = "18w1y20w1y"
             if displayCode == "":
                 displayCode = str(len(displayString) - 1) + "w1y"
-            console.lineList.insert(0, {"Blank": True})
-            console.lineList.insert(0, {"String":displayString, "Code":displayCode})
+            console.write(displayString, displayCode, True)
         elif input == "sigh":
-            console.lineList.insert(0, {"Blank": True})
-            console.lineList.insert(0, {"String":"You sigh.", "Code":"8w1y"})
+            console.write("You sigh.", "8w1y", True)
         elif input == "grin":
-            console.lineList.insert(0, {"Blank": True})
-            console.lineList.insert(0, {"String":"You grin.", "Code":"8w1y"})
+            console.write("You grin.", "8w1y", True)
         elif input == "snicker":
-            console.lineList.insert(0, {"Blank": True})
-            console.lineList.insert(0, {"String":"You snicker softly.", "Code":"18w1y"})
+            console.write("You snicker softly.", "18w1y", True)
         
     # Mob Functions #
     def loadMob(self, num):
         if num == 1:
             self.name = {"String":"Robotic Greeter Droid", "Code":"21w"}
+            self.speechList = [{"String":"Welcome to the COTU Spaceport!", "Code":"29w1y"}, \
+                               {"String":"Please have your badge ready.", "Code":"28w1y"}]
         elif num == 2:
             self.name = {"String":"Mummy", "Code":"5w"}
             self.flags ["No Chase"] = True
@@ -3267,6 +3158,5 @@ class Player:
         appendKeyList(self.keyList, self.name["String"].lower())
 
     def lookDescription(self, console):
-        console.lineList.insert(0, {"Blank": True})
-        console.lineList.insert(0, {"String": "You look at " + self.prefix.lower() + " " + self.name["String"] + ".", "Code":"12w" + str(len(self.prefix)) + "w1w" + self.name["Code"] + "1y"})
-        console.lineList.insert(0, {"String": "You see nothing special.", "Code":"23w1y"})
+        console.write("You look at " + self.prefix.lower() + " " + self.name["String"] + ".", "12w" + str(len(self.prefix)) + "w1w" + self.name["Code"] + "1y", True)
+        console.write("You see nothing special.", "23w1y")

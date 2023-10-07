@@ -16,6 +16,7 @@ class Map:
         self.surfaceMapDict = None
         self.surfaceCell = None
         self.surfaceCellWall = {}
+        self.surfaceDoor = {}
         self.surfaceMapPlayerIconDict = None
         
         self.zoomLevel = 0
@@ -35,6 +36,15 @@ class Map:
         pygame.draw.line(self.surfaceCellWall["East"], [50, 50, 50], [self.cellSize-1, 0], [self.cellSize-1, self.cellSize], 3)
         pygame.draw.line(self.surfaceCellWall["South"], [50, 50, 50], [0, self.cellSize], [self.cellSize, self.cellSize], 5)
         pygame.draw.line(self.surfaceCellWall["West"], [50, 50, 50], [0, 0], [0, self.cellSize], 2)
+        
+        self.surfaceDoor["North"] = pygame.Surface([self.cellSize, self.cellSize], pygame.SRCALPHA, 32)
+        self.surfaceDoor["East"] = pygame.Surface([self.cellSize, self.cellSize], pygame.SRCALPHA, 32)
+        self.surfaceDoor["South"] = pygame.Surface([self.cellSize, self.cellSize], pygame.SRCALPHA, 32)
+        self.surfaceDoor["West"] = pygame.Surface([self.cellSize, self.cellSize], pygame.SRCALPHA, 32)
+        pygame.draw.line(self.surfaceDoor["North"], [50, 50, 50], [0, 0], [self.cellSize, 0], 3)
+        pygame.draw.line(self.surfaceDoor["East"], [50, 50, 50], [self.cellSize-1, 0], [self.cellSize-1, self.cellSize], 3)
+        pygame.draw.line(self.surfaceDoor["South"], [50, 50, 50], [0, self.cellSize], [self.cellSize, self.cellSize], 3)
+        pygame.draw.line(self.surfaceDoor["West"], [50, 50, 50], [0, 0], [0, self.cellSize], 3)
 
     def loadMap(self, area):
 
@@ -50,6 +60,8 @@ class Map:
                     for exitDir in ["North", "East", "South", "West"]:
                         if currentRoom.exit[exitDir] == None:
                             surfaceMap.blit(self.surfaceCellWall[exitDir], cellBlitLoc)
+                        if exitDir in ["North", "East"] and currentRoom.door[exitDir] != None:
+                            surfaceMap.blit(self.surfaceDoor[exitDir], cellBlitLoc)
                     writeFast(str(currentRoom.room), [50, 50, 50], [cellBlitLoc[0] + 4, cellBlitLoc[1] + 4], self.font, surfaceMap)
                     
         # Resize Default Map For Zoom #

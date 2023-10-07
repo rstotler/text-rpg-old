@@ -2,12 +2,12 @@ import copy
 
 class Action:
 
-    def __init__(self, actionType, flags):
+    def __init__(self, actionType, flags, maxTick=2):
         self.actionType = actionType
         self.flags = flags
         
         self.currentTick = 0
-        self.maxTick = 2
+        self.maxTick = maxTick
 
     def update(self, console, player, target):
         self.currentTick += 1

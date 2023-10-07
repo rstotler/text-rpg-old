@@ -18,19 +18,16 @@ from Components.Utility import stringIsNumber
 from Components.Utility import appendKeyList
 
 # To Do List:
-    # Basic Mob Speech
-    # Implement wordWrap() In Player.py
-    # Combat:
-    # -Auto-Reload
-    # Why can't the player fireball in their off hand?
     # Make Player Lose Sight Of Mobs On Darkness
-    # Dodge Command
-    # Parry Command
-    # Fix Map Doors (Active Map)
+    # Search Command
     # Auto-Loot
-    # Counter-Attack (Passive Skill)
+    # Auto-Reload
+    # Auto-Combat
     # Move Direction '#'
     # Launch/Land Command
+    # Dodge Command
+    # Parry Command
+    # Counter-Attack (Passive Skill)
     # Jab(?)
 
 class Game:
@@ -47,7 +44,7 @@ class Game:
         self.frameTick = 0
         
         self.loadGame()
-        self.inputBar.inputList = ["n", "n", "w", "loot cab", "wear pis", "wear pis", "e", "s", "s", "reload"]
+        #self.inputBar.inputList = ["n", "n", "w", "loot cab", "wear pis", "wear pis", "e", "s", "s", "reload"]
 
     def loadGame(self):
         galaxyProtoMilkyWay = Galaxy()
@@ -95,6 +92,7 @@ class Game:
             roomCOTU00.name = {"String":"Center of the Universe", "Code":"1w1ddw1da2dw2da1dw2ddw1da1dw1w2w2dw2ddw1da2ddw"}
             roomCOTU00.exit["South"] = [0, 0, 1, 0, 1]
             roomCOTU00.exit["North"] = [0, 0, 1, 0, 3]
+            roomCOTU00.exit["East"] = [0, 0, 1, 1, 0]
             roomCOTU00.description = [{"String":"You stand on a large floating platform at the Center of the", "Code":"46w1w1ddw1da2dw2da1dw2ddw1da1dw1w"},
                                     {"String":"Universe. Billions of multi-colored stars twinkle and flash", "Code":"1w2dw2ddw1da2ddw2y13w1dc1c1ddc1w1y1r1dr1do1o1y1dy1ddy7w1c1dc1ddc2dc1c1ddc5w1c1dc1ddc1dc1c"},
                                     {"String":"from ages past. You see a bridge leading to the Spaceport", "Code":"14w2y32w1w1dw2ddw1dw1w1dw1ddw1dw"},
@@ -204,7 +202,22 @@ class Game:
                         targetExitRoom.installDoor(self.galaxyList, exitDir, "Automatic", None, "Closed", True)
                         break
             cotuTransportShipArea0.zeroCoordinates(self.galaxyList)
-            
+
+        # (Area) Ice Cavern
+        if True:
+            areaIceCavern = Area(1)
+            planetProtoEarth.areaList.append(areaIceCavern)
+            areaCOTU.name = {"String":"Ice Cavern"}
+
+            roomIceCavern00 = Room(0, 0, 1, 1, 0)
+            areaIceCavern.roomList.append(roomIceCavern00)
+            roomIceCavern00.name = {"String":"Ice Cavern", "Code":"4w6w"}
+            roomIceCavern00.exit["West"] = [0, 0, 1, 0, 0]
+            roomIceCavern00.description = [{"String":"It's cold.", "Code":"2w1y6w1y"}]
+
+            # Zero Area Coordinates #
+            areaIceCavern.zeroCoordinates(self.galaxyList)
+
         # Milky Way & Sol #
         if True:
             galaxyMilkyWay = Galaxy()
@@ -283,6 +296,7 @@ class Game:
             playerArea, playerRoom = Room.getAreaAndRoom(self.galaxyList, self.player)
             updateAreaList, updateRoomList = Room.getSurroundingRoomData(self.galaxyList, playerArea, playerRoom, 4)
             
+            playerArea.update(self.console)
             self.player.update(self.console, self.galaxyList, self.player, playerRoom)
             for room in updateRoomList:
                 for mob in room.mobList:
@@ -869,6 +883,16 @@ class Game:
             else:
                 self.console.write("Remove what?", "11w1y", True)
 
+        # Say #
+        elif input.lower().split()[0] in ["say", "sa"]:
+            if len(input.split()) > 1:
+                sayKey = ' '.join(input.lower().split()[1::])
+                sayText = {"String":sayKey, "Code":str(len(sayKey)) + "w"}
+                self.player.sayCheck(self.console, sayText)
+
+            else:
+                self.console.write("Say what?", "8w1y", True)
+
         ## Combat Commands ##
         # Attack #
         elif input.lower().split()[0] in ["attack", "attac", "atta", "att", "at", "a"]:
@@ -1222,7 +1246,9 @@ class Game:
 
         # Land #
 
-        ## Crafting Commands ##
+        ## Crafting/Exploration Commands ##
+        # Search #
+
         # Inspect #
         
         # Prospect #
@@ -1250,6 +1276,11 @@ class Game:
         # Auto Reload #
         elif input.lower().split()[0] == "autoreload" or (len(input.split()) == 2 and input.lower().split()[0] == "auto" and input.lower().split()[1] == "reload"):
             self.player.autoReload = not self.player.autoReload
+            self.console.write("Setting changed.", "15w1y", True)
+
+        # Auto Combat #
+        elif input.lower().split()[0] == "autocombat" or (len(input.split()) == 2 and input.lower().split()[0] == "auto" and input.lower().split()[1] == "combat"):
+            self.player.autoCombat = not self.player.autoCombat
             self.console.write("Setting changed.", "15w1y", True)
 
         # Team Damage #

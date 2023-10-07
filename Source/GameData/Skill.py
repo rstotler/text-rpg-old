@@ -144,6 +144,9 @@ class Skill:
         if "Disable Two-Handed Attacks" in flags and "Requires Two-Handed Weapon" in self.ruleDict:
             return False
 
+        if "Disable No Off-Hand Attack Attacks" in flags and self.offHandAttacks == False:
+            return False
+
         if "Disable Healing" in flags and self.healCheck == True:
             return False
 
