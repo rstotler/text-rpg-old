@@ -26,7 +26,7 @@ class Room:
         self.inside = False
 
     def display(self, console, galaxyList, player):
-        roomIsLit = self.isLit(galaxyList, player)
+        roomIsLit = self.isLit(galaxyList, player, player)
 
         # Name #
         nameString = self.name["String"]
@@ -85,13 +85,13 @@ class Room:
                 if self.door[exitDir] != None and self.door[exitDir]["Status"] in ["Closed", "Locked"]:
                     exitRoomString = "( " + spaceString + exitDir + " ) - [Closed]"
                     exitRoomCode = "2r1w4ddw2r3y1r6w1r"
-                elif roomIsLit == False and exitRoom.isLit(galaxyList, player) == False:
+                elif roomIsLit == False and exitRoom.isLit(galaxyList, player, player) == False:
                     exitRoomString = "( " + spaceString + exitDir + " ) - ( Black )"
                     exitRoomCode = "2r1w4ddw2r3y2r1dw1a2da1dda2r"
                 else:
                     exitRoomString = "( " + spaceString + exitDir + " ) - " + exitRoom.name["String"]
                 
-                if roomIsLit == False and exitRoom.isLit(galaxyList, player) == False:
+                if roomIsLit == False and exitRoom.isLit(galaxyList, player, player) == False:
                     exitRoomNameCode = "2r1dw1a2da1dda2r"
                 else:
                     exitRoomNameCode = str(len(exitRoomString)) + "w"
@@ -280,7 +280,7 @@ class Room:
 
         return False
     
-    def isLit(self, galaxyList, targetPlayer):
+    def isLit(self, galaxyList, player, targetPlayer):
         targetPlanet = None
         if self.galaxy != None and self.system != None and self.planet != None:
             if self.galaxy <= len(galaxyList) - 1 and self.system <= len(galaxyList[self.galaxy].systemList) -1 and self.planet <= len(galaxyList[self.galaxy].systemList[self.system].planetList) - 1:
@@ -293,19 +293,23 @@ class Room:
             if "Glowing" in item.flags and item.flags["Glowing"] == True:
                 return True
 
-        if self.sameRoomCheck(targetPlayer):
-            for gearSlot in targetPlayer.gearDict:
-                if isinstance(targetPlayer.gearDict[gearSlot], list):
-                    for gearSubSlot in targetPlayer.gearDict[gearSlot]:
-                        if gearSubSlot != None:
-                            if "Glowing" in gearSubSlot.flags and gearSubSlot.flags["Glowing"] == True:
+        targetPlayerList = self.mobList
+        if targetPlayer.num == None or self.sameRoomCheck(player):
+            targetPlayerList = [player] + self.mobList
+        for target in targetPlayerList:
+            if self.sameRoomCheck(target):
+                for gearSlot in target.gearDict:
+                    if isinstance(target.gearDict[gearSlot], list):
+                        for gearSubSlot in target.gearDict[gearSlot]:
+                            if gearSubSlot != None:
+                                if "Glowing" in gearSubSlot.flags and gearSubSlot.flags["Glowing"] == True:
+                                    return True
+                    else:
+                        if target.gearDict[gearSlot] != None:
+                            item = target.gearDict[gearSlot]
+                            if "Glowing" in item.flags and item.flags["Glowing"] == True:
                                 return True
-                else:
-                    if targetPlayer.gearDict[gearSlot] != None:
-                        item = targetPlayer.gearDict[gearSlot]
-                        if "Glowing" in item.flags and item.flags["Glowing"] == True:
-                            return True
-                
+                    
         return False
 
     def getTargetObject(self, targetObjectKey, includeList=["Mobs", "Items", "Spaceships"]):

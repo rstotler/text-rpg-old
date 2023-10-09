@@ -128,12 +128,15 @@ def appendKeyList(targetKeyList, targetString):
         if phrase.strip() not in targetKeyList:
             targetKeyList.append(phrase.strip())
 
-def getCountString(targetCount):
+def getCountString(targetCount, blankSpace=True):
     displayString = ""
     displayCode = ""
     if targetCount > 1:
         displayString = " (" + str(targetCount) + ")"
         displayCode = "2r" + str(len(str(targetCount))) + "w1r"
+        if blankSpace == False:
+            displayString = displayString[1::]
+            displayCode = "1" + displayCode[1::]
     return displayString, displayCode
 
 def writeCrashReport(errorString, input, player):
@@ -146,3 +149,14 @@ def writeCrashReport(errorString, input, player):
         f.write("Player Group: " + str(len(player.recruitList)) + "\n")
         f.write("Player Inventory: " + str(len(player.getAllItemList(["Inventory"]))) + "\n")
         f.write("Player Gear: " + str(len(player.getAllItemList(["Gear"]))) + "\n")
+
+def messageExistsCheck(messageDataList, messageType, stringHalf1, stringHalf2, codeHalf1, codeHalf2, drawBlankLine, combineCheck=True):
+    if combineCheck == True:
+        for messageData in messageDataList:
+            if stringHalf1 + stringHalf2 == messageData["Original String"]:
+                messageData["Count"] += 1
+                countString, countCode = getCountString(messageData["Count"], False)
+                messageData["String"] = messageData["String Half 1"] + countString + " " + messageData["String Half 2"]
+                messageData["Code"] = messageData["Code Half 1"] + countCode + "1w" + messageData["Code Half 2"]
+                return
+    messageDataList.append({"String":stringHalf1 + stringHalf2, "Code":codeHalf1 + codeHalf2, "Draw Blank Line":drawBlankLine, "Count":1, "Message Type":messageType, "Original String":stringHalf1 + stringHalf2, "String Half 1":stringHalf1, "String Half 2":stringHalf2, "Code Half 1":codeHalf1, "Code Half 2":codeHalf2})

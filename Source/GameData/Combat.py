@@ -21,5 +21,8 @@ class Combat:
 
             return False, dataDict
 
-        target.currentHealth -= 1
+        if attackSkill.healCheck == False:
+            target.currentHealth -= 1
+        else:
+            target.currentHealth += 1
         return True, None

@@ -107,6 +107,7 @@ class Skill:
     def weaponAttackCheck(self, mainHandWeapon, offHandWeapon="Unused"):
         # Checks For Skills That Require Two Weapons Don't Exist Yet! #
 
+        self.weaponDataList = []
         if "Gear Num List" in self.ruleDict:
             if self in mainHandWeapon.skillList:
                 self.weaponDataList = [mainHandWeapon]

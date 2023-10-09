@@ -1,16 +1,18 @@
 Traceback (most recent call last):
   File "D:\Codes\Python\Universe\Source\Screen\InputBar.py", line 50, in processInput
     game.processInputBarCommand(self.input)
-  File "D:\Codes\Python\Universe\Source\Game.py", line 891, in processInputBarCommand
-    self.player.sayCheck(self.console, currentRoom, sayKey)
-  File "D:\Codes\Python\Universe\Source\GameData\Player.py", line 2322, in sayCheck
-    userString = "You " + stayString
-NameError: name 'stayString' is not defined
+  File "D:\Codes\Python\Universe\Source\Game.py", line 1044, in processInputBarCommand
+    self.player.combatSkillCheck(self.console, self.galaxyList, self.player, currentRoom, combatSkill, mobCount, mobKey, None, None)
+  File "D:\Codes\Python\Universe\Source\GameData\Player.py", line 2313, in combatSkillCheck
+    flags = self.combatSkillFunction(player, combatSkill, currentRoom, targetRoom, roomDistance, mobKey, mobCount, directionKey, True, {})
+  File "D:\Codes\Python\Universe\Source\GameData\Player.py", line 2559, in combatSkillFunction
+    targetMob = copyMob
+NameError: name 'copyMob' is not defined
 
-Input: say yo
+Input: pun dro
 Player Loc: [0, 0, 1, 0, 1]
 Player Spaceship: None
 Player Targets: 0
 Player Group: 0
-Player Inventory: 0
+Player Inventory: 18
 Player Gear: 0

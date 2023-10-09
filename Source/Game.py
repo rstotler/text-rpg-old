@@ -19,6 +19,9 @@ from Components.Utility import appendKeyList
 
 # To Do List:
     # Make Player Lose Sight Of Mobs On Darkness
+    #console not going to bottom on new line
+    # map error exiting spaceship
+    # Combat/Movement
     # Search Command
     # Auto-Loot
     # Auto-Reload
@@ -44,7 +47,8 @@ class Game:
         self.frameTick = 0
         
         self.loadGame()
-        #self.inputBar.inputList = ["n", "n", "w", "loot cab", "wear pis", "wear pis", "e", "s", "s", "reload"]
+        self.inputBar.inputList = ["n", "n", "w", "loot cab", "wear pis", "wear pis", "e", "s", "s", "reload"]
+        # self.inputBar.inputList = ["n", "n", "w", "get sniper from cab", "get 5.56 from cab", "get 5.56 from cab", "get 5.56 from cab", "e", "s", "s", "wear sni", "reload"]
 
     def loadGame(self):
         galaxyProtoMilkyWay = Galaxy()
@@ -207,13 +211,30 @@ class Game:
         if True:
             areaIceCavern = Area(1)
             planetProtoEarth.areaList.append(areaIceCavern)
-            areaCOTU.name = {"String":"Ice Cavern"}
+            areaIceCavern.name = {"String":"Ice Cavern"}
 
             roomIceCavern00 = Room(0, 0, 1, 1, 0)
             areaIceCavern.roomList.append(roomIceCavern00)
             roomIceCavern00.name = {"String":"Ice Cavern", "Code":"4w6w"}
             roomIceCavern00.exit["West"] = [0, 0, 1, 0, 0]
-            roomIceCavern00.description = [{"String":"It's cold.", "Code":"2w1y6w1y"}]
+            roomIceCavern00.exit["North"] = [0, 0, 1, 1, 1]
+
+            roomIceCavern01 = Room(0, 0, 1, 1, 1)
+            areaIceCavern.roomList.append(roomIceCavern01)
+            roomIceCavern01.name = {"String":"Ice Cavern", "Code":"4w6w"}
+            roomIceCavern01.exit["South"] = [0, 0, 1, 1, 0]
+            roomIceCavern01.exit["East"] = [0, 0, 1, 1, 2]
+
+            roomIceCavern02 = Room(0, 0, 1, 1, 2)
+            areaIceCavern.roomList.append(roomIceCavern02)
+            roomIceCavern02.name = {"String":"Ice Cavern", "Code":"4w6w"}
+            roomIceCavern02.exit["West"] = [0, 0, 1, 1, 1]
+            roomIceCavern02.exit["North"] = [0, 0, 1, 1, 3]
+
+            roomIceCavern03 = Room(0, 0, 1, 1, 3)
+            areaIceCavern.roomList.append(roomIceCavern03)
+            roomIceCavern03.name = {"String":"Ice Cavern", "Code":"4w6w"}
+            roomIceCavern03.exit["South"] = [0, 0, 1, 1, 2]
 
             # Zero Area Coordinates #
             areaIceCavern.zeroCoordinates(self.galaxyList)
@@ -296,11 +317,14 @@ class Game:
             playerArea, playerRoom = Room.getAreaAndRoom(self.galaxyList, self.player)
             updateAreaList, updateRoomList = Room.getSurroundingRoomData(self.galaxyList, playerArea, playerRoom, 4)
             
+            messageDataList = []
             playerArea.update(self.console)
-            self.player.update(self.console, self.galaxyList, self.player, playerRoom)
+            messageDataList = self.player.update(self.console, self.galaxyList, self.player, playerRoom, messageDataList)
             for room in updateRoomList:
                 for mob in room.mobList:
-                    mob.update(self.console, self.galaxyList, self.player, room)
+                    messageDataList = mob.update(self.console, self.galaxyList, self.player, room, messageDataList)
+            for messageData in messageDataList:
+                self.console.write(messageData["String"], messageData["Code"], messageData["Draw Blank Line"])
                 
         self.frameTick += 1
         if self.frameTick >= 60:
@@ -389,7 +413,7 @@ class Game:
                 elif input.lower().split()[1] in ["south", "sout", "sou", "so", "s"] : targetDir = "South"
                 else : targetDir = "West"
                 lookTarget = ' '.join(input.lower().split()[3::])
-                self.player.lookTargetCheck(self.console, self.galaxyList, currentRoom, targetDir, int(input.split()[2]), lookTarget)
+                self.player.lookTargetCheck(self.console, self.galaxyList, self.player, currentRoom, targetDir, int(input.split()[2]), lookTarget)
 
             # Look 'Direction' Item/Mob/Spaceship #
             elif len(input.split()) > 2 and input.lower().split()[1] in directionStringList:
@@ -398,7 +422,7 @@ class Game:
                 elif input.lower().split()[1] in ["south", "sout", "sou", "so", "s"] : targetDir = "South"
                 else : targetDir = "West"
                 lookTarget = ' '.join(input.lower().split()[2::])
-                self.player.lookTargetCheck(self.console, self.galaxyList, currentRoom, targetDir, 1, lookTarget)
+                self.player.lookTargetCheck(self.console, self.galaxyList, self.player, currentRoom, targetDir, 1, lookTarget)
 
             # Look Item In Container #
             elif len(input.split()) > 3 and "in" in input.lower().split() and input.lower().split()[1] != "in" and input.lower().split()[-1] != "in":
@@ -410,7 +434,7 @@ class Game:
             # Look Item/Mob/Spaceship/Inventory/Gear #
             elif len(input.split()) > 1:
                 lookTarget = ' '.join(input.lower().split()[1::])
-                self.player.lookTargetCheck(self.console, self.galaxyList, currentRoom, None, None, lookTarget)
+                self.player.lookTargetCheck(self.console, self.galaxyList, self.player, currentRoom, None, None, lookTarget)
 
             # Look #
             elif len(input.split()) == 1 and input.lower().split()[0] in ["look", "loo", "lo", "l"]:
@@ -888,7 +912,7 @@ class Game:
             if len(input.split()) > 1:
                 sayKey = ' '.join(input.lower().split()[1::])
                 sayText = {"String":sayKey, "Code":str(len(sayKey)) + "w"}
-                self.player.sayCheck(self.console, sayText)
+                self.player.sayCheck(self.console, self.galaxyList, self.player, currentRoom, sayText)
 
             else:
                 self.console.write("Say what?", "8w1y", True)
@@ -1187,11 +1211,11 @@ class Game:
             targetPocketKey = None
             if len(input.split()) > 1:
                 targetPocketKey = ' '.join(input.lower().split()[1::])
-            self.player.displayInventory(self.console, self.galaxyList, currentRoom, targetPocketKey)
+            self.player.displayInventory(self.console, self.galaxyList, self.player, currentRoom, targetPocketKey)
         
         # Gear #
         elif len(input.split()) == 1 and input.lower() in ["gear", "gea"]:
-            self.player.displayGear(self.console, self.galaxyList, currentRoom)
+            self.player.displayGear(self.console, self.galaxyList, self.player, currentRoom)
 
         # Skills #
         elif len(input.split()) == 1 and input.lower() in ["skills", "skill", "skil", "ski", "sk"]:
@@ -1231,20 +1255,20 @@ class Game:
                 self.console.write("Board what?", "10w1y", True)
 
         # Launch #
+        elif len(input.split()) == 1 and input.lower() in ["launch", "launc", "laun", "lau"]:
+            self.player.launchCheck(self.console, self.galaxyList, self.player, currentRoom)
 
-        # Scan #
+        # Land #
+        elif len(input.split()) == 1 and input.lower() in ["land", "lan"]:
+            self.player.landCheck(self.console, self.galaxyList, self.player, currentRoom)
 
         # Radar #
-
-        # Course #
 
         # Calculate #
 
         # Throttle #
 
         # System #
-
-        # Land #
 
         ## Crafting/Exploration Commands ##
         # Search #
