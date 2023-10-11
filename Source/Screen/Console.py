@@ -55,3 +55,6 @@ class Console:
         else:
             for displayLine in wordWrap(displayString, displayCode, self.characterWidth):
                 self.lineList.insert(0, {"String":displayLine["String"], "Code":displayLine["Code"]})
+
+        self.displayLine = 0
+        

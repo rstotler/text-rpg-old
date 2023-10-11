@@ -16,6 +16,7 @@ class Skill:
 
         self.healCheck = False
         self.ruleDict = {}
+        self.onTarget = False
 
         self.loadSkill(num)
 
@@ -63,6 +64,7 @@ class Skill:
             self.name = {"String":"Slash All", "Code":"9w"}
             self.weaponTypeList = ["Sword"]
             self.ruleDict["All Only"] = True
+            self.offHandAttacks = False
             # self.maxTargets = "All" # Is Automatically Set Below
         elif num == 10:
             self.name = {"String":"Bash", "Code":"4w"}
@@ -70,10 +72,12 @@ class Skill:
         elif num == 11:
             self.name = {"String":"Pray", "Code":"4w"}
             self.maxTargets = "All"
+            self.maxRange = 1
             self.healCheck = True
         elif num == 12:
             self.name = {"String":"Bless", "Code":"5w"}
             self.ruleDict["All Only"] = True
+            self.maxRange = 1
             self.healCheck = True
             # self.maxTargets = "All" # Is Automatically Set Below
         elif num == 13:

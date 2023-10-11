@@ -1,18 +1,16 @@
 Traceback (most recent call last):
   File "D:\Codes\Python\Universe\Source\Screen\InputBar.py", line 50, in processInput
     game.processInputBarCommand(self.input)
-  File "D:\Codes\Python\Universe\Source\Game.py", line 1044, in processInputBarCommand
-    self.player.combatSkillCheck(self.console, self.galaxyList, self.player, currentRoom, combatSkill, mobCount, mobKey, None, None)
-  File "D:\Codes\Python\Universe\Source\GameData\Player.py", line 2313, in combatSkillCheck
-    flags = self.combatSkillFunction(player, combatSkill, currentRoom, targetRoom, roomDistance, mobKey, mobCount, directionKey, True, {})
-  File "D:\Codes\Python\Universe\Source\GameData\Player.py", line 2559, in combatSkillFunction
-    targetMob = copyMob
-NameError: name 'copyMob' is not defined
+  File "D:\Codes\Python\Universe\Source\Game.py", line 1245, in processInputBarCommand
+    self.player.courseCheck(self.console, self.galaxyList, self.player, currentRoom, courseKey)
+  File "D:\Codes\Python\Universe\Source\GameData\Player.py", line 3044, in courseCheck
+    console.write("You are already orbiting " + targetPlanet.name["String"] + ".", "25w" + targetName.name["Code"] + "1y", True)
+NameError: name 'targetName' is not defined
 
-Input: pun dro
-Player Loc: [0, 0, 1, 0, 1]
-Player Spaceship: None
+Input: course earth
+Player Loc: [0, 0, 1, 0, 0]
+Player Spaceship: 1
 Player Targets: 0
 Player Group: 0
-Player Inventory: 18
+Player Inventory: 1
 Player Gear: 0

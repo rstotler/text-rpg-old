@@ -11,6 +11,7 @@ class Room:
         self.area = area
         self.room = room
         self.spaceshipObject = None
+        self.flags = {}
 
         self.mapCoordinates = [None, None]
 
@@ -78,7 +79,7 @@ class Room:
                 elif len(self.exit[exitDir]) == 3 and self.spaceshipObject != None:
                     exitRoom = self.spaceshipObject.getRoom(self.exit[exitDir][1], self.exit[exitDir][2])
                 elif self.exit[exitDir] == "Spaceship Exit" and self.spaceshipObject.landedLocation != None:
-                    exitRoom = Room.exists(galaxyList, None, self.spaceshipObject.landedLocation[0], self.spaceshipObject.landedLocation[1], self.spaceshipObject.landedLocation[2], self.spaceshipObject.landedLocation[3], self.spaceshipObject.landedLocation[4])
+                    exitRoom = Room.exists(galaxyList, None, self.spaceshipObject.galaxy, self.spaceshipObject.system, self.spaceshipObject.planet, self.spaceshipObject.landedLocation[0], self.spaceshipObject.landedLocation[1])
                 if exitRoom == None:
                     exitRoom = galaxyList[0].systemList[0].planetList[0].areaList[0].roomList[0]
                 
@@ -121,7 +122,7 @@ class Room:
             if roomIsLit == False:
                 displayString = "A spaceship is sitting on the launch pad."
                 displayCode = "40w1y"
-                countString, countCode = len(self.spaceshipList)
+                countString, countCode = getCountString(len(self.spaceshipList))
                 console.write(displayString + countString, displayCode + countCode)
             else:
                 for spaceship in self.spaceshipList:
@@ -140,7 +141,8 @@ class Room:
                     targetCheck = False
                     if groupCheck == False:
                         targetCheck = mob in player.targetList
-                    if mob.num == data["Num"] and data["Target Check"] == targetCheck and data["Group Check"] == groupCheck:
+                    combatCheck = mob in player.combatList
+                    if mob.num == data["Num"] and data["Target Check"] == targetCheck and data["Group Check"] == groupCheck and combatCheck == data["Combat Check"]:
                         targetMobData = data
                         break
                 if targetMobData == None:
@@ -148,7 +150,8 @@ class Room:
                     targetCheck = False
                     if groupCheck == False:
                         targetCheck = mob in player.targetList
-                    mobDisplayList.append({"Num":mob.num, "Count":1, "Target Check":targetCheck, "Group Check":groupCheck, "Mob Data":mob})
+                    combatCheck = mob in player.combatList
+                    mobDisplayList.append({"Num":mob.num, "Count":1, "Target Check":targetCheck, "Group Check":groupCheck, "Mob Data":mob, "Combat Check":combatCheck})
                 else:
                     targetMobData["Count"] += 1
                 totalMobCount += 1
@@ -168,8 +171,12 @@ class Room:
                         targetString = "[+]"
                         targetCode = "3m"
                     countString, countCode = getCountString(mobData["Count"])
-                    mobDisplayString = targetString + mobData["Mob Data"].prefix + " " + mobData["Mob Data"].name["String"] + " " + mobData["Mob Data"].roomDescription["String"] + countString
-                    mobDisplayCode = targetCode + str(len(mobData["Mob Data"].prefix)) + "w1w" + mobData["Mob Data"].name["Code"] + "1w" + mobData["Mob Data"].roomDescription["Code"] + countCode
+                    if "Combat Check" in mobData and mobData["Combat Check"] == True:
+                        mobDisplayString = targetString + mobData["Mob Data"].prefix + " " + mobData["Mob Data"].name["String"] + " is here, fighting you!" + countString
+                        mobDisplayCode = targetCode + str(len(mobData["Mob Data"].prefix)) + "w1w" + mobData["Mob Data"].name["Code"] + "8w1y13w1y" + countCode
+                    else:
+                        mobDisplayString = targetString + mobData["Mob Data"].prefix + " " + mobData["Mob Data"].name["String"] + " " + mobData["Mob Data"].roomDescription["String"] + countString
+                        mobDisplayCode = targetCode + str(len(mobData["Mob Data"].prefix)) + "w1w" + mobData["Mob Data"].name["Code"] + "1w" + mobData["Mob Data"].roomDescription["Code"] + countCode
                     console.write(mobDisplayString, mobDisplayCode)
 
         # Items #
@@ -271,11 +278,16 @@ class Room:
                 if target[0] == self.galaxy and target[1] == self.system and target[2] == self.planet and target[3] == self.area and target[4] == self.room:
                     return True
 
-        elif target.spaceship == None and self.spaceshipObject == None:
-            if target.galaxy == self.galaxy and target.system == self.system and target.planet == self.planet and target.area == self.area and target.room == self.room:
-                return True
-        elif target.spaceship != None and self.spaceshipObject != None:
-            if target.spaceship == self.spaceshipObject.num and target.area == self.area and target.room == self.room:
+        elif hasattr(target, "currentHealth"):
+            if target.spaceship == None and self.spaceshipObject == None:
+                if target.galaxy == self.galaxy and target.system == self.system and target.planet == self.planet and target.area == self.area and target.room == self.room:
+                    return True
+            elif target.spaceship != None and self.spaceshipObject != None:
+                if target.spaceship == self.spaceshipObject.num and target.area == self.area and target.room == self.room:
+                    return True
+
+        else:
+            if target.galaxy == self.galaxy and target.system == self.system and target.planet == self.planet and target.area == self.area and target.room == self.room and target.spaceshipObject == self.spaceshipObject:
                 return True
 
         return False
@@ -366,12 +378,13 @@ class Room:
                         break
                     
                 # Spaceship Exit #
-                if targetExit == "Spaceship Exit" and currentRoom.spaceshipObject != None and currentRoom.spaceshipObject.landedLocation != None:
-                    landedLocation = currentRoom.spaceshipObject.landedLocation
-                    if Room.exists(galaxyList, None, landedLocation[0], landedLocation[1], landedLocation[2], landedLocation[3], landedLocation[4]) != None:
-                        currentRoom = Room.exists(galaxyList, None, landedLocation[0], landedLocation[1], landedLocation[2], landedLocation[3], landedLocation[4])
-                        currentArea = galaxyList[currentRoom.galaxy].systemList[currentRoom.system].planetList[currentRoom.planet].areaList[currentRoom.area]
-                        
+                if targetExit == "Spaceship Exit" and currentRoom.spaceshipObject != None:
+                    if currentRoom.spaceshipObject.landedLocation != None:
+                        landedLocation = currentRoom.spaceshipObject.landedLocation
+                        if Room.exists(galaxyList, None, currentRoom.spaceshipObject.galaxy, currentRoom.spaceshipObject.system, currentRoom.spaceshipObject.planet, landedLocation[0], landedLocation[1]) != None:
+                            currentRoom = Room.exists(galaxyList, None, currentRoom.spaceshipObject.galaxy, currentRoom.spaceshipObject.system, currentRoom.spaceshipObject.planet, landedLocation[0], landedLocation[1])
+                            currentArea = galaxyList[currentRoom.galaxy].systemList[currentRoom.system].planetList[currentRoom.planet].areaList[currentRoom.area]
+                            
                 # Spaceship Room #
                 elif len(targetExit) == 3 and currentRoom.spaceshipObject != None:
                     if currentArea.num != targetExit[1]:
@@ -419,62 +432,77 @@ class Room:
         targetRange = 0
         searchDir = None
         messageType = None
-        if (targetObject.num != None and targetObject in startRoom.mobList) or \
-        (targetObject.num == None and startRoom.sameRoomCheck(targetObject) == True):
-            return 0, None, None
-
+        if hasattr(targetObject, "currentHealth"):
+            if (targetObject.num != None and targetObject in startRoom.mobList) or \
+            (targetObject.num == None and startRoom.sameRoomCheck(targetObject) == True):
+                return 0, None, None
         else:
-            sideDirList = {"North":["East", "West"],
-                           "East":["North", "South"],
-                           "South":["East", "West"],
-                           "West":["North", "South"]}
-                
-            for searchDir in ["North", "East", "South", "West"]:
-                messageMaster = None
-                currentRoom = startRoom
-                if currentRoom.spaceshipObject != None:
-                    currentArea = currentRoom.spaceshipObject.areaList[currentRoom.area]
-                else:
-                    currentArea = galaxyList[currentRoom.galaxy].systemList[currentRoom.system].planetList[currentRoom.planet].areaList[currentRoom.area]
-                for rNum in range(maxRange):
-                    messageType = messageMaster
-                    if currentRoom.exit[searchDir] == None:
-                        break
-                    else:
-                        currentArea, currentRoom, distance, message = Room.getTargetRoomFromStartRoom(galaxyList, currentArea, currentRoom, searchDir, 1, True)
-                        if message == "Door Is Closed":
-                            messageMaster = message
+            if startRoom.sameRoomCheck(targetObject) == True:
+                return 0, None, None
 
+        sideDirList = {"North":["East", "West"],
+                        "East":["North", "South"],
+                        "South":["East", "West"],
+                        "West":["North", "South"]}
+        for searchDir in ["North", "East", "South", "West"]:
+            messageMaster = None
+            currentRoom = startRoom
+            if currentRoom.spaceshipObject != None:
+                currentArea = currentRoom.spaceshipObject.areaList[currentRoom.area]
+            else:
+                currentArea = galaxyList[currentRoom.galaxy].systemList[currentRoom.system].planetList[currentRoom.planet].areaList[currentRoom.area]
+            for rNum in range(maxRange):
+                messageType = messageMaster
+                if currentRoom.exit[searchDir] == None:
+                    break
+                else:
+                    currentArea, currentRoom, distance, message = Room.getTargetRoomFromStartRoom(galaxyList, currentArea, currentRoom, searchDir, 1, True)
+                    if message == "Door Is Closed":
+                        messageMaster = message
+
+                    if hasattr(targetObject, "currentHealth"):
                         if (targetObject.num != None and targetObject in currentRoom.mobList) or \
                         (targetObject.num == None and currentRoom.sameRoomCheck(targetObject) == True):
                             messageType = messageMaster
                             targetFoundCheck = True
                             targetRange = rNum + 1
                             break
-
-                        for sideDir in sideDirList[searchDir]:
+                    else:
+                        if currentRoom.sameRoomCheck(targetObject) == True:
                             messageType = messageMaster
-                            sideRoom = currentRoom
-                            sideArea = currentArea
-                            for sideNum in range(maxRange - (rNum + 1)):
+                            targetFoundCheck = True
+                            targetRange = rNum + 1
+                            break
+
+                    for sideDir in sideDirList[searchDir]:
+                        messageType = messageMaster
+                        sideRoom = currentRoom
+                        sideArea = currentArea
+                        for sideNum in range(maxRange - (rNum + 1)):
+                            if sideRoom.exit[sideDir] == None:
+                                break
+                            else:
                                 if sideRoom.exit[sideDir] == None:
                                     break
                                 else:
-                                    if sideRoom.exit[sideDir] == None:
-                                        break
-                                    else:
-                                        sideArea, sideRoom, distance, message = Room.getTargetRoomFromStartRoom(galaxyList, sideArea, sideRoom, sideDir, 1, True)
-                                        if message == "Door Is Closed" : messageType = message
+                                    sideArea, sideRoom, distance, message = Room.getTargetRoomFromStartRoom(galaxyList, sideArea, sideRoom, sideDir, 1, True)
+                                    if message == "Door Is Closed" : messageType = message
 
+                                    if hasattr(targetObject, "currentHealth"):
                                         if targetObject in sideRoom.mobList or \
                                         (targetObject.num == None and sideRoom.sameRoomCheck(targetObject) == True):
                                             targetFoundCheck = True
                                             targetRange = (rNum + 1) + (sideNum + 1)
                                             break
-                                            
-                            if targetFoundCheck : break
-                    if targetFoundCheck : break
+                                    else:
+                                        if sideRoom.sameRoomCheck(targetObject) == True:
+                                            targetFoundCheck = True
+                                            targetRange = (rNum + 1) + (sideNum + 1)
+                                            break
+                                        
+                        if targetFoundCheck : break
                 if targetFoundCheck : break
+            if targetFoundCheck : break
 
         if not targetFoundCheck:
             return -1, None, messageType
@@ -486,12 +514,22 @@ class Room:
         if isinstance(target, Room):
             if target.spaceshipObject != None:
                 spaceshipNum = target.spaceshipObject.num
+                targetGalaxy = target.spaceshipObject.galaxy
+                targetSystem = target.spaceshipObject.system
+                targetPlanet = target.spaceshipObject.planet
             else:
                 spaceshipNum = None
         else:
             spaceshipNum = target.spaceship
+            targetGalaxy = target.galaxy
+            targetSystem = target.system
+            targetPlanet = target.planet
 
-        targetRoom = Room.exists(galaxyList, spaceshipNum, target.galaxy, target.system, target.planet, target.area, target.room)
+        if spaceshipNum != None:
+            targetRoom = Room.exists(galaxyList, spaceshipNum, targetGalaxy, targetSystem, targetPlanet, target.area, target.room)
+        else:
+            targetRoom = Room.exists(galaxyList, None, target.galaxy, target.system, target.planet, target.area, target.room)
+        
         if targetRoom == None:
             targetRoom = galaxyList[0].systemList[0].planetList[0].areaList[0].roomList[0]
         if targetRoom.spaceshipObject != None:

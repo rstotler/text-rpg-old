@@ -9,6 +9,7 @@ from Components.Utility import appendKeyList
 from Components.Utility import stringIsNumber
 from Components.Utility import getCountString
 from Components.Utility import messageExistsCheck
+from Components.Utility import insertCommasInNumber
 
 class Player:
 
@@ -30,10 +31,10 @@ class Player:
         self.actionList = []
         self.combatSkillList = [Skill(1), Skill(2), Skill(3), Skill(4), Skill(5), Skill(6), Skill(7), Skill(8), Skill(9), Skill(11), Skill(12), Skill(13)]
 
-        self.currentHealth = 222
+        self.currentHealth = 30
 
-        self.maxLookDistance = 3
-        self.maxTargetDistance = 2
+        self.maxLookDistance = 2
+        self.maxTargetDistance = 1
         self.targetList = []
         self.recruitList = []
         self.combatList = []
@@ -53,7 +54,7 @@ class Player:
         self.debugDualWield = False
 
         # Mob-Specific Variables #
-        self.speechTickMax = 3
+        self.speechTickMax = 10
         self.speechTick = 0
         self.speechIndex = 0
         self.speechList = []
@@ -61,8 +62,8 @@ class Player:
         if num != None:
             self.loadMob(num)
 
-    def update(self, console, galaxyList, player, currentRoom, messageDataList):
-        messageDataList = self.updateAction(console, player, messageDataList)
+    def update(self, console, map, galaxyList, player, currentRoom, messageDataList):
+        messageDataList = self.updateAction(console, galaxyList, player, messageDataList)
         
         # Mob Update #
         if self.num != None:
@@ -109,13 +110,16 @@ class Player:
                         self.speechIndex += 1
                         if self.speechIndex >= len(self.speechList):
                             self.speechIndex = 0
-                            self.speechTick =  -80
+                            self.speechTick =  -100
+
+        # if self.num != None and len(self.actionList) == 0:
+            # self.moveCheck(console, map, galaxyList, player, currentRoom, "north")
 
         return messageDataList
 
-    def updateAction(self, console, player, messageDataList):
+    def updateAction(self, console, galaxyList, player, messageDataList):
         if len(self.actionList) > 0:
-            messageDataList = self.actionList[0].update(console, player, self, messageDataList)
+            messageDataList = self.actionList[0].update(console, galaxyList, player, self, messageDataList)
             if self.actionList[0].currentTick >= self.actionList[0].maxTick:
                 del self.actionList[0]
 
@@ -246,6 +250,8 @@ class Player:
     def targetCheck(self, console, galaxyList, currentRoom, targetMobKey, targetDirKey, targetMobCount, targetDirCount):
         if targetDirCount != None and targetDirCount > self.maxLookDistance:
             console.write("You can't see that far.", "7w1y14w1y", True)
+        elif targetDirCount != None and targetDirCount > self.maxTargetDistance:
+            console.write("It's too far away to target.", "2w1y24w1y", True)
         
         else:
             targetRoom = currentRoom
@@ -271,7 +277,7 @@ class Player:
                     else:
                         if targetRoom.exit[targetDir] == "Spaceship Exit":
                             landedLocation = targetRoom.spaceshipObject.landedLocation
-                            targetRoom = Room.exists(galaxyList, None, landedLocation[0], landedLocation[1], landedLocation[2], landedLocation[3], landedLocation[4])
+                            targetRoom = Room.exists(galaxyList, None, targetRoom.spaceshipObject.galaxy, targetRoom.spaceshipObject.system, targetRoom.spaceshipObject.planet, landedLocation[0], landedLocation[1])
                             if targetRoom == None:
                                 targetRoom = galaxyList[0].systemList[0].planetList[0].areaList[0].roomList[0]
                         elif len(targetRoom.exit[targetDir]) == 3 and targetRoom.spaceshipObject != None:
@@ -406,7 +412,7 @@ class Player:
                     else:
                         if targetRoom.exit[targetDir] == "Spaceship Exit":
                             landedLocation = targetRoom.spaceshipObject.landedLocation
-                            targetRoom = Room.exists(galaxyList, None, landedLocation[0], landedLocation[1], landedLocation[2], landedLocation[3], landedLocation[4])
+                            targetRoom = Room.exists(galaxyList, None, targetRoom.spaceshipObject.galaxy, targetRoom.spaceshipObject.system, targetRoom.spaceshipObject.planet, landedLocation[0], landedLocation[1])
                             if targetRoom == None:
                                 targetRoom = galaxyList[0].systemList[0].planetList[0].areaList[0].roomList[0]
                         elif len(targetRoom.exit[targetDir]) == 3 and targetRoom.spaceshipObject != None:
@@ -544,11 +550,14 @@ class Player:
         elif currentRoom.exit[targetDir] == None:
             if self.num == None:
                 console.write("You can't go that way!", "7w1y13w1y", True)
+        elif currentRoom.exit[targetDir] == "Spaceship Exit" and currentRoom.spaceshipObject != None and currentRoom.spaceshipObject.landedLocation == None:
+            if self.num == None:
+                console.write("The hatch is sealed.", "19w1y", True)
 
         else:
             mobString = self.prefix + " " + self.name["String"]
             mobCode = str(len(self.prefix)) + "w1w" + self.name["Code"]
-            if len(self.actionList) > 0:
+            if len(self.actionList) > 0 and self.actionList[0].actionType != "Combat Skill":
                 self.actionList = []
                 if self.num == None:
                     console.write("You stop what you're doing and move.", "17w1y17w1y", True)
@@ -560,12 +569,22 @@ class Player:
             currentArea = Room.getAreaAndRoom(galaxyList, self)[0]
             targetArea, targetRoom, unusedDistance, unusedMessage = Room.getTargetRoomFromStartRoom(galaxyList, currentArea, currentRoom, targetDir, 1, True)
 
+            if len(self.actionList) > 0 and self.actionList[0].actionType == "Combat Skill" and self.actionList[0].flags["combatSkill"].maxRange > 0:
+                attackDistance = Room.getTargetRange(galaxyList, targetRoom, self.actionList[0].flags["targetRoom"], self.actionList[0].flags["combatSkill"].maxRange)[0]
+                if attackDistance == -1:
+                    del self.actionList[0]
+                    if self.num == None:
+                        console.write("You move out of your attack range.", "33w1y", True)
+                    else:
+                        console.write(mobString + " releases their attack.", mobCode + "22w1y", True)
+
             # Move #
             automaticDoorCheck = False
             if targetRoom.spaceshipObject != None:
                 self.area = targetRoom.area
                 self.room = targetRoom.room
             else:
+                oldSpaceship = self.spaceship
                 oldArea = self.area
                 self.galaxy = targetRoom.galaxy
                 self.system = targetRoom.system
@@ -576,27 +595,27 @@ class Player:
                     self.spaceship = None
 
                 if self.num == None:
-                    if self.spaceship != None or self.area != oldArea:
+                    if self.spaceship != oldSpaceship or self.area != oldArea:
                         map.loadMap(targetArea)
                         targetArea.flavorTextTick = 0
-                
-                if self.num == None or targetRoom.sameRoomCheck(player) == True or currentRoom.sameRoomCheck(player) == True:
-                    if currentRoom.door[targetDir] != None and currentRoom.door[targetDir]["Type"] == "Automatic":
-                        doorString = "door"
-                        if currentRoom.exit[targetDir] == "Spaceship Exit":
-                            doorString = "hatch"
-                        if self.num == None:
-                            console.write("The " + doorString + " opens and closes as you walk through.", "4w" + str(len(doorString)) + "w37w1y", True)
-                        else:
-                            displayDirection = targetDir
-                            leavesString = " leaves"
-                            if targetRoom.sameRoomCheck(player) == True:
-                                displayDirection = Room.getOppositeDirection(targetDir)
-                                leavesString = " enters"
-                            displayString = "The door to the " + displayDirection + " opens and closes as " + mobString + leavesString + "."
-                            displayCode = "16w" + str(len(displayDirection)) + "w21w" + mobCode + str(len(leavesString)) + "w1y"
-                            console.write(displayString, displayCode, True)
-                        automaticDoorCheck = True
+            
+            if self.num == None or targetRoom.sameRoomCheck(player) == True or currentRoom.sameRoomCheck(player) == True:
+                if currentRoom.door[targetDir] != None and currentRoom.door[targetDir]["Type"] == "Automatic":
+                    doorString = "door"
+                    if currentRoom.exit[targetDir] == "Spaceship Exit":
+                        doorString = "hatch"
+                    if self.num == None:
+                        console.write("The " + doorString + " opens and closes as you walk through.", "4w" + str(len(doorString)) + "w37w1y", True)
+                    else:
+                        displayDirection = targetDir
+                        leavesString = " leaves"
+                        if targetRoom.sameRoomCheck(player) == True:
+                            displayDirection = Room.getOppositeDirection(targetDir)
+                            leavesString = " enters"
+                        displayString = "The door to the " + displayDirection + " opens and closes as " + mobString + leavesString + "."
+                        displayCode = "16w" + str(len(displayDirection)) + "w21w" + mobCode + str(len(leavesString)) + "w1y"
+                        console.write(displayString, displayCode, True)
+                    automaticDoorCheck = True
 
             if self.num == None:
                 for mob in targetRoom.mobList:
@@ -627,6 +646,23 @@ class Player:
 
                 targetRoom.display(console, galaxyList, self)
 
+            if self.num != None and self in player.targetList:
+                playerRoom = Room.exists(galaxyList, player.spaceship, player.galaxy, player.system, player.planet, player.area, player.room)
+                if playerRoom == None:
+                    playerRoom = galaxyList[0].systemList[0].planetList[0].areaList[0].roomList[0]
+                mobDistance, mobDirection, unused = Room.getTargetRange(galaxyList, targetRoom, playerRoom, player.maxTargetDistance + 1)
+                if len(player.targetList) > 0 and player.targetList[0] == self and len(player.actionList) > 0 and player.actionList[0].actionType == "Combat Skill" and player.actionList[0].flags["combatSkill"].onTarget == True and mobDistance > player.actionList[0].flags["combatSkill"].maxRange:
+                    del player.actionList[0]
+                    console.write("Your target moved out of range for your attack.", "46w1y", True)
+                elif self in player.targetList and mobDistance > player.maxTargetDistance:
+                    displayString = "You lose sight of " + self.prefix.lower() + " " + self.name["String"] + " as it moves " + Room.getOppositeDirection(mobDirection) + "."
+                    displayCode = "18w" + str(len(self.prefix)) + "w1w" + self.name["Code"] + "13w" + str(len(Room.getOppositeDirection(mobDirection))) + "w1y"
+                    console.write(displayString, displayCode, True)
+                    if player.targetList[0] == self and len(player.actionList) > 0 and player.actionList[0].actionType == "Combat Skill" and player.actionList[0].flags["combatSkill"].onTarget == True:
+                        del player.actionList[0]
+                        console.write("Your target moved out of range for your attack.", "46w1y")
+                    del player.targetList[player.targetList.index(self)]
+                    
             if self.num == None and len(delTargetList) > 0:
                 countString, countCode = getCountString(len(delTargetList))
                 if delMobData != "Multiple":
@@ -755,7 +791,7 @@ class Player:
             console.write("You can't " + targetAction.lower() + " that!", "7w1y2w" + str(len(targetAction)) + "w5w1y", True)
         
         elif isinstance(targetObject, Spaceship):
-            if targetObject.hatchPassword != None and self.hasKey(targetObject.hatchPassword) == False:
+            if targetObject.password != None and self.hasKey(targetObject.password) == False:
                 console.write("It's locked.", "2w1y8w1y", True)
             else:
                 console.write("The hatch " + targetAction.lower() + "s automatically.", "10w" + str(len(targetAction)) + "w15w1y", True)
@@ -780,7 +816,7 @@ class Player:
             console.write("You can't " + targetAction.lower() + " that!", "7w1y2w" + str(len(targetAction)) + "w5w1y", True)
         
         elif isinstance(targetObject, Spaceship):
-            if targetObject.hatchPassword == None:
+            if targetObject.password == None:
                 console.write("The hatch doesn't have a lock.", "15w1y13w1y", True)
             else:
                 console.write("The hatch " + targetAction.lower() + "s automatically.", "10w" + str(len(targetAction)) + "w15w1y", True)
@@ -2234,6 +2270,7 @@ class Player:
         targetString = userString + ", '"
         targetCode = userCode + "3y"
         periodString = '.'
+        keyString = sayKey["String"]
         if sayKey["String"][-1] == '.':
             keyString = ' '.join(sayKey["String"].split()[0:-1] + [sayKey["String"].split()[-1].replace('.', '')])
         elif sayKey["String"][-1] == '?':
@@ -2343,12 +2380,12 @@ class Player:
                         drawBlankLineCheck = drawBlankLine and (len(messageDataList) == 0 or (len(messageDataList) > 0 and messageDataList[-1]["Message Type"] != messageType))
                         messageExistsCheck(messageDataList, messageType, stringHalf1, stringHalf2, codeHalf1, codeHalf2, drawBlankLineCheck)
                         
-                    actionFlags = {"combatSkill":combatSkill, "currentRoom":currentRoom, "targetRoom":targetRoom, "roomDistance":roomDistance, "mobKey":mobKey, "mobCount":mobCount, "directionKey":directionKey, "targetDirection":targetDirection, "attackList":attackList}
+                    actionFlags = {"combatSkill":combatSkill, "targetRoom":targetRoom, "roomDistance":roomDistance, "mobKey":mobKey, "mobCount":mobCount, "directionKey":directionKey, "targetDirection":targetDirection, "attackList":attackList}
                     self.actionList.append(Action("Combat Skill", actionFlags))
 
         return messageDataList
 
-    def combatSkillCompleteAction(self, console, player, flags, messageDataList):
+    def combatSkillCompleteAction(self, console, galaxyList, player, flags, messageDataList):
         combatSkill = flags["combatSkill"]
         targetRoom = flags["targetRoom"]
         roomDistance = flags["roomDistance"]
@@ -2356,7 +2393,23 @@ class Player:
         mobCount = flags["mobCount"]
         directionKey = flags["directionKey"]
         targetDirection = flags["targetDirection"]
-        currentRoom = flags["currentRoom"]
+        currentRoom = Room.exists(galaxyList, self.spaceship, self.galaxy, self.system, self.planet, self.area, self.room)
+        if currentRoom == None:
+            currentRoom = galaxyList[0].systemList[0].planetList[0].areaList[0].roomList[0]
+
+        if combatSkill.maxRange == 0:
+            targetRoom = currentRoom
+        elif len(self.targetList) > 0:
+            targetRoom = Room.exists(galaxyList, self.targetList[0].spaceship, self.targetList[0].galaxy, self.targetList[0].system, self.targetList[0].planet, self.targetList[0].area, self.targetList[0].room)
+            if targetRoom == None:
+                targetRoom = galaxyList[0].systemList[0].planetList[0].areaList[0].roomList[0]
+        if currentRoom != targetRoom:
+            distance, targetDirection, unused = Room.getTargetRange(galaxyList, targetRoom, currentRoom, combatSkill.maxRange)
+            if distance != -1:
+                roomDistance = distance
+                if targetDirection != None:
+                    targetDirection = Room.getOppositeDirection(targetDirection)
+        
         flags = self.combatSkillFunction(player, combatSkill, currentRoom, targetRoom, roomDistance, mobKey, mobCount, directionKey, False, flags)
 
         if self.num != None:
@@ -2373,48 +2426,54 @@ class Player:
             targetUserString = self.prefix + " " + self.name["String"] + "'s "
             targetUserCode = str(len(self.prefix)) + "w1w" + self.name["Code"] + "1y2w"
 
+        directionString = ""
+        directionCode = ""
+        directionCountString = ""
+        directionCountCode = ""
+        toTheString = ""
+        if roomDistance > 0:
+            toTheString = " to the "
+            targetDirectionString = targetDirection
+            if self.num != None and targetRoom.sameRoomCheck(player) == True:
+                targetDirectionString = Room.getOppositeDirection(targetDirection)
+                toTheString = " from the "
+            directionString = toTheString + targetDirectionString
+            directionCode = str(len(toTheString)) + "w" + str(len(targetDirectionString)) + "w"
+            directionCountString, directionCountCode = getCountString(roomDistance)
+
         messageType = "Attack Complete"
         drawBlankLine = True
-        if targetMob == None and "All Only" in combatSkill.ruleDict and selfSkill == None:
+        if (targetMob == None and "All Only" in combatSkill.ruleDict and selfSkill == None) or \
+        (len(targetMobList) == 0):
             if not (self.num != None and targetRoom.sameRoomCheck(player) == False):
                 stringHalf1 = targetUserString
-                stringHalf2 = combatSkill.name["String"] + " doesn't hit anyone."
+                stringHalf2 = combatSkill.name["String"] + directionString + " doesn't hit anyone."
                 codeHalf1 = targetUserCode
-                codeHalf2 = combatSkill.name["Code"] + "6w1y12w1y"
+                codeHalf2 = combatSkill.name["Code"] + directionCode + "6w1y12w1y"
                 drawBlankLineCheck = drawBlankLine and (len(messageDataList) == 0 or (len(messageDataList) > 0 and messageDataList[-1]["Message Type"] != messageType))
-                messageExistsCheck(messageDataList, messageType, stringHalf1, stringHalf2, codeHalf1, codeHalf2, drawBlankLineCheck)
+                combineLinesCheck = self.num != None
+                messageExistsCheck(messageDataList, messageType, stringHalf1, stringHalf2, codeHalf1, codeHalf2, drawBlankLineCheck, combineLinesCheck)
                 drawBlankLine = False
 
-        elif selfSkill != None:
-            healString = "You heal yourself with "
-            healCode = "23w"
+        elif selfSkill != None and targetRoom.sameRoomCheck(self):
+            targetUserStringHeal = "You "
+            targetUserCodeHeal = "4w"
+            healString = "heal yourself with "
             if self.num != None:
-                healString = self.prefix + " " + self.name["String"] + " heals themself with "
-                healCode = str(len(self.prefix)) + "w1w" + self.name["Code"] + "21w"
+                targetUserStringHeal = self.prefix + " " + self.name["String"] + " "
+                targetUserCodeHeal = str(len(self.prefix)) + "w1w" + self.name["Code"] + "1w"
+                healString = "heals themself with "
             if not (self.num != None and targetRoom.sameRoomCheck(player) == False):
-                stringHalf1 = self.prefix + " " + self.name["String"]
-                stringHalf2 = " heals themself with " + healString + combatSkill.name["String"] + "."
-                codeHalf1 = str(len(self.prefix)) + "w1w" + self.name["Code"]
-                codeHalf2 = "21w" + healCode + combatSkill.name["Code"] + "1y"
+                stringHalf1 = targetUserStringHeal
+                stringHalf2 = healString + combatSkill.name["String"] + "."
+                codeHalf1 = targetUserCodeHeal
+                codeHalf2 = str(len(healString)) + "w" + combatSkill.name["Code"] + "1y"
                 drawBlankLineCheck = drawBlankLine and (len(messageDataList) == 0 or (len(messageDataList) > 0 and messageDataList[-1]["Message Type"] != messageType))
-                messageExistsCheck(messageDataList, messageType, stringHalf1, stringHalf2, codeHalf1, codeHalf2, drawBlankLineCheck)
+                combineLinesCheck = self.num != None
+                messageExistsCheck(messageDataList, messageType, stringHalf1, stringHalf2, codeHalf1, codeHalf2, drawBlankLineCheck, combineLinesCheck)
                 drawBlankLine = False
 
         if len(targetMobList) > 0:
-            directionString = ""
-            directionCode = ""
-            directionCountString = ""
-            directionCountCode = ""
-            toTheString = " to the "
-            if roomDistance > 0:
-                targetDirectionString = targetDirection
-                if self.num != None and targetRoom.sameRoomCheck(player) == True:
-                    targetDirectionString = Room.getOppositeDirection(targetDirection)
-                    toTheString = " from the "
-                directionString = toTheString + targetDirectionString
-                directionCode = str(len(toTheString)) + "w" + str(len(targetDirectionString)) + "w"
-                directionCountString, directionCountCode = getCountString(roomDistance)
-
             for attackData in attackDisplayList:
                 if "Miss Check" in attackData:
                     if attackData["Miss Check"] == "Out Of Ammo":
@@ -2446,7 +2505,8 @@ class Player:
                             codeHalf1 = targetUserCode
                             codeHalf2 = attackData["Attack Data"].name["Code"] + directionCode + directionCountCode + "8w" + mobCode + "1y" + countCode
                             drawBlankLineCheck = drawBlankLine and (len(messageDataList) == 0 or (len(messageDataList) > 0 and messageDataList[-1]["Message Type"] != messageType))
-                            messageExistsCheck(messageDataList, messageType, stringHalf1, stringHalf2, codeHalf1, codeHalf2, drawBlankLineCheck)
+                            combineLinesCheck = self.num != None
+                            messageExistsCheck(messageDataList, messageType, stringHalf1, stringHalf2, codeHalf1, codeHalf2, drawBlankLineCheck, combineLinesCheck)
                             drawBlankLine = False
 
                 if attackData["Count"] > 0:
@@ -2463,7 +2523,8 @@ class Player:
                             codeHalf1 = targetUserCode
                             codeHalf2 = attackData["Attack Data"].name["Code"] + directionCode + directionCountCode + hitCode + "10w1y"
                             drawBlankLineCheck = drawBlankLine and (len(messageDataList) == 0 or (len(messageDataList) > 0 and messageDataList[-1]["Message Type"] != messageType))
-                            messageExistsCheck(messageDataList, messageType, stringHalf1, stringHalf2, codeHalf1, codeHalf2, drawBlankLineCheck)
+                            combineLinesCheck = self.num != None
+                            messageExistsCheck(messageDataList, messageType, stringHalf1, stringHalf2, codeHalf1, codeHalf2, drawBlankLineCheck, combineLinesCheck)
                     elif attackData["Mob Data"] != None:
                         countString, countCode = getCountString(attackData["Count"])
                         targetEnemyString = attackData["Mob Data"].prefix.lower() + " " + attackData["Mob Data"].name["String"]
@@ -2477,7 +2538,8 @@ class Player:
                             codeHalf1 = targetUserCode
                             codeHalf2 = attackData["Attack Data"].name["Code"] + directionCode + directionCountCode + hitCode + "1w" + targetEnemyCode + "1y" + countCode
                             drawBlankLineCheck = drawBlankLine and (len(messageDataList) == 0 or (len(messageDataList) > 0 and messageDataList[-1]["Message Type"] != messageType))
-                            messageExistsCheck(messageDataList, messageType, stringHalf1, stringHalf2, codeHalf1, codeHalf2, drawBlankLineCheck)
+                            combineLinesCheck = self.num != None
+                            messageExistsCheck(messageDataList, messageType, stringHalf1, stringHalf2, codeHalf1, codeHalf2, drawBlankLineCheck, combineLinesCheck)
             
             if attackDisplayList[0]["Kill Count"] > 0:
                 countString, countCode = getCountString(attackData["Kill Count"])
@@ -2499,7 +2561,9 @@ class Player:
                         stringHalf2 = ""
                         codeHalf1 = "12w1y"
                         codeHalf2 = ""
-                    if not (attackDisplayList[0]["Killed Mob Data"].num != None and self.num != None and currentRoom.sameRoomCheck(player) == False):
+                        drawBlankLineCheck = drawBlankLine and (len(messageDataList) == 0 or (len(messageDataList) > 0 and messageDataList[-1]["Message Type"] != messageType))
+                        messageExistsCheck(messageDataList, messageType, stringHalf1, stringHalf2, codeHalf1, codeHalf2, drawBlankLineCheck)
+                    elif not (attackDisplayList[0]["Killed Mob Data"].num != None and self.num != None and currentRoom.sameRoomCheck(player) == False):
                         stringHalf1 = attackDisplayList[0]["Killed Mob Data"].prefix + " " + attackDisplayList[0]["Killed Mob Data"].name["String"] + " is DEAD!"
                         stringHalf2 = ""
                         codeHalf1 = str(len(attackDisplayList[0]["Killed Mob Data"].prefix)) + "w1w" + attackDisplayList[0]["Killed Mob Data"].name["Code"] + "8w1y"
@@ -2512,30 +2576,29 @@ class Player:
     def combatSkillFunction(self, player, combatSkill, currentRoom, targetRoom, roomDistance, mobKey, mobCount, directionKey, copyCheck, flags):
         attackDisplayList = []                
 
-        if "attackList" in flags:
-            attackList = flags["attackList"]
-        else:
-            attackList = []
-            mainAttackHand = self.gearDict[self.dominantHand]
-            offAttackHand = self.gearDict[self.getOppositeHand(self.dominantHand)]
-            combatSkill.weaponDataList = []
-            if combatSkill.weaponAttackCheck(mainAttackHand, offAttackHand) == True:
-                attackList.append(combatSkill)
-                if len(combatSkill.weaponDataList) == 1 and (combatSkill.weaponDataList[0] == offAttackHand or (combatSkill.weaponDataList[0] == "Open Hand" and offAttackHand == None)):
-                    offAttackHand = self.gearDict[self.dominantHand]
-            if combatSkill.offHandAttacks == True and len(combatSkill.weaponTypeList) != 2 and combatSkill.healCheck == False:
-                offHandFlagList = {"Distance":roomDistance, "Disable Two-Handed Attacks":True, '"All" Attacks Disabled':True, "Disable Healing":True}
-                if self.num == None:
-                    offHandFlagList["Disable Weaponless Skills"] = True
-                else:
-                    offHandFlagList["Disable No Off-Hand Attack Attacks"] = True
-                offAttackSkill, offAttackMessage = copy.deepcopy(self.getRandomAttackSkill(offAttackHand, None, offHandFlagList))
-                if offAttackSkill != None and offAttackSkill.weaponAttackCheck(offAttackHand) == True:
-                    attackList.append(offAttackSkill)
+        attackList = []
+        mainAttackHand = self.gearDict[self.dominantHand]
+        offAttackHand = self.gearDict[self.getOppositeHand(self.dominantHand)]
+        combatSkill.weaponDataList = []
+        if combatSkill.weaponAttackCheck(mainAttackHand, offAttackHand) == True:
+            attackList.append(combatSkill)
+            if len(combatSkill.weaponDataList) == 1 and (combatSkill.weaponDataList[0] == offAttackHand or (combatSkill.weaponDataList[0] == "Open Hand" and offAttackHand == None)):
+                offAttackHand = self.gearDict[self.dominantHand]
+        if combatSkill.offHandAttacks == True and len(combatSkill.weaponTypeList) != 2 and combatSkill.healCheck == False:
+            offHandFlagList = {"Distance":roomDistance, "Disable Two-Handed Attacks":True, '"All" Attacks Disabled':True, "Disable Healing":True}
+            if self.num == None:
+                offHandFlagList["Disable Weaponless Skills"] = True
+            else:
+                offHandFlagList["Disable No Off-Hand Attack Attacks"] = True
+            offAttackSkill, offAttackMessage = copy.deepcopy(self.getRandomAttackSkill(offAttackHand, None, offHandFlagList))
+            if offAttackSkill != None and offAttackSkill.weaponAttackCheck(offAttackHand) == True:
+                attackList.append(offAttackSkill)
 
         for skill in attackList:
             displayData = {"Mob Data":None, "Killed Mob Data":None, "Count":0, "Kill Count":0, "Miss Count":0, "Attack Data":skill}
             attackDisplayList.append(displayData)
+            if mobKey == None and directionKey == None:
+                skill.onTarget = True
             
         allOnlyCheck = False
         for attackSkill in attackList:
@@ -2544,7 +2607,7 @@ class Player:
         
         if mobCount in ["All", "Group", None] or allOnlyCheck == True:
             maxTargets = len(targetRoom.mobList)
-            if self.num != None and targetRoom.sameRoomCheck(player) == True:
+            if targetRoom.sameRoomCheck(player) == True:
                 maxTargets += 1
         else : maxTargets = mobCount
         if combatSkill.maxTargets != "All" and maxTargets > combatSkill.maxTargets:
@@ -2562,15 +2625,14 @@ class Player:
         targetMobList = []
         targetMob = None
         mobKillList = []
-        if not ((mobKey == "Self" and allOnlyCheck == False) or (combatSkill.healCheck == True and mobKey == None and mobCount == None and len(self.targetList) > 0 and self.healEnemies == False and allOnlyCheck == False)):
+        if not (combatSkill.healCheck == True and mobKey == None and mobCount == None and len(self.targetList) > 0 and self.healEnemies == False and allOnlyCheck == False):
             if maxTargets > 0 and not (combatSkill.healCheck == True and mobKey == "Self" and allOnlyCheck == False):
-                if self.num != None and targetRoom.sameRoomCheck(player) == True:
+                if (targetRoom.sameRoomCheck(player) == True):
                     targetList = [player] + targetRoom.mobList
                 else:
                     targetList = targetRoom.mobList
                 for mob in targetList:
-                    if mob != self:
-                        mobCopy = copy.deepcopy(mob)
+                    if not (combatSkill.healCheck == False and mob == self):
                         if mobKey == "All" or allOnlyCheck == True or \
                         (mobKey != None and mobKey in mob.keyList) or \
                         (mobKey == None and mob in self.targetList) or \
@@ -2582,10 +2644,10 @@ class Player:
                                     for i, attackSkill in enumerate(attackList):
                                         hitCheck = False
                                         if len(attackSkill.weaponDataList) in [0, 2]:
-                                            targetMob = mob
-                                            if copyCheck == True:
-                                                targetMob = mobCopy
-                                            attackHitCheck, attackHitData = Combat.hitCheck(self, attackSkill, targetMob)
+                                            if copyCheck != False:
+                                                attackHitCheck, attackHitData = Combat.hitCheck(self, attackSkill, copy.deepcopy(mob))
+                                            else:
+                                                attackHitCheck, attackHitData = Combat.hitCheck(self, attackSkill, mob)
                                             if attackHitCheck == False:
                                                 attackDisplayList[i].update(attackHitData)
                                             else:
@@ -2597,10 +2659,10 @@ class Player:
                                                     attackDisplayList[i]["Miss Check"] = "Out Of Ammo"
                                                     attackDisplayList[i]["Weapon Data List"] = [attackSkill.weaponDataList[0]]
                                                 else:
-                                                    targetMob = mob
-                                                    if copyCheck == True:
-                                                        targetMob = mobCopy
-                                                    attackHitCheck, attackHitData = Combat.hitCheck(self, attackSkill, targetMob)
+                                                    if copyCheck != False:
+                                                        attackHitCheck, attackHitData = Combat.hitCheck(self, attackSkill, copy.deepcopy(mob))
+                                                    else:
+                                                        attackHitCheck, attackHitData = Combat.hitCheck(self, attackSkill, mob)
                                                     if attackHitCheck == False:
                                                         attackDisplayList[i].update(attackHitData)
                                                     else:
@@ -2608,28 +2670,34 @@ class Player:
 
                                                     if copyCheck == False and weapon != "Open Hand" and weapon.weaponType == "Gun" and weapon.isLoaded(1) == True:
                                                         weapon.shoot()
-                                                
-                                        if attackDisplayList[i]["Mob Data"] == None:
-                                            attackDisplayList[i]["Mob Data"] = mob
-                                        elif attackDisplayList[i]["Mob Data"] != "Multiple" and attackDisplayList[i]["Mob Data"].num != mob.num:
-                                            attackDisplayList[i]["Mob Data"] = "Multiple"
-                                        if hitCheck == True:
-                                            attackDisplayList[i]["Count"] += 1
-                                        else:
-                                            attackDisplayList[i]["Miss Count"] += 1
+
+                                        if mob.num != None or self.num != None:
+                                            if attackDisplayList[i]["Mob Data"] == None:
+                                                attackDisplayList[i]["Mob Data"] = mob
+                                            elif attackDisplayList[i]["Mob Data"] != "Multiple" and attackDisplayList[i]["Mob Data"].num != mob.num:
+                                                attackDisplayList[i]["Mob Data"] = "Multiple"
+                                            if hitCheck == True:
+                                                attackDisplayList[i]["Count"] += 1
+                                            else:
+                                                attackDisplayList[i]["Miss Count"] += 1
 
                                     targetMobList.append(mob)
 
                                     if copyCheck == True:
-                                        if len(combatSkill.weaponTypeList) > 0:
-                                            if mob not in self.combatList and targetRoom.sameRoomCheck(player) == True:
-                                                mob.actionList.append(Action("Buffer Action", {}, 2))
-                                                self.combatList.append(mob)
-                                        if mob not in self.targetList:
-                                            self.targetList.insert(0, mob)
+                                        if self.num == None:
+                                            if combatSkill.healCheck == False and len(combatSkill.weaponTypeList) > 0:
+                                                if mob not in self.combatList and targetRoom.sameRoomCheck(player) == True:
+                                                    mob.actionList.append(Action("Buffer Action", {}, 2))
+                                                    self.combatList.append(mob)
+                                            if mob not in self.targetList:
+                                                if not (combatSkill.healCheck == True and mobKey in ["All", None]):
+                                                    self.targetList.insert(0, mob)
                                     else:
                                         if mob.currentHealth <= 0:
                                             mobKillList.append(mob)
+                                            if self.num != None and self in player.combatList:
+                                                self.speechIndex = 0
+                                                self.speechTick = -50
                                             attackDisplayList[0]["Kill Count"] += 1
                                             if attackDisplayList[0]["Killed Mob Data"] == None:
                                                 attackDisplayList[0]["Killed Mob Data"] = mob
@@ -2637,7 +2705,8 @@ class Player:
                                                 attackDisplayList[0]["Killed Mob Data"] = "Multiple"
                                         elif self.num == None and mob.currentHealth > 0:
                                             if mob not in self.targetList:
-                                                self.targetList.insert(0, mob)
+                                                if not (combatSkill.healCheck == True and mobKey in ["All", None]):
+                                                    self.targetList.insert(0, mob)
                                             if combatSkill.healCheck == False:
                                                 if mob in self.recruitList:
                                                     del self.recruitList[self.recruitList.index(mob)]
@@ -2899,7 +2968,7 @@ class Player:
             console.write("You are already inside.", "22w1y", drawBlankLine)
         elif targetSpaceship == None:
             console.write("You don't see anything like that.", "7w1y24w1y", drawBlankLine)
-        elif targetSpaceship.hatchPassword != None and self.hasKey(targetSpaceship.hatchPassword) == False:
+        elif targetSpaceship.password != None and self.hasKey(targetSpaceship.password) == False:
             console.write("You lack the proper key.", "23w1y", drawBlankLine)
         
         else:
@@ -2915,7 +2984,133 @@ class Player:
             map.loadMap(targetSpaceship.areaList[self.area])
 
     def launchCheck(self, console, galaxyList, player, currentRoom):
-        pass
+        if currentRoom.spaceshipObject == None or "Cockpit" not in currentRoom.flags:
+            console.write("You must be in a cockpit to do that.", "35w1y", True)
+        elif currentRoom.spaceshipObject.password != None and self.hasKey(currentRoom.spaceshipObject.password) == False:
+            console.write("You lack the key.", "16w1y", True)
+        elif currentRoom.spaceshipObject.landedLocation == None:
+            console.write("You have already launched.", "25w1y", True)
+
+        else:
+            currentPlanet = galaxyList[self.galaxy].systemList[self.system].planetList[self.planet]
+            currentArea = Room.getAreaAndRoom(galaxyList, currentRoom)[0]
+            for room in currentArea.roomList:
+                if currentRoom.spaceshipObject in room.spaceshipList:
+                    del room.spaceshipList[room.spaceshipList.index(currentRoom.spaceshipObject)]
+            currentRoom.spaceshipObject.landedLocation = None
+            currentRoom.spaceshipObject.launchTick = 0
+            currentRoom.spaceshipObject.position = currentPlanet.position
+            console.write('A computerized voice says, "Commencing launch countdown."', "25w3y27w2y", True)
+
+    def courseCheck(self, console, galaxyList, player, currentRoom, targetCourse):
+        if currentRoom.spaceshipObject == None or "Cockpit" not in currentRoom.flags:
+            console.write("You must be in a cockpit to do that.", "35w1y", True)
+        elif currentRoom.spaceshipObject.landedLocation != None:
+            if currentRoom.spaceshipObject.launchTick != -1:
+                console.write("You can't do that while launching.", "7w1y25w1y", True)
+            else:
+                console.write("You can't do that while landed.", "7w1y22w1y", True)
+        elif targetCourse == "none" and currentRoom.spaceshipObject.course == None:
+            console.write("Your heading is already clear.", "29w1y", True)
+        
+        else:
+            if targetCourse == "none":
+                currentRoom.spaceshipObject.course = None
+                currentRoom.spaceshipObject.targetPlanet = None
+                currentRoom.spaceshipObject.speedMod = 0
+                console.write("You clear the ships heading.", "27w1y", True)
+
+            else:
+                targetPlanet = None
+                if isinstance(targetCourse, str) == True:
+                    for planet in galaxyList[self.galaxy].systemList[self.system].planetList:
+                        if targetCourse in planet.keyList:
+                            targetPlanet = planet
+                            break
+                else:
+                    rangeBound = 100
+                    for planet in galaxyList[self.galaxy].systemList[self.system].planetList:
+                        if targetCourse[0] >= planet.position[0] - rangeBound and targetCourse[0] < planet.position[0] + rangeBound:
+                            if targetCourse[1] >= planet.position[1] - rangeBound and targetCourse[1] < planet.position[1] + rangeBound:
+                                targetPlanet = planet
+                                break
+
+                if isinstance(targetCourse, str) == True and targetPlanet == None:
+                    console.write("You can't find it on the radar.", "7w1y22w1y", True)
+                elif isinstance(targetCourse, str) == True and targetPlanet.planet == self.planet:
+                    console.write("You are already orbiting " + targetPlanet.name["String"] + ".", "25w" + targetPlanet.name["Code"] + "1y", True)
+
+                else:
+                    if targetPlanet != None:
+                        currentRoom.spaceshipObject.course = targetPlanet.position
+                        currentRoom.spaceshipObject.targetPlanet = targetPlanet
+                        console.write("You punch in the coordinates for " + targetPlanet.name["String"] + ".", "33w" + targetPlanet.name["Code"] + "1y", True)
+                    else:
+                        currentRoom.spaceshipObject.course = targetCourse
+                        console.write("You punch some coordinates into the ship's computer.", "40w1y10w1y", True)
+
+                    currentRoom.spaceshipObject.speedMod = 100
+                    currentRoom.spaceshipObject.planet = None
+                    if currentRoom.spaceshipObject.num == player.spaceship:
+                        player.planet = None
+                    for area in currentRoom.spaceshipObject.areaList:
+                        for room in area.roomList:
+                            for mob in room.mobList:
+                                mob.planet = None
+
+    def radarCheck(self, console, galaxyList, player, currentRoom):
+        if currentRoom.spaceshipObject == None or "Cockpit" not in currentRoom.flags:
+            console.write("You must be in a cockpit to do that.", "35w1y", True)
+        
+        else:
+            console.write("You look at the ship's radar screen.", "20w1y14w1y", True)
+            xPositionLine = insertCommasInNumber(str(int(currentRoom.spaceshipObject.position[0])))
+            yPositionLine = insertCommasInNumber(str(int(currentRoom.spaceshipObject.position[1])))
+            positionString = "Position - X:" + xPositionLine["String"] + " Y:" + yPositionLine["String"]
+            positionCode = "9w2y1r1y" + xPositionLine["Code"] + "w1w1r1y" + yPositionLine["Code"] + "w"
+            console.write(positionString, positionCode)
+
+            statusString = "[Orbiting]"
+            statusCode = "1y8w1y"
+            if currentRoom.spaceshipObject.landedLocation != None:
+                statusString = "[Landed]"
+                statusCode = "1y6w1y"
+            elif currentRoom.spaceshipObject.launchTick != -1:
+                statusString = "[Launching]"
+                statusCode = "1y9w1y"
+            
+            headingString = " Heading - " + statusString
+            headingCode = "9w2y" + statusCode
+            if currentRoom.spaceshipObject.course != None:
+                xCourseLine = insertCommasInNumber(str(int(currentRoom.spaceshipObject.course[0])))
+                yCourseLine = insertCommasInNumber(str(int(currentRoom.spaceshipObject.course[1])))
+                headingString = " Heading - X:" + xCourseLine["String"] + " Y:" + yCourseLine["String"]
+                headingCode = "9w2y1r1y" + xCourseLine["Code"] + "w1w1r1y" + yCourseLine["Code"]
+            console.write(headingString, headingCode)
+
+            speedString = "   Speed - " + str(currentRoom.spaceshipObject.speed) + "%"
+            speedCode = "9w2y" + str(len(str(currentRoom.spaceshipObject.speed))) + "w1y"
+            console.write(speedString, speedCode)
+
+            longestNameString = 0
+            for planet in galaxyList[currentRoom.spaceshipObject.galaxy].systemList[currentRoom.spaceshipObject.system].planetList:
+                if len(planet.name["String"]) > longestNameString:
+                    longestNameString = len(planet.name["String"])
+            console.write("Bodies Detected:", "1w6ddw1w7ddw1y", True)
+            for planet in galaxyList[currentRoom.spaceshipObject.galaxy].systemList[currentRoom.spaceshipObject.system].planetList:
+                bufferString = ""
+                for i in range(longestNameString - len(planet.name["String"])):
+                    bufferString += " "
+                xPositionLine = insertCommasInNumber(str(int(planet.position[0])))
+                yPositionLine = insertCommasInNumber(str(int(planet.position[1])))
+                orbitString = " " + statusString
+                orbitCode = "1w" + statusCode
+                if currentRoom.spaceshipObject.planet != planet.planet:
+                    orbitString = ""
+                    orbitCode = ""
+                displayString = bufferString + planet.name["String"] + " - X:" + xPositionLine["String"] + " Y:" + yPositionLine["String"] + orbitString
+                displayCode = str(len(bufferString)) + "w" + planet.name["Code"] + "3y1r1y" + xPositionLine["Code"] + "2r1y" + yPositionLine["Code"] + orbitCode
+                console.write(displayString, displayCode)
 
     def landCheck(self, console, galaxyList, player, currentRoom):
         pass

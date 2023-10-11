@@ -48,7 +48,6 @@ class InputBar:
                             if len(self.previousInputList) > 20:
                                 self.previousInputList = self.previousInputList[0:20]
                         game.processInputBarCommand(self.input)
-                        game.console.displayLine = 0
                     except Exception as error:
                         writeCrashReport(traceback.format_exc(), self.input, game.player)
                         print(traceback.format_exc())

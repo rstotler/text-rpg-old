@@ -106,7 +106,7 @@ class Map:
             self.surface.blit(self.surfaceMapPlayerIconDict[self.zoomLevel], [0, 0])
                 
         targetPlanet = None
-        targetPlanetName = None
+        targetPlanetName = {"String":"None", "Code":"4w"}
         if player.planet != None:
             targetPlanet = galaxyList[player.galaxy].systemList[player.system].planetList[player.planet]
             targetPlanetName = targetPlanet.name

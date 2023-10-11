@@ -139,17 +139,6 @@ def getCountString(targetCount, blankSpace=True):
             displayCode = "1" + displayCode[1::]
     return displayString, displayCode
 
-def writeCrashReport(errorString, input, player):
-    with open("../CrashReport.txt", "w") as f:
-        f.write(errorString + "\n")
-        f.write("Input: " + input + "\n")
-        f.write("Player Loc: [" + str(player.galaxy) + ", " + str(player.system) + ", " + str(player.planet) + ", " + str(player.area) + ", " + str(player.room) + "]" + "\n")
-        f.write("Player Spaceship: " + str(player.spaceship) + "\n")
-        f.write("Player Targets: " + str(len(player.targetList)) + "\n")
-        f.write("Player Group: " + str(len(player.recruitList)) + "\n")
-        f.write("Player Inventory: " + str(len(player.getAllItemList(["Inventory"]))) + "\n")
-        f.write("Player Gear: " + str(len(player.getAllItemList(["Gear"]))) + "\n")
-
 def messageExistsCheck(messageDataList, messageType, stringHalf1, stringHalf2, codeHalf1, codeHalf2, drawBlankLine, combineCheck=True):
     if combineCheck == True:
         for messageData in messageDataList:
@@ -160,3 +149,38 @@ def messageExistsCheck(messageDataList, messageType, stringHalf1, stringHalf2, c
                 messageData["Code"] = messageData["Code Half 1"] + countCode + "1w" + messageData["Code Half 2"]
                 return
     messageDataList.append({"String":stringHalf1 + stringHalf2, "Code":codeHalf1 + codeHalf2, "Draw Blank Line":drawBlankLine, "Count":1, "Message Type":messageType, "Original String":stringHalf1 + stringHalf2, "String Half 1":stringHalf1, "String Half 2":stringHalf2, "Code Half 1":codeHalf1, "Code Half 2":codeHalf2})
+
+def insertCommasInNumber(targetNumString):
+    returnString = ""
+    returnCode = ""
+
+    negativeCheck = False
+    if targetNumString[0] == '-':
+        negativeCheck = True
+        targetNumString = targetNumString[1::]
+
+    loopRange = int((len(targetNumString) - 1) / 3)
+    for i in range(loopRange):
+        startIndex = 3
+        if startIndex > len(targetNumString):
+            startIndex = len(targetNumString)
+        returnString = "," + targetNumString[-startIndex::] + returnString
+        returnCode = "1y" + str(len(targetNumString[-startIndex::])) + "w" + returnCode
+        targetNumString = targetNumString[0:-startIndex]
+    returnString = targetNumString + returnString
+    returnCode = str(len(targetNumString)) + "w" + returnCode
+    if negativeCheck == True:
+        returnString = '-' + returnString
+        returnCode = "1w" + returnCode
+    return {"String":returnString, "Code":returnCode}
+
+def writeCrashReport(errorString, input, player):
+    with open("../CrashReport.txt", "w") as f:
+        f.write(errorString + "\n")
+        f.write("Input: " + input + "\n")
+        f.write("Player Loc: [" + str(player.galaxy) + ", " + str(player.system) + ", " + str(player.planet) + ", " + str(player.area) + ", " + str(player.room) + "]" + "\n")
+        f.write("Player Spaceship: " + str(player.spaceship) + "\n")
+        f.write("Player Targets: " + str(len(player.targetList)) + "\n")
+        f.write("Player Group: " + str(len(player.recruitList)) + "\n")
+        f.write("Player Inventory: " + str(len(player.getAllItemList(["Inventory"]))) + "\n")
+        f.write("Player Gear: " + str(len(player.getAllItemList(["Gear"]))) + "\n")

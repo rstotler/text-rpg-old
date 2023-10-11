@@ -15,23 +15,21 @@ from GameData.World.Spaceship import Spaceship
 from GameData.Item import Item
 from GameData.Action import Action
 from Components.Utility import stringIsNumber
-from Components.Utility import appendKeyList
 
 # To Do List:
     # Make Player Lose Sight Of Mobs On Darkness
-    #console not going to bottom on new line
-    # map error exiting spaceship
-    # Combat/Movement
+    # Enemy groups
     # Search Command
     # Auto-Loot
     # Auto-Reload
     # Auto-Combat
     # Move Direction '#'
-    # Launch/Land Command
     # Dodge Command
     # Parry Command
     # Counter-Attack (Passive Skill)
+    # Peek Through Ship Exit Door
     # Jab(?)
+    # Someone says in dark fix
 
 class Game:
 
@@ -47,8 +45,9 @@ class Game:
         self.frameTick = 0
         
         self.loadGame()
-        self.inputBar.inputList = ["n", "n", "w", "loot cab", "wear pis", "wear pis", "e", "s", "s", "reload"]
+        # self.inputBar.inputList = ["n", "n", "w", "loot cab", "wear pis", "wear pis", "e", "s", "s", "reload"]
         # self.inputBar.inputList = ["n", "n", "w", "get sniper from cab", "get 5.56 from cab", "get 5.56 from cab", "get 5.56 from cab", "e", "s", "s", "wear sni", "reload"]
+        self.inputBar.inputList = ["n", "n", "w", "get key from chest", "e", "s", "s", "s", "s", "board ship", "n"]
 
     def loadGame(self):
         galaxyProtoMilkyWay = Galaxy()
@@ -61,11 +60,10 @@ class Game:
             galaxyProtoMilkyWay.systemList.append(systemProtoSol)
             systemProtoSol.name = {"String":"Proto Sol"}
 
-            starProtoSol = Planet(0, 0, 0, 0, 38880, 0)
+            protoSolName = {"String":"Proto Sol", "Code":"1w5ddw1y2ddy"}
+            starProtoSol = Planet(0, 0, 0, protoSolName, "Star", 0, 38880, 0, 7.25)
             systemProtoSol.planetList.append(starProtoSol)
-            starProtoSol.name = {"String":"Proto Sol"}
             starProtoSol.type = "Star"
-            starProtoSol.axialTilt = 6
 
             areaLimbo = Area(0)
             starProtoSol.areaList.append(areaLimbo)
@@ -75,15 +73,18 @@ class Game:
             areaLimbo.roomList.append(roomLimbo)
             roomLimbo.name = {"String":"Limbo"}
 
-            planetProtoEarth = Planet(0, 0, 1, 93456, 1440, 525600)
+            protoEarthName = {"String":"Proto Earth", "Code":"1w5ddw1b4db"}
+            planetProtoEarth = Planet(0, 0, 1, protoEarthName, "Planet", 93456, 1440, 525600, 23.43)
             systemProtoSol.planetList.append(planetProtoEarth)
-            planetProtoEarth.name = {"String":"Proto Earth"}
-            planetProtoEarth.axialTilt = 23.5
             
             planetProtoEarth.currentMinutesInDay = 480
             planetProtoEarth.currentMinutesInYear = 480
             planetProtoEarth.updateNightDayTimers()
-            planetProtoEarth.updateLocation()
+            planetProtoEarth.updatePosition()
+
+            protoMarsName = {"String":"Proto Mars", "Code":"1w5ddw1dr3ddr"}
+            planetProtoMars = Planet(1, 1, 4, protoMarsName, "Planet", 148120, 1477, 989280, 25.19)
+            systemProtoSol.planetList.append(planetProtoMars)
 
         # (Area) Center of the Universe #
         if True:
@@ -166,46 +167,12 @@ class Game:
             # Zero Area Coordinates #
             areaCOTU.zeroCoordinates(self.galaxyList)
 
-        # Debug Spaceship #
+        # (Spaceship) COTU Transport Ship #
         if True:
-            cotuTransportShip = Spaceship(0, 0, 1, "COTU Spaceport", [0, 1], [[0, 1]])
+            cotuTransportShipName = {"String":"COTU Transport Ship", "Code":"19w"}
+            cotuTransportShip = Spaceship(self.galaxyList, cotuTransportShipName, "COTU Spaceport", [0, 0, 1, 0, 5], [0, 1], [0, 1], [0, 0])
             roomCOTU05.spaceshipList.append(cotuTransportShip)
             systemProtoSol.spaceshipList.append(cotuTransportShip)
-            cotuTransportShip.name = {"String":"COTU Transport Ship", "Code":"19w"}
-            appendKeyList(cotuTransportShip.keyList, cotuTransportShip.name["String"].lower())
-            appendKeyList(cotuTransportShip.keyList, "spaceship")
-
-            cotuTransportShipArea0 = Area(0)
-            cotuTransportShip.areaList.append(cotuTransportShipArea0)
-            cotuTransportShipArea0.name = {"String":"Debug Ship"}
-            
-            cotuTransportShipRoom00 = Room(None, None, None, 0, 0)
-            cotuTransportShipArea0.roomList.append(cotuTransportShipRoom00)
-            cotuTransportShipRoom00.name = {"String":"Ship Cockpit"}
-            cotuTransportShipRoom00.exit["South"] = [0, 1]
-
-            cotuTransportShipRoom01 = Room(None, None, None, 0, 1)
-            cotuTransportShipArea0.roomList.append(cotuTransportShipRoom01)
-            cotuTransportShipRoom01.name = {"String":"Ship Hallway"}
-            cotuTransportShipRoom01.exit["North"] = [0, 0]
-
-            # Spaceship Setup #
-            cotuTransportShip.landedLocation = [0, 0, 1, 0, 5]
-            for area in cotuTransportShip.areaList:
-                for room in area.roomList:
-                    for exitDir in room.exit:
-                        if room.exit[exitDir] != None and len(room.exit[exitDir]) == 2:
-                            room.exit[exitDir].insert(0, cotuTransportShip.num)
-                    room.inside = True
-                    room.spaceshipObject = cotuTransportShip
-            for spaceshipExit in cotuTransportShip.exitList:
-                for exitDir in ["West", "South", "North", "East"]:
-                    if cotuTransportShip.areaList[spaceshipExit[0]].roomList[spaceshipExit[1]].exit[exitDir] == None:
-                        targetExitRoom = cotuTransportShip.areaList[spaceshipExit[0]].roomList[spaceshipExit[1]]
-                        targetExitRoom.exit[exitDir] = "Spaceship Exit"
-                        targetExitRoom.installDoor(self.galaxyList, exitDir, "Automatic", None, "Closed", True)
-                        break
-            cotuTransportShipArea0.zeroCoordinates(self.galaxyList)
 
         # (Area) Ice Cavern
         if True:
@@ -249,52 +216,47 @@ class Game:
             galaxyMilkyWay.systemList.append(systemSol)
             systemSol.name = {"String":"Sol"}
 
-            starSol = Planet(1, 1, 0, 0, 38880, 0)
+            solName = {"String":"Sol", "Code":"3w"}
+            starSol = Planet(1, 1, 0, solName, "Star", 0, 38880, 0, 7.25)
             systemSol.planetList.append(starSol)
-            starSol.name = {"String":"Sol"}
             starSol.type = "Star"
-            starSol.axialTilt = 6
 
-            planetMercury = Planet(1, 1, 1, 29945, 84960, 126720)
+            mercuryName = {"String":"Mercury", "Code":"7w"}
+            planetMercury = Planet(1, 1, 1, mercuryName, "Planet", 29945, 84960, 126720, 0)
             systemSol.planetList.append(planetMercury)
-            planetMercury.name = {"String":"Mercury"}
             
-            planetVenus = Planet(1, 1, 2, 67443, 349920, 324000)
+            venusName = {"String":"Venus", "Code":"5w"}
+            planetVenus = Planet(1, 1, 2, venusName, "Planet", 67443, 349920, 324000, 2.63)
             systemSol.planetList.append(planetVenus)
-            planetVenus.name = {"String":"Venus"}
             planetVenus.orbit = "Clockwise"
-            planetVenus.axialTilt = 3
             
-            planetEarth = Planet(1, 1, 3, 93456, 1440, 525600)
+            earthName = {"String":"Earth", "Code":"5w"}
+            planetEarth = Planet(1, 1, 3, earthName, "Planet", 93456, 1440, 525600, 23.43)
             systemSol.planetList.append(planetEarth)
-            planetEarth.name = {"String":"Earth"}
-            planetEarth.axialTilt = 23.5
 
-            planetMars = Planet(1, 1, 4, 15044, 1477, 989280)
+            marsName = {"String":"Mars", "Code":"4w"}
+            planetMars = Planet(1, 1, 4, marsName, "Planet", 148120, 1477, 989280, 25.19)
             systemSol.planetList.append(planetMars)
-            planetMars.name = {"String":"Mars"}
-            planetJupiter = Planet(1, 1, 5, 484000000, 596, 6239520)
+            jupiterName = {"String":"Jupiter", "Code":"7w"}
+            planetJupiter = Planet(1, 1, 5, jupiterName, "Planet", 484000000, 596, 6239520, 3.13)
             systemSol.planetList.append(planetJupiter)
-            planetJupiter.name = {"String":"Jupiter"}
-            planetSaturn = Planet(1, 1, 6, 886000000, 634, 15448640)
+            saturnName = {"String":"Saturn", "Code":"6w"}
+            planetSaturn = Planet(1, 1, 6, saturnName, "Planet", 886000000, 634, 15448640, 26.73)
             systemSol.planetList.append(planetSaturn)
-            planetSaturn.name = {"String":"Saturn"}
-            planetUranus = Planet(1, 1, 7, 1824000000, 1034, 44189280)
+            uranusName = {"String":"Uranus", "Code":"6w"}
+            planetUranus = Planet(1, 1, 7, uranusName, "Planet", 1824000000, 1034, 44189280, 97.77)
             systemSol.planetList.append(planetUranus)
-            planetUranus.name = {"String":"Uranus"}
-            planetNeptune = Planet(1, 1, 8, 2779300000, 966, 86673600)
+            neptuneName = {"String":"Neptune", "Code":"7w"}
+            planetNeptune = Planet(1, 1, 8, neptuneName, "Planet", 2779300000, 966, 86673600, 28.32)
             systemSol.planetList.append(planetNeptune)
-            planetNeptune.name = {"String":"Neptune"}
-            planetPluto = Planet(1, 1, 9, 3700000000, 9180, 130348800)
+            plutoName = {"String":"Pluto", "Code":"5w"}
+            planetPluto = Planet(1, 1, 9, plutoName, "Planet", 3700000000, 9180, 130348800, 119.61)
             systemSol.planetList.append(planetPluto)
-            planetPluto.name = {"String":"Pluto"}
 
         # Load Doors AFTER ALL Rooms Are Loaded! #
         roomCOTU02.installDoor(self.galaxyList, "North", "Automatic", "COTU Spaceport")
         roomCOTU02.lockUnlockDoor(self.galaxyList, "Lock", "North")
         roomCOTU04.installDoor(self.galaxyList, "East", "Manual", None, "Open")
-        cotuTransportShipRoom00.installDoor(self.galaxyList, "South", "Automatic", "COTU Spaceport")
-        cotuTransportShipRoom00.lockUnlockDoor(self.galaxyList, "Lock", "South")
 
         # Load Map #
         playerArea, playerRoom = Room.getAreaAndRoom(self.galaxyList, self.player)
@@ -313,16 +275,20 @@ class Game:
 
         if self.frameTick == 0:
             self.galaxyList[self.player.galaxy].systemList[self.player.system].update(self.galaxyList, self.player, self.console)
-        if self.frameTick in [0, 30]:
             playerArea, playerRoom = Room.getAreaAndRoom(self.galaxyList, self.player)
+            if playerRoom.spaceshipObject != None:
+                playerRoom.spaceshipObject.update(self.console, self.galaxyList, self.player)
+        if self.frameTick in [0, 30]:
+            if self.frameTick == 30:
+                playerArea, playerRoom = Room.getAreaAndRoom(self.galaxyList, self.player)
             updateAreaList, updateRoomList = Room.getSurroundingRoomData(self.galaxyList, playerArea, playerRoom, 4)
             
             messageDataList = []
             playerArea.update(self.console)
-            messageDataList = self.player.update(self.console, self.galaxyList, self.player, playerRoom, messageDataList)
+            messageDataList = self.player.update(self.console, self.map, self.galaxyList, self.player, playerRoom, messageDataList)
             for room in updateRoomList:
                 for mob in room.mobList:
-                    messageDataList = mob.update(self.console, self.galaxyList, self.player, room, messageDataList)
+                    messageDataList = mob.update(self.console, self.map, self.galaxyList, self.player, room, messageDataList)
             for messageData in messageDataList:
                 self.console.write(messageData["String"], messageData["Code"], messageData["Draw Blank Line"])
                 
@@ -1263,10 +1229,28 @@ class Game:
             self.player.landCheck(self.console, self.galaxyList, self.player, currentRoom)
 
         # Radar #
+        elif len(input.split()) == 1 and input.lower() in ["radar", "rada", "rad"]:
+            self.player.radarCheck(self.console, self.galaxyList, self.player, currentRoom)
+
+        # Course #
+        elif input.lower().split()[0] in ["course", "cours", "cour", "cou"]:
+            if len(input.split()) == 3 and stringIsNumber(input.split()[1]) and stringIsNumber(input.split()[2]):
+                targetX = int(input.split()[1])
+                targetY = int(input.split()[2])
+                self.player.courseCheck(self.console, self.galaxyList, self.player, currentRoom, [targetX, targetY])
+            
+            elif len(input.split()) > 1:
+                courseKey = ' '.join(input.lower().split()[1::])
+                self.player.courseCheck(self.console, self.galaxyList, self.player, currentRoom, courseKey)
+            
+            else:
+                displayString = '''A computerized voice says, 'Please set your course with "Course X Y" or "Course Destination".' '''
+                displayCode = "25w3y28w1y10w2y3w1y18w3y"
+                self.console.write(displayString, displayCode, True)
+
+        # Throttle/Speed #
 
         # Calculate #
-
-        # Throttle #
 
         # System #
 

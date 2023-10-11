@@ -4,7 +4,7 @@ class Combat:
 
     @staticmethod
     def hitCheck(user, attackSkill, target):
-        if random.randrange(4) == 0:
+        if attackSkill.healCheck == False and random.randrange(4) == 0:
             dataDict = {}
             if len(attackSkill.weaponDataList) == 0:
                 dataDict["Miss Check"] = "Miss Attack"
