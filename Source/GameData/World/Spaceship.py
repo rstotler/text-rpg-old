@@ -42,11 +42,13 @@ class Spaceship:
 
         # Move In Orbit #
         if self.planet != None:
-            targetPlanet = galaxyList[self.galaxy].systemList[self.system].planetList[self.planet]
-            self.position = targetPlanet.position
+            orbitingPlanet = galaxyList[self.galaxy].systemList[self.system].planetList[self.planet]
+            self.position = orbitingPlanet.position
 
         # Move Out Of Orbit #
         elif self.planet == None and (self.speedMod != 0 or self.speed != 0):
+            if self.targetPlanet != None:
+                self.course = self.targetPlanet.position
 
             # Speed Modulator #
             if self.speed != self.speedMod:
@@ -61,8 +63,8 @@ class Spaceship:
                     if self.speed < self.speedMod:
                         self.speed = self.speedMod
 
-            # if self.speed > 0:
-                # if self.position < 
+            if self.speed > 0:
+                pass
 
     def launch(self, console, galaxyList):
         self.launchTick += 1

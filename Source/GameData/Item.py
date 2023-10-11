@@ -216,7 +216,7 @@ class Item:
                 self.pocket = "Ammo"
                 self.ammoType = "5.56"
 
-        # Misc. (901 - 1000) #
+        # Other (901 - 1000) #
         if self.name["String"] == "Debug Item":
             if num == 901:
                 self.name = {"String":"Silver Keycard", "Code":"1ddw1dw1w1ddw1dw1w8w"}
@@ -239,6 +239,14 @@ class Item:
                 self.roomDescription = {"String":"is sitting in the corner.", "Code":"24w1y"}
                 self.flags["Glowing"] = True
                 self.flags["No Get"] = True
+            elif num == 905:
+                self.name = {"String":"Hamburger", "Code":"9w"}
+                self.roomDescription = {"String":"has been dropped on the ground.", "Code":"30w1y"}
+                self.pocket = "Food"
+            elif num == 906:
+                self.name = {"String":"Canteen", "Code":"7w"}
+                self.roomDescription = {"String":"has been dropped on the ground.", "Code":"30w1y"}
+                self.pocket = "Food"
 
         # Special Items #
         if self.name["String"] == "Debug Item":

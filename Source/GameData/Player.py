@@ -39,7 +39,7 @@ class Player:
         self.recruitList = []
         self.combatList = []
 
-        self.itemDict = {"Armor": [], "Weapon":[], "Ammo":[], "Misc": []}
+        self.itemDict = {"Armor":[], "Weapon":[], "Ammo":[], "Misc":[], "Food":[]}
         self.gearDict = {"Head":None, "Face":None, "Neck":[None, None], "Body Under":None, "Body Over":None, "About Body":None, "Hands":None, "Finger":[None, None], "Legs Under":None, "Legs Over":None, "Feet":None, "Left Hand":None, "Right Hand":None}
         self.dominantHand = "Right Hand"
 
@@ -54,7 +54,7 @@ class Player:
         self.debugDualWield = False
 
         # Mob-Specific Variables #
-        self.speechTickMax = 10
+        self.speechTickMax = 8
         self.speechTick = 0
         self.speechIndex = 0
         self.speechList = []
@@ -110,7 +110,7 @@ class Player:
                         self.speechIndex += 1
                         if self.speechIndex >= len(self.speechList):
                             self.speechIndex = 0
-                            self.speechTick =  -100
+                            self.speechTick =  -150
 
         # if self.num != None and len(self.actionList) == 0:
             # self.moveCheck(console, map, galaxyList, player, currentRoom, "north")
@@ -134,7 +134,7 @@ class Player:
         if lookDistance > self.maxLookDistance:
             lookDistance = self.maxLookDistance
         for i in range(lookDistance):
-            if currentRoom.exit[lookDir] == None:
+            if currentRoom.exit[lookDir] == None or (currentRoom.door[lookDir] != None and currentRoom.door[lookDir]["Type"] == "Hidden" and currentRoom.door[lookDir]["Status"] != "Open"):
                 messageType = "Can't See Further"
                 break
             elif currentRoom.door[lookDir] != None and currentRoom.door[lookDir]["Status"] in ["Closed", "Locked"]:
@@ -541,13 +541,10 @@ class Player:
         elif targetDirKey.lower() in ["south", "sout", "sou", "so", "s"] : targetDir = "South"
         else : targetDir = "West"
         
-        if currentRoom.door[targetDir] != None and currentRoom.door[targetDir]["Type"] == "Manual" and currentRoom.door[targetDir]["Status"] in ["Closed", "Locked"]:
-            if self.num == None:
-                console.write("The door is closed.", "18w1y", True)
-        elif currentRoom.door[targetDir] != None and currentRoom.door[targetDir]["Type"] == "Automatic" and currentRoom.door[targetDir]["Status"] == "Locked" and "Password" in currentRoom.door[targetDir] and self.hasKey(currentRoom.door[targetDir]["Password"]) == False:
+        if currentRoom.door[targetDir] != None and currentRoom.door[targetDir]["Status"] == "Locked" and "Password" in currentRoom.door[targetDir] and self.hasKey(currentRoom.door[targetDir]["Password"]) == False:
             if self.num == None:
                 console.write("You lack the proper key.", "23w1y", True)
-        elif currentRoom.exit[targetDir] == None:
+        elif currentRoom.exit[targetDir] == None or (currentRoom.door[targetDir] != None and currentRoom.door[targetDir]["Type"] == "Hidden" and currentRoom.door[targetDir]["Status"] in ["Closed", "Locked"]):
             if self.num == None:
                 console.write("You can't go that way!", "7w1y13w1y", True)
         elif currentRoom.exit[targetDir] == "Spaceship Exit" and currentRoom.spaceshipObject != None and currentRoom.spaceshipObject.landedLocation == None:
@@ -598,9 +595,36 @@ class Player:
                     if self.spaceship != oldSpaceship or self.area != oldArea:
                         map.loadMap(targetArea)
                         targetArea.flavorTextTick = 0
+
+            openCheck = False
+            lockCheck = False
+            if currentRoom.door[targetDir] != None:
+                if currentRoom.door[targetDir]["Status"] == "Locked":
+                    lockCheck = True
+                if currentRoom.door[targetDir]["Type"] == "Manual" and currentRoom.door[targetDir]["Status"] != "Open":
+                    currentRoom.openCloseDoor(galaxyList, "Open", targetDir)
+                    openCheck = True
             
             if self.num == None or targetRoom.sameRoomCheck(player) == True or currentRoom.sameRoomCheck(player) == True:
-                if currentRoom.door[targetDir] != None and currentRoom.door[targetDir]["Type"] == "Automatic":
+                if currentRoom.door[targetDir] != None and currentRoom.door[targetDir]["Type"] == "Manual" and openCheck:
+                    if self.num == None:
+                        openString = "open"
+                        if lockCheck:
+                            openString = "unlock and open"
+                        console.write("You " + openString + " the door and walk through.", "4w" + str(len(openString)) + "w26w1y", True)
+                    elif currentRoom.sameRoomCheck(player) == True:
+                        openString = "opens"
+                        if lockCheck:
+                            openString = "unlocks and opens"
+                        displayString = self.prefix + " " + self.name["String"] + " " + openString + " the door to the " + targetDir + " and walks through."
+                        displayCode = str(len(self.prefix)) + "w1w" + self.name["Code"] + "1w" + str(len(openString)) + "w17w" + str(len(targetDir)) + "w18w1y"
+                        console.write(displayString, displayCode, True)
+                    elif targetRoom.sameRoomCheck(player) == True:
+                        displayString = "The door to the " + Room.getOppositeDirection(targetDir) + " opens as " + self.prefix.lower() + " " + self.name["String"] + " walks through."
+                        displayCode = "16w" + str(len(Room.getOppositeDirection(targetDir))) + "w10w" + str(len(self.prefix)) + "w1w" + self.name["Code"] + "14w1y"
+                        console.write(displayString, displayCode, True)
+                
+                elif currentRoom.door[targetDir] != None and currentRoom.door[targetDir]["Type"] == "Automatic":
                     doorString = "door"
                     if currentRoom.exit[targetDir] == "Spaceship Exit":
                         doorString = "hatch"
@@ -620,6 +644,7 @@ class Player:
             if self.num == None:
                 for mob in targetRoom.mobList:
                     mob.speechTick = 0
+                    mob.speechIndex = 0
 
             if self.num != None:
                 if self in currentRoom.mobList:
@@ -1870,6 +1895,19 @@ class Player:
     def disbandCheck(self, console, galaxyList, player, currentRoom, mobKey, mobCount):
         pass
 
+    def displayGroup(self, console, galaxyList):
+        console.write("Group Status", "12w", True)
+        console.write("--========--", "1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy")
+        
+        if len(self.recruitList) == 0:
+            console.write("-None", "1y4w")
+
+        else:
+            for mob in self.recruitList:
+                displayString = mob.name["String"] + " [" + str(mob.currentHealth) + " HP]"
+                displayCode = mob.name["Code"] + "2y" + str(len(str(mob.currentHealth))) + "r3w1y"
+                console.write(displayString, displayCode)
+
     def stopCheck(self, console, galaxyList, player):
         if len(self.actionList) == 0:
             console.write("You aren't doing anything.", "8w1y16w1y", True)
@@ -2264,8 +2302,8 @@ class Player:
             userString = self.prefix + " " + self.name["String"] + " says"
             userCode = str(len(self.prefix)) + "w1w" + self.name["Code"] + "5w"
             if currentRoom.isLit(galaxyList, player, self) == False:
-                userString = "Someone"
-                userCode = "7w"
+                userString = "Someone says"
+                userCode = "12w"
 
         targetString = userString + ", '"
         targetCode = userCode + "3y"
@@ -2766,11 +2804,13 @@ class Player:
             targetPocket = "Weapon"
         elif targetPocketKey in ["ammo", "amm", "am", "a"]:
             targetPocket = "Ammo"
+        elif targetPocketKey in ["food", "foo", "fo", "f"]:
+            targetPocket = "Food"
         elif targetPocketKey in ["misc.", "misc", "mis", "mi", "m"]:
             targetPocket = "Misc"
 
         if targetPocket not in self.itemDict:
-            console.write("Open which bag? (Gear, Weapon, Ammo, Misc.)", "14w2y1r4w2y6w2y4w2y4w1y1r", True)
+            console.write("Open which bag? (Gear, Weapon, Ammo, Food, Misc.)", "14w2y1r4w2y6w2y4w2y4w2y4w1y1r", True)
 
         else:
             displayList = []
@@ -2927,8 +2967,8 @@ class Player:
                 console.write(gearSlotString + ": " + gearString + weaponStatusString + modString, gearSlotCode + "2y" + gearCode + weaponStatusCode + modCode)
 
     def displayStatus(self, console):
-        console.write("Character Status", "1w9ddw1w5ddw", True)
-        console.write("---==========---", "1y1dy1y1dy1y1dy1y1dy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1r")
+        console.write("Player Status", "1w9ddw1w5ddw", True)
+        console.write("--=========--", "1y1dy1y1dy1y1dy1y1dy1y1ddy1y1ddy1y")
 
         autoLootString  = "[ ]"
         if self.autoLoot == True:
@@ -2955,6 +2995,33 @@ class Player:
             healEnemiesString = "[X]"
         console.write(healEnemiesString + " - Heal Enemies", "1y1dr1y3y12w")
         
+    def displayTime(self, console, galaxyList):
+        currentPlanet = galaxyList[self.galaxy].systemList[self.system].planetList[self.planet]
+        hoursString = str(int(currentPlanet.currentMinutesInDay / 60))
+        if currentPlanet.name["String"] in ["Earth", "Proto Earth"]:
+            if hoursString == "0":
+                hoursString = "12"
+            elif int(hoursString) > 12:
+                hoursString = str(int(hoursString) - 12)
+
+        minutesString = str(int(currentPlanet.currentMinutesInDay % 60))
+        if len(minutesString) == 1:
+            minutesString = "0" + minutesString
+
+        if currentPlanet.name["String"] in ["Earth", "Proto Earth"]:
+            amPmString = " A.M"
+            if currentPlanet.currentMinutesInDay >= currentPlanet.minutesInDay / 2:
+                amPmString = " P.M"
+            amPmCode = "2w1y1w"
+            console.lineList.insert(0, {"Blank": True})
+            console.lineList.insert(0, {"String":"The time is " + str(hoursString) + ":" + str(minutesString) + amPmString + ".", "Code":"12w" + str(len(hoursString)) +"w1y" + str(len(minutesString)) + "w" + amPmCode + "1y"})
+        else:
+            console.lineList.insert(0, {"Blank": True})
+            console.lineList.insert(0, {"String":"The time is " + str(hoursString) + ":" + str(minutesString) + ".", "Code":"12w" + str(len(hoursString)) +"w1y" + str(len(minutesString)) + "w1y"})
+
+    def consumeCheck(self, console, galaxyList, player, currentRoom, consumeKey):
+        pass
+
     def boardCheck(self, console, map, galaxyList, player, currentRoom, targetSpaceshipKey):
         drawBlankLine = self.stopActions(console, galaxyList, player)
 
@@ -3001,6 +3068,68 @@ class Player:
             currentRoom.spaceshipObject.launchTick = 0
             currentRoom.spaceshipObject.position = currentPlanet.position
             console.write('A computerized voice says, "Commencing launch countdown."', "25w3y27w2y", True)
+    
+    def landCheck(self, console, galaxyList, player, currentRoom):
+        pass
+
+    def radarCheck(self, console, galaxyList, player, currentRoom):
+        if currentRoom.spaceshipObject == None or "Cockpit" not in currentRoom.flags:
+            console.write("You must be in a cockpit to do that.", "35w1y", True)
+        
+        else:
+            console.write("You look at the ship's radar screen.", "20w1y14w1y", True)
+            xPositionLine = insertCommasInNumber(str(int(currentRoom.spaceshipObject.position[0])))
+            yPositionLine = insertCommasInNumber(str(int(currentRoom.spaceshipObject.position[1])))
+            positionString = "Position - X:" + xPositionLine["String"] + " Y:" + yPositionLine["String"]
+            positionCode = "9w2y1r1y" + xPositionLine["Code"] + "w1w1r1y" + yPositionLine["Code"] + "w"
+            console.write(positionString, positionCode)
+
+            statusString = "[Orbiting]"
+            statusCode = "1y8w1y"
+            if currentRoom.spaceshipObject.landedLocation != None:
+                statusString = "[Landed]"
+                statusCode = "1y6w1y"
+            elif currentRoom.spaceshipObject.launchTick != -1:
+                statusString = "[Launching]"
+                statusCode = "1y9w1y"
+            
+            headingString = " Heading - " + statusString
+            headingCode = "9w2y" + statusCode
+            headingPlanetString = ""
+            headingPlanetCode = ""
+            if currentRoom.spaceshipObject.course != None:
+                xCourseLine = insertCommasInNumber(str(int(currentRoom.spaceshipObject.course[0])))
+                yCourseLine = insertCommasInNumber(str(int(currentRoom.spaceshipObject.course[1])))
+                if currentRoom.spaceshipObject.targetPlanet != None:
+                    headingPlanetString = " [" + currentRoom.spaceshipObject.targetPlanet.name["String"] + "]"
+                    headingPlanetCode = "2y" + currentRoom.spaceshipObject.targetPlanet.name["Code"] + "1y"
+                headingString = " Heading - X:" + xCourseLine["String"] + " Y:" + yCourseLine["String"] + headingPlanetString
+                headingCode = "9w2y1r1y" + xCourseLine["Code"] + "w1w1r1y" + yCourseLine["Code"] + headingPlanetCode
+            console.write(headingString, headingCode)
+
+            speedString = "   Speed - " + str(currentRoom.spaceshipObject.speed) + "%"
+            speedCode = "9w2y" + str(len(str(currentRoom.spaceshipObject.speed))) + "w1y"
+            console.write(speedString, speedCode)
+
+            longestNameString = 0
+            for planet in galaxyList[currentRoom.spaceshipObject.galaxy].systemList[currentRoom.spaceshipObject.system].planetList:
+                if len(planet.name["String"]) > longestNameString:
+                    longestNameString = len(planet.name["String"])
+            console.write("Bodies Detected:", "1w6ddw1w7ddw1y", True)
+            for planet in galaxyList[currentRoom.spaceshipObject.galaxy].systemList[currentRoom.spaceshipObject.system].planetList:
+                bufferString = ""
+                for i in range(longestNameString - len(planet.name["String"])):
+                    bufferString += " "
+                xPositionLine = insertCommasInNumber(str(int(planet.position[0])))
+                yPositionLine = insertCommasInNumber(str(int(planet.position[1])))
+                orbitString = " " + statusString
+                orbitCode = "1w" + statusCode
+                if currentRoom.spaceshipObject.planet != planet.planet:
+                    orbitString = ""
+                    orbitCode = ""
+                displayString = bufferString + planet.name["String"] + " - X:" + xPositionLine["String"] + " Y:" + yPositionLine["String"] + orbitString
+                displayCode = str(len(bufferString)) + "w" + planet.name["Code"] + "3y1r1y" + xPositionLine["Code"] + "2r1y" + yPositionLine["Code"] + orbitCode
+                console.write(displayString, displayCode)
 
     def courseCheck(self, console, galaxyList, player, currentRoom, targetCourse):
         if currentRoom.spaceshipObject == None or "Cockpit" not in currentRoom.flags:
@@ -3058,62 +3187,30 @@ class Player:
                             for mob in room.mobList:
                                 mob.planet = None
 
-    def radarCheck(self, console, galaxyList, player, currentRoom):
-        if currentRoom.spaceshipObject == None or "Cockpit" not in currentRoom.flags:
-            console.write("You must be in a cockpit to do that.", "35w1y", True)
-        
-        else:
-            console.write("You look at the ship's radar screen.", "20w1y14w1y", True)
-            xPositionLine = insertCommasInNumber(str(int(currentRoom.spaceshipObject.position[0])))
-            yPositionLine = insertCommasInNumber(str(int(currentRoom.spaceshipObject.position[1])))
-            positionString = "Position - X:" + xPositionLine["String"] + " Y:" + yPositionLine["String"]
-            positionCode = "9w2y1r1y" + xPositionLine["Code"] + "w1w1r1y" + yPositionLine["Code"] + "w"
-            console.write(positionString, positionCode)
-
-            statusString = "[Orbiting]"
-            statusCode = "1y8w1y"
-            if currentRoom.spaceshipObject.landedLocation != None:
-                statusString = "[Landed]"
-                statusCode = "1y6w1y"
-            elif currentRoom.spaceshipObject.launchTick != -1:
-                statusString = "[Launching]"
-                statusCode = "1y9w1y"
-            
-            headingString = " Heading - " + statusString
-            headingCode = "9w2y" + statusCode
-            if currentRoom.spaceshipObject.course != None:
-                xCourseLine = insertCommasInNumber(str(int(currentRoom.spaceshipObject.course[0])))
-                yCourseLine = insertCommasInNumber(str(int(currentRoom.spaceshipObject.course[1])))
-                headingString = " Heading - X:" + xCourseLine["String"] + " Y:" + yCourseLine["String"]
-                headingCode = "9w2y1r1y" + xCourseLine["Code"] + "w1w1r1y" + yCourseLine["Code"]
-            console.write(headingString, headingCode)
-
-            speedString = "   Speed - " + str(currentRoom.spaceshipObject.speed) + "%"
-            speedCode = "9w2y" + str(len(str(currentRoom.spaceshipObject.speed))) + "w1y"
-            console.write(speedString, speedCode)
-
-            longestNameString = 0
-            for planet in galaxyList[currentRoom.spaceshipObject.galaxy].systemList[currentRoom.spaceshipObject.system].planetList:
-                if len(planet.name["String"]) > longestNameString:
-                    longestNameString = len(planet.name["String"])
-            console.write("Bodies Detected:", "1w6ddw1w7ddw1y", True)
-            for planet in galaxyList[currentRoom.spaceshipObject.galaxy].systemList[currentRoom.spaceshipObject.system].planetList:
-                bufferString = ""
-                for i in range(longestNameString - len(planet.name["String"])):
-                    bufferString += " "
-                xPositionLine = insertCommasInNumber(str(int(planet.position[0])))
-                yPositionLine = insertCommasInNumber(str(int(planet.position[1])))
-                orbitString = " " + statusString
-                orbitCode = "1w" + statusCode
-                if currentRoom.spaceshipObject.planet != planet.planet:
-                    orbitString = ""
-                    orbitCode = ""
-                displayString = bufferString + planet.name["String"] + " - X:" + xPositionLine["String"] + " Y:" + yPositionLine["String"] + orbitString
-                displayCode = str(len(bufferString)) + "w" + planet.name["Code"] + "3y1r1y" + xPositionLine["Code"] + "2r1y" + yPositionLine["Code"] + orbitCode
-                console.write(displayString, displayCode)
-
-    def landCheck(self, console, galaxyList, player, currentRoom):
+    def throttleCheck(self, console, galaxyList, player, currentRoom, throttleKey):
         pass
+    
+    def searchCheck(self, console, galaxyList, player, currentRoom, searchKey):
+        searchData = None
+        for tempSearchData in currentRoom.searchList:
+            if "Key List" in tempSearchData and searchKey in tempSearchData["Key List"]:
+                searchData = tempSearchData
+                break
+        if searchData == None:
+            console.write("You search but don't find anything..", "18w1y15w2y", True)
+
+        else:
+            targetDir = searchData["Target Direction"]
+            if searchData["Type"] == "Hidden Door" and "Target Direction" in searchData and currentRoom.door[targetDir] != None:
+                targetDoor = currentRoom.door[targetDir]
+                if targetDoor["Status"] == "Open":
+                    console.write("The hidden entrance is already open.", "35w1y", True)
+                elif targetDoor["Status"] == "Locked" and self.hasKey(targetDoor["Password"]) == False:
+                    console.write("You lack the key.", "16w1y")
+
+                else:
+                    currentRoom.openCloseDoor(galaxyList, "Open", searchData["Target Direction"])
+                    console.write(searchData["Open Display String"], searchData["Open Display Code"], True)
 
     def manifestCheck(self, console, currentRoom, targetType, targetNum, targetCount):
         manifestTarget = None

@@ -15,8 +15,8 @@ class Area:
 
     def update(self, console):
         self.flavorTextTick += 1
-        if self.flavorTextTick <= 0:
-            self.flavorTextTick = flavorTextTickMax
+        if self.flavorTextTick >= self.flavorTextTickMax:
+            self.flavorTextTick = 0
             console.write("You hear some squeaking sounds.", "30w1y", True)
 
     def zeroCoordinates(self, galaxyList):

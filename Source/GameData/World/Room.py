@@ -17,6 +17,8 @@ class Room:
 
         self.name = {"String":"A Debug Room"}
         self.description = []
+        self.searchList = []
+
         self.exit = {"North": None, "East": None, "South": None, "West": None}
         self.door = {"North": None, "East": None, "South": None, "West": None}
 
@@ -72,7 +74,7 @@ class Room:
             spaceString = ""
             if exitDir in ["East", "West"]:
                 spaceString = " "
-            if self.exit[exitDir] != None:
+            if self.exit[exitDir] != None and not (self.door[exitDir] != None and self.door[exitDir]["Type"] == "Hidden" and self.door[exitDir]["Status"] in ["Locked", "Closed"]):
                 exitRoom = None
                 if len(self.exit[exitDir]) == 5:
                     exitRoom = Room.exists(galaxyList, None, self.exit[exitDir][0], self.exit[exitDir][1], self.exit[exitDir][2], self.exit[exitDir][3], self.exit[exitDir][4])
@@ -242,6 +244,30 @@ class Room:
                     if password != None:
                         otherRoom.door[otherRoomExitDir]["Password"] = password
 
+    def openCloseDoor(self, galaxyList, targetAction, targetDir):
+        if self.door[targetDir] != None:
+            if targetAction == "Close":
+                targetAction = "Closed"
+
+            self.door[targetDir]["Status"] = targetAction
+
+            if self.exit[targetDir] != None:
+                otherRoom = None
+                if len(self.exit[targetDir]) == 3 and self.spaceshipObject != None:
+                    otherRoom = self.spaceshipObject.areaList[self.exit[targetDir][1]].roomList[self.exit[targetDir][2]]
+                elif len(self.exit[targetDir]) == 5:
+                    otherRoom = Room.exists(galaxyList, None, self.exit[targetDir][0], self.exit[targetDir][1], self.exit[targetDir][2], self.exit[targetDir][3], self.exit[targetDir][4])
+                if otherRoom != None:
+                    otherRoomExitDir = None
+                    for exitDir in otherRoom.exit:
+                        exitData = otherRoom.exit[exitDir]
+                        if exitData != None and self.sameRoomCheck(exitData) == True:
+                            otherRoomExitDir = exitDir
+                            break
+                    
+                    if otherRoomExitDir != None and otherRoom.door[otherRoomExitDir] != None:
+                        otherRoom.door[otherRoomExitDir]["Status"] = targetAction
+
     def lockUnlockDoor(self, galaxyList, targetAction, targetDir):
         if self.door[targetDir] != None:
             if targetAction == "Lock":
@@ -266,7 +292,7 @@ class Room:
                                 otherRoomExitDir = exitDir
                                 break
 
-                        if otherRoomExitDir != None:
+                        if otherRoomExitDir != None and otherRoom.door[otherRoomExitDir] != None:
                             otherRoom.door[otherRoomExitDir]["Status"] = targetAction
 
     def sameRoomCheck(self, target):

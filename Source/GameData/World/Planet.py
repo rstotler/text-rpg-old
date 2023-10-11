@@ -56,7 +56,7 @@ class Planet:
                 elif dayPercent >= self.noonPercent and self.noonMessage == False:
                     self.noonMessage = True
                     console.lineList.insert(0, {"Blank": True})
-                    console.lineList.insert(0, {"String":"It is noon.", "Code":"10w1y"})
+                    console.lineList.insert(0, {"String":"It's noon.", "Code":"2w1y6w1y"})
                 elif dayPercent >= self.duskPercent and self.duskMessage == False:
                     self.duskMessage = True
                     console.lineList.insert(0, {"Blank": True})
@@ -75,7 +75,7 @@ class Planet:
         yearRatio = 0
         if self.minutesInYear != 0:
             yearRatio = math.cos(math.radians(((self.currentMinutesInYear) / (self.minutesInYear)) * 360))
-        ratio = ((self.axialTilt / 100) * yearRatio) * (self.minutesInDay / 2.50)
+        ratio = ((self.axialTilt / 100.0) * yearRatio) * (self.minutesInDay / 2.50)
         nightMinutes = self.minutesInDay - ((self.minutesInDay / 1.9) - ratio)
         
         self.dawnPercent = (nightMinutes / 2.01) / self.minutesInDay
@@ -115,29 +115,6 @@ class Planet:
             y = ((math.sin(math.radians((self.currentMinutesInYear / self.minutesInYear) * 360)) * self.distanceFromSun) / 1.5) * orbitMod
         
         self.position = [x, y]
-
-    def displayTime(self, console):
-        hoursString = str(int(self.currentMinutesInDay / 60))
-        if self.name["String"] in ["Earth", "Proto Earth"]:
-            if hoursString == "0":
-                hoursString = "12"
-            elif int(hoursString) > 12:
-                hoursString = str(int(hoursString) - 12)
-
-        minutesString = str(int(self.currentMinutesInDay % 60))
-        if len(minutesString) == 1:
-            minutesString = "0" + minutesString
-
-        if self.name["String"] in ["Earth", "Proto Earth"]:
-            amPmString = " A.M"
-            if self.currentMinutesInDay >= self.minutesInDay / 2:
-                amPmString = " P.M"
-            amPmCode = "2w1y1w"
-            console.lineList.insert(0, {"Blank": True})
-            console.lineList.insert(0, {"String":"The time is " + str(hoursString) + ":" + str(minutesString) + amPmString + ".", "Code":"12w" + str(len(hoursString)) +"w1y" + str(len(minutesString)) + "w" + amPmCode + "1y"})
-        else:
-            console.lineList.insert(0, {"Blank": True})
-            console.lineList.insert(0, {"String":"The time is " + str(hoursString) + ":" + str(minutesString) + ".", "Code":"12w" + str(len(hoursString)) +"w1y" + str(len(minutesString)) + "w1y"})
 
     def dayCheck(self):
         if self.type == "Star":

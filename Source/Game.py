@@ -19,7 +19,6 @@ from Components.Utility import stringIsNumber
 # To Do List:
     # Make Player Lose Sight Of Mobs On Darkness
     # Enemy groups
-    # Search Command
     # Auto-Loot
     # Auto-Reload
     # Auto-Combat
@@ -29,7 +28,8 @@ from Components.Utility import stringIsNumber
     # Counter-Attack (Passive Skill)
     # Peek Through Ship Exit Door
     # Jab(?)
-    # Someone says in dark fix
+    # refactor 'currentRoom' ?
+    # turning off course mid flight
 
 class Game:
 
@@ -47,7 +47,7 @@ class Game:
         self.loadGame()
         # self.inputBar.inputList = ["n", "n", "w", "loot cab", "wear pis", "wear pis", "e", "s", "s", "reload"]
         # self.inputBar.inputList = ["n", "n", "w", "get sniper from cab", "get 5.56 from cab", "get 5.56 from cab", "get 5.56 from cab", "e", "s", "s", "wear sni", "reload"]
-        self.inputBar.inputList = ["n", "n", "w", "get key from chest", "e", "s", "s", "s", "s", "board ship", "n"]
+        # self.inputBar.inputList = ["n", "n", "w", "get key from chest", "e", "s", "s", "s", "s", "board ship", "n"]
 
     def loadGame(self):
         galaxyProtoMilkyWay = Galaxy()
@@ -167,6 +167,11 @@ class Game:
             # Zero Area Coordinates #
             areaCOTU.zeroCoordinates(self.galaxyList)
 
+            # Load Doors #
+            roomCOTU02.installDoor(self.galaxyList, "North", "Automatic", "COTU Spaceport")
+            roomCOTU02.lockUnlockDoor(self.galaxyList, "Lock", "North")
+            roomCOTU04.installDoor(self.galaxyList, "East", "Manual", None, "Open")
+
         # (Spaceship) COTU Transport Ship #
         if True:
             cotuTransportShipName = {"String":"COTU Transport Ship", "Code":"19w"}
@@ -182,7 +187,7 @@ class Game:
 
             roomIceCavern00 = Room(0, 0, 1, 1, 0)
             areaIceCavern.roomList.append(roomIceCavern00)
-            roomIceCavern00.name = {"String":"Ice Cavern", "Code":"4w6w"}
+            roomIceCavern00.name = {"String":"Frozen Entryway", "Code":"1dc1ddc1dw1dc1ddc1dw1dc1ddc1dw1dc1ddc1dw1dc1ddc1dw"}
             roomIceCavern00.exit["West"] = [0, 0, 1, 0, 0]
             roomIceCavern00.exit["North"] = [0, 0, 1, 1, 1]
 
@@ -205,6 +210,10 @@ class Game:
 
             # Zero Area Coordinates #
             areaIceCavern.zeroCoordinates(self.galaxyList)
+
+            # Load Doors #
+            roomIceCavern00.installDoor(self.galaxyList, "North", "Hidden", None, "Closed", True)
+            roomIceCavern00.searchList.append({"Type":"Hidden Door", "Target Direction":"North", "Key List":["wall"], "Open Display String":"You find a loose section of rock, pull on it, and the cave wall before you opens up!", "Open Display Code":"32w1y11w1y38w1y"})
 
         # Milky Way & Sol #
         if True:
@@ -252,11 +261,6 @@ class Game:
             plutoName = {"String":"Pluto", "Code":"5w"}
             planetPluto = Planet(1, 1, 9, plutoName, "Planet", 3700000000, 9180, 130348800, 119.61)
             systemSol.planetList.append(planetPluto)
-
-        # Load Doors AFTER ALL Rooms Are Loaded! #
-        roomCOTU02.installDoor(self.galaxyList, "North", "Automatic", "COTU Spaceport")
-        roomCOTU02.lockUnlockDoor(self.galaxyList, "Lock", "North")
-        roomCOTU04.installDoor(self.galaxyList, "East", "Manual", None, "Open")
 
         # Load Map #
         playerArea, playerRoom = Room.getAreaAndRoom(self.galaxyList, self.player)
@@ -1103,8 +1107,8 @@ class Game:
             else:
                 self.player.unloadCheck(self.console, self.galaxyList, self.player, currentRoom, "All", "All", None)
 
-        # Recruit/Tame [Needs Testing] #
-        elif input.lower().split()[0] in ["tame", "tam", "recruit", "recrui", "recru", "recr", "rec"]:
+        # Recruit/Tame/Group [Needs Testing] #
+        elif input.lower().split()[0] in ["tame", "tam", "recruit", "recrui", "recru", "recr", "rec", "group", "grou", "gro", "gr"]:
 
             # Recruit All Mob #
             if len(input.split()) > 2 and input.lower().split()[1] == "all":
@@ -1117,6 +1121,10 @@ class Game:
                 mobCount = int(input.split()[1])
                 mobKey = ' '.join(input.lower().split()[2::])
                 self.player.recruitCheck(self.console, self.galaxyList, self.player, currentRoom, mobKey, mobCount)
+
+            # Recruit List #
+            elif len(input.split()) == 2 and input.lower().split()[1] == "list":
+                self.player.displayGroup(self.console, self.galaxyList)
 
             # Recruit All #
             elif len(input.split()) == 2 and input.lower().split()[1] == "all":
@@ -1193,8 +1201,7 @@ class Game:
 
         # Time #
         elif len(input.split()) == 1 and input.lower() in ["time", "tim", "ti"]:
-            currentPlanet = self.galaxyList[self.player.galaxy].systemList[self.player.system].planetList[self.player.planet]
-            currentPlanet.displayTime(self.console)
+            self.player.displayTime(self.console, self.galaxyList)
 
         # Weather #
 
@@ -1202,6 +1209,13 @@ class Game:
 
         ## Other Commands ##
         # Eat/Drink #
+        elif input.lower().split()[0] in ["eat", "drink", "drin", "dri"]:
+            if len(input.split()) > 1:
+                consumeKey = ' '.join(input.lower().split()[1::])
+                self.player.consumeCheck(self.console, self.galaxyList, self.player, currentRoom, consumeKey)
+
+            else:
+                self.console.write(actionString + " what?", str(len(actionString)) + "w5w1y", True)
 
         # Fill #
 
@@ -1234,11 +1248,14 @@ class Game:
 
         # Course #
         elif input.lower().split()[0] in ["course", "cours", "cour", "cou"]:
+            
+            # Course X Y #
             if len(input.split()) == 3 and stringIsNumber(input.split()[1]) and stringIsNumber(input.split()[2]):
                 targetX = int(input.split()[1])
                 targetY = int(input.split()[2])
                 self.player.courseCheck(self.console, self.galaxyList, self.player, currentRoom, [targetX, targetY])
             
+            # Course Target #
             elif len(input.split()) > 1:
                 courseKey = ' '.join(input.lower().split()[1::])
                 self.player.courseCheck(self.console, self.galaxyList, self.player, currentRoom, courseKey)
@@ -1249,6 +1266,15 @@ class Game:
                 self.console.write(displayString, displayCode, True)
 
         # Throttle/Speed #
+        elif input.lower().split()[0] in ["throttle", "throttl", "thrott", "throt", "speed", "spee", "spe"]:
+            if len(input.split()) > 1:
+                throttleKey = ' '.join(input.lower().split()[1::])
+                self.player.throttleCheck(self.console, self.galaxyList, self.player, currentRoom, throttleKey)
+
+            else:
+                displayString = '''A computerized voice says, 'Adjust speed using "Speed 50" or "Speed Max".' '''
+                displayCOde = "25w3y19w1y8w1y4w1y9w3y" 
+                self.console.write(displayString, displayCode, True)
 
         # Calculate #
 
@@ -1256,6 +1282,13 @@ class Game:
 
         ## Crafting/Exploration Commands ##
         # Search #
+        elif input.lower().split()[0] in ["search", "searc", "sear", "sea", "se"]:
+            if len(input.split()) > 1:
+                searchKey = ' '.join(input.lower().split()[1::])
+                self.player.searchCheck(self.console, self.galaxyList, self.player, currentRoom, searchKey)
+            
+            else:
+                self.console.write("What should you search?", "22w1y", True)
 
         # Inspect #
         
