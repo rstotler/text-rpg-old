@@ -10,6 +10,7 @@ class Spaceship:
         self.system = landedLocation[1]
         self.planet = landedLocation[2]
         self.num = Spaceship.generateNum()
+        self.flags = {}
 
         self.name = name
         self.keyList = []
@@ -24,21 +25,60 @@ class Spaceship:
         self.position = [0, 0]
         self.course = None
         self.targetPlanet = None
-        
-        self.speed = 0
-        self.speedMod = 0
+        self.lastPlanet = None
 
-        self.launchTick = -1
-        self.launchTickMax = 1
-        self.launchPhase = 3
+        self.clearCourseCheck = False
+        self.displaySpeedUpMessage = False
+        self.displaySlowDownMessage = False
+        
+        self.speedPercent = 0
+        self.speedMod = 0
+        self.topSpeed = 2500
+
+        self.launchLandAction = None
+        self.launchLandTick = -1
+        self.launchLandTickMax = 1
+        self.launchLandPhase = 0
 
         self.buildSpaceship(galaxyList)
 
     def update(self, console, galaxyList, player):
 
-        # Launch Spaceship #
-        if self.launchTick > -1:
+        # Launch/Land Spaceship #
+        if self.launchLandTick > -1 and self.launchLandAction == "Launch":
             self.launch(console, galaxyList)
+        elif self.launchLandTick > -1 and self.launchLandAction == "Land":
+            self.land(console, galaxyList)
+
+        # Speed Modulator #
+        if self.speedPercent != self.speedMod:
+            if self.speedPercent < self.speedMod:
+                if player.spaceship == self.num and self.displaySpeedUpMessage != False:
+                    if self.displaySpeedUpMessage < 2:
+                        self.displaySpeedUpMessage += 1
+                    else:
+                        console.write("The ship lurches slightly as it increases speed.", "47w1y", True)
+                        self.displaySpeedUpMessage = False
+                self.speedPercent += 2
+                if self.speedPercent > self.speedMod:
+                    self.speedPercent = self.speedMod
+                if player.spaceship == self.num and self.speedPercent == self.speedMod:
+                    console.write("The engine sounds normalize as the ship reaches its target speed.", "64w1y", True)
+            elif self.speedPercent > self.speedMod:
+                if player.spaceship == self.num and self.displaySlowDownMessage != False:
+                    if self.displaySlowDownMessage < 2:
+                        self.displaySlowDownMessage += 1
+                    else:
+                        console.write("You feel the ship slow down.", "27w1y", True)
+                        self.displaySlowDownMessage = False
+                self.speedPercent -= 4
+                if self.speedPercent < self.speedMod:
+                    self.speedPercent = self.speedMod
+                if player.spaceship == self.num:
+                    if self.speedPercent == 0:
+                        console.write("The electronic hum stops as the ships engines power down.", "56w1y", True)
+                    elif self.speedPercent == self.speedMod:
+                        console.write("The engine sounds normalize as the ship reaches its top speed.", "61w1y", True)
 
         # Move In Orbit #
         if self.planet != None:
@@ -46,46 +86,101 @@ class Spaceship:
             self.position = orbitingPlanet.position
 
         # Move Out Of Orbit #
-        elif self.planet == None and (self.speedMod != 0 or self.speed != 0):
-            if self.targetPlanet != None:
-                self.course = self.targetPlanet.position
+        elif self.planet == None:
+            self.move(console, galaxyList, player)
 
-            # Speed Modulator #
-            if self.speed != self.speedMod:
-                if self.speed < self.speedMod:
-                    if player.spaceship == self.num and self.speed == 4:
-                        console.write("The ship lurches slightly as it begins to move.", "46w1y", True)
-                    self.speed += 2
-                    if self.speed > self.speedMod:
-                        self.speed = self.speedMod
-                elif self.speed > self.speedMod:
-                    self.speed -= 2
-                    if self.speed < self.speedMod:
-                        self.speed = self.speedMod
-
-            if self.speed > 0:
-                pass
+        # Clear Course Check #
+        if self.speedPercent == 0 and self.clearCourseCheck == True:
+            self.course = None
+            self.targetPlanet = None
+            self.clearCourseCheck = False
 
     def launch(self, console, galaxyList):
-        self.launchTick += 1
-        if self.launchTick >= self.launchTickMax:
-            self.launchTick = 0
-            self.launchPhase += 1
+        self.launchLandTick += 1
+        if self.launchLandTick >= self.launchLandTickMax:
+            self.launchLandTick = 0
+            self.launchLandPhase += 1
 
-            if self.launchPhase == 1:
+            if self.launchLandPhase == 1:
                 console.write("The ship rumbles as the engines start up.", "40w1y", True)
-            elif self.launchPhase == 2:
+            elif self.launchLandPhase == 2:
                 console.write("The engines roar as you blast off!", "33w1y", True)
-            elif self.launchPhase == 3:
+            elif self.launchLandPhase == 3:
                 console.write("The ship rumbles as it makes its fiery ascent.", "45w1y", True)
 
-            elif self.launchPhase == 4:
-                self.launchTick = -1
+            elif self.launchLandPhase == 4:
                 targetPlanet = galaxyList[self.galaxy].systemList[self.system].planetList[self.planet]
+                self.launchLandAction = None
+                self.launchLandTick = -1
+                self.lastPlanet = targetPlanet
+
                 displayString = "You begin orbiting " + targetPlanet.name["String"] + "."
                 displayCode = "19w" + targetPlanet.name["Code"] + "1y"
                 console.write(displayString, displayCode, True)
     
+    def land(self, console, galaxyList):
+        self.launchLandTick += 1
+        if self.launchLandTick >= self.launchLandTickMax:
+            self.launchLandTick = 0
+            self.launchLandPhase += 1
+
+            if self.launchLandPhase == 1:
+                console.write("You feel a sense of weightlessness as you begin your descent.", "60w1y", True)
+            elif self.launchLandPhase == 2:
+                console.write("The ship rumbles as it descends toward the plant.", "48w1y", True)
+            elif self.launchLandPhase == 3:
+                console.write("The ship begins to slow down as it approaches the landing pad.", "61w1y", True)
+
+            elif self.launchLandPhase == 4:
+                targetPlanet = galaxyList[self.galaxy].systemList[self.system].planetList[self.planet]
+                self.launchLandAction = None
+                self.launchLandTick = -1
+                if "Target Landing Location" in self.flags:
+                    self.landedLocation = self.flags["Target Landing Location"]
+                    del self.flags["Target Landing Location"]
+                else:
+                    self.landedLocation = [targetPlanet.getLandingRoomDataList[0]["Area"].num, targetPlanet.getLandingRoomDataList[0]["Room"].room]
+                targetPlanet.areaList[self.landedLocation[0]].roomList[self.landedLocation[1]].spaceshipList.append(self)
+                console.write("You feel a slight thud as the ship lands.", "40w1y", True)
+
+    def move(self, console, galaxyList, player):
+        if self.targetPlanet != None:
+            self.course = self.targetPlanet.position
+
+        if self.speedPercent > 0:
+            moveSpeed = self.topSpeed * (self.speedPercent / 100.0)
+            distance = [self.course[0] - self.position[0], self.course[1] - self.position[1]]
+            slope = distance[0] / distance[1]
+            counterSlope = 1.0 - abs(slope)
+            if abs(slope) > 1.0:
+                counterSlope = 1.0 / slope
+                slope = 1.0
+
+            if self.position[0] < self.course[0] : self.position[0] += moveSpeed * abs(slope)
+            else : self.position[0] -= moveSpeed * abs(slope)
+            if self.position[1] < self.course[1] : self.position[1] += moveSpeed * abs(counterSlope)
+            else : self.position[1] -= moveSpeed * abs(counterSlope)
+
+            for planet in galaxyList[self.galaxy].systemList[self.system].planetList:
+                if planet != self.lastPlanet:
+                    if abs(self.position[0] - planet.position[0]) <= (moveSpeed * 1.25):
+                        if abs(self.position[1] - planet.position[1]) <= (moveSpeed * 1.25):
+                            self.planet = planet.planet
+                            self.course = None
+                            self.targetPlanet = None
+                            self.speedMod = 0
+                            if self.speedPercent > 0:
+                                self.displaySlowDownMessage = 1
+                                self.displaySpeedUpMessage = False
+                            if player.spaceship == self.num:
+                                player.planet = planet.planet
+                            for area in self.areaList:
+                                for room in area.roomList:
+                                    for mob in room.mobList:
+                                        mob.planet = planet.planet
+                            console.write("You being orbiting " + planet.name["String"] + ".", "19w" + planet.name["Code"] + "1y", True)
+                            break
+
     def getRoom(self, area, room):
         if area <= len(self.areaList):
             if isinstance(room, int) and room <= len(self.areaList[area].roomList):
@@ -105,18 +200,18 @@ class Spaceship:
         appendKeyList(self.keyList, self.name["String"].lower())
         appendKeyList(self.keyList, "spaceship")
 
-        shipArea0 = Area(0)
+        shipArea0Name = {"String":"Ship Area 1"}
+        shipArea0 = Area(0, shipArea0Name)
         self.areaList.append(shipArea0)
-        shipArea0.name = {"String":"Ship Area 1"}
         
-        shipRoom00 = Room(None, None, None, 0, 0)
+        shipRoom00Name = {"String":"Ship Cockpit"}
+        shipRoom00 = Room(None, None, None, 0, 0, shipRoom00Name)
         shipArea0.roomList.append(shipRoom00)
-        shipRoom00.name = {"String":"Ship Cockpit"}
         shipRoom00.exit["South"] = [0, 1]
 
-        shipRoom01 = Room(None, None, None, 0, 1)
+        shipRoom01Name = {"String":"Ship Hallway"}
+        shipRoom01 = Room(None, None, None, 0, 1, shipRoom01Name)
         shipArea0.roomList.append(shipRoom01)
-        shipRoom01.name = {"String":"Ship Hallway"}
         shipRoom01.exit["North"] = [0, 0]
 
         for area in self.areaList:

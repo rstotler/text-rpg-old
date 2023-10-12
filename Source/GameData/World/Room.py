@@ -1,10 +1,12 @@
 import copy
 from GameData.Item import Item
 from Components.Utility import getCountString
+from Components.Utility import createUnderlineString
+from Components.Utility import createDefaultString
 
 class Room:
 
-    def __init__(self, galaxy, system, planet, area, room):
+    def __init__(self, galaxy, system, planet, area, room, name):
         self.galaxy = galaxy
         self.system = system
         self.planet = planet
@@ -15,7 +17,7 @@ class Room:
 
         self.mapCoordinates = [None, None]
 
-        self.name = {"String":"A Debug Room"}
+        self.name = createDefaultString(name)
         self.description = []
         self.searchList = []
 
@@ -45,21 +47,8 @@ class Room:
         console.write(nameString, nameCode, True)
 
         # Underline #
-        underlineString = ""
-        underlineCode = ""
-        for i in range(len(nameString)):
-            underlineChar = "-"
-            indentCount = int(len(nameString) * .15)
-            if indentCount <= 0:
-                indentCount = 1
-            if i not in range(0, indentCount) and i not in range(len(nameString) - indentCount, len(nameString)):
-                underlineChar = "="
-            underlineString = underlineString + underlineChar
-            if i % 2 == 1:
-                underlineCode = underlineCode + "1y"
-            else:
-                underlineCode = underlineCode + "1dy"
-        console.write(underlineString, underlineCode)
+        underline = createUnderlineString(nameString)
+        console.write(underline["String"], underline["Code"])
 
         # Description #
         if roomIsLit == False:

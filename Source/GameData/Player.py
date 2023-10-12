@@ -10,6 +10,7 @@ from Components.Utility import stringIsNumber
 from Components.Utility import getCountString
 from Components.Utility import messageExistsCheck
 from Components.Utility import insertCommasInNumber
+from Components.Utility import createUnderlineString
 
 class Player:
 
@@ -167,7 +168,7 @@ class Player:
             if messageType == "Can't See Further":
                 console.write("You can't see any farther to the " + lookDir + "." + countString, "7w1y25w" + str(len(lookDir)) + "w1y" + countCode, True)
             elif messageType == "View Obstructed":
-                console.write("Your view to the " + lookDir + " is obstructed." + countString, "17w" + str(len(lookDir)) + "w14w1y" + countCode, True)
+                console.write("Your view to the " + lookDir + " is obstructed by a door." + countString, "17w" + str(len(lookDir)) + "w24w1y" + countCode, True)
         if lookCheck:
             currentRoom.display(console, galaxyList, self)
     
@@ -209,7 +210,7 @@ class Player:
                     sCode = "1w"
                 countString = " (" + str(lookCount) + " Room" + sString + " Away)"
                 countCode = "2r" + str(len(str(lookCount))) + "w5w" + sCode + "5w1r"
-            console.write("Your view to the " + lookDir + " is obstructed." + countString, "17w" + str(len(lookDir)) + "w14w1y" + countCode, True)
+            console.write("Your view to the " + lookDir + " is obstructed by a door." + countString, "17w" + str(len(lookDir)) + "w24w1y" + countCode, True)
             
             if lookCount > 0:
                 currentRoom.display(console, galaxyList, self)
@@ -301,7 +302,7 @@ class Player:
                         sCode = "1w"
                     countString = " (" + str(roomCount) + " Room" + sString + " Away)"
                     countCode = "2r" + str(len(str(roomCount))) + "w5w" + sCode + "5w1r"
-                console.write("Your view to the " + targetDir + " is obstructed." + countString, "17w" + str(len(targetDir)) + "w14w1y" + countCode, True)
+                console.write("Your view to the " + targetDir + " is obstructed by a door." + countString, "17w" + str(len(targetDir)) + "w24w1y" + countCode, True)
         
             else:
                 targetMob = None
@@ -436,7 +437,7 @@ class Player:
                         sCode = "1w"
                     countString = " (" + str(roomCount) + " Room" + sString + " Away)"
                     countCode = "2r" + str(len(str(roomCount))) + "w5w" + sCode + "5w1r"
-                console.write("Your view to the " + targetDir + " is obstructed." + countString, "17w" + str(len(targetDir)) + "w14w1y" + countCode, True)
+                console.write("Your view to the " + targetDir + " is obstructed by a door." + countString, "17w" + str(len(targetDir)) + "w24w1y" + countCode, True)
         
             else:
                 targetMob = None
@@ -3059,19 +3060,19 @@ class Player:
             console.write("You have already launched.", "25w1y", True)
 
         else:
-            currentPlanet = galaxyList[self.galaxy].systemList[self.system].planetList[self.planet]
-            currentArea = Room.getAreaAndRoom(galaxyList, currentRoom)[0]
-            for room in currentArea.roomList:
+            landedPlanet = galaxyList[currentRoom.spaceshipObject.galaxy].systemList[currentRoom.spaceshipObject.system].planetList[currentRoom.spaceshipObject.planet]
+            landedArea = landedPlanet.areaList[currentRoom.spaceshipObject.landedLocation[0]]
+            for room in landedArea.roomList:
                 if currentRoom.spaceshipObject in room.spaceshipList:
                     del room.spaceshipList[room.spaceshipList.index(currentRoom.spaceshipObject)]
+            
+            currentRoom.spaceshipObject.launchLandAction = "Launch"
             currentRoom.spaceshipObject.landedLocation = None
-            currentRoom.spaceshipObject.launchTick = 0
-            currentRoom.spaceshipObject.position = currentPlanet.position
+            currentRoom.spaceshipObject.launchLandTick = 0
+            currentRoom.spaceshipObject.launchLandPhase = 3 # Debug, Original: 0 #
+
             console.write('A computerized voice says, "Commencing launch countdown."', "25w3y27w2y", True)
     
-    def landCheck(self, console, galaxyList, player, currentRoom):
-        pass
-
     def radarCheck(self, console, galaxyList, player, currentRoom):
         if currentRoom.spaceshipObject == None or "Cockpit" not in currentRoom.flags:
             console.write("You must be in a cockpit to do that.", "35w1y", True)
@@ -3084,13 +3085,20 @@ class Player:
             positionCode = "9w2y1r1y" + xPositionLine["Code"] + "w1w1r1y" + yPositionLine["Code"] + "w"
             console.write(positionString, positionCode)
 
-            statusString = "[Orbiting]"
+            statusString = "[Orbiting]" 
             statusCode = "1y8w1y"
+            if currentRoom.spaceshipObject.planet != None:
+                orbitingPlanet = galaxyList[currentRoom.spaceshipObject.galaxy].systemList[currentRoom.spaceshipObject.system].planetList[currentRoom.spaceshipObject.planet]
+                statusString = "[Orbiting " + orbitingPlanet.name["String"] + "]"
+                statusCode = "1y9w" + orbitingPlanet.name["Code"] + "1y"
             if currentRoom.spaceshipObject.landedLocation != None:
                 statusString = "[Landed]"
                 statusCode = "1y6w1y"
-            elif currentRoom.spaceshipObject.launchTick != -1:
-                statusString = "[Launching]"
+            elif currentRoom.spaceshipObject.launchLandTick != -1 and currentRoom.spaceshipObject.launchLandAction in ["Launch", "Land"]:
+                statusString = "[" + currentRoom.spaceshipObject.launchLandAction + "ing]"
+                statusCode = "1y" + str(len(currentRoom.spaceshipObject.launchLandAction)) + "w3w1y"
+            elif currentRoom.spaceshipObject.planet == None:
+                statusString = "[In Flight]"
                 statusCode = "1y9w1y"
             
             headingString = " Heading - " + statusString
@@ -3100,15 +3108,22 @@ class Player:
             if currentRoom.spaceshipObject.course != None:
                 xCourseLine = insertCommasInNumber(str(int(currentRoom.spaceshipObject.course[0])))
                 yCourseLine = insertCommasInNumber(str(int(currentRoom.spaceshipObject.course[1])))
-                if currentRoom.spaceshipObject.targetPlanet != None:
+                if currentRoom.spaceshipObject.targetPlanet != None and currentRoom.spaceshipObject.clearCourseCheck == False:
                     headingPlanetString = " [" + currentRoom.spaceshipObject.targetPlanet.name["String"] + "]"
                     headingPlanetCode = "2y" + currentRoom.spaceshipObject.targetPlanet.name["Code"] + "1y"
                 headingString = " Heading - X:" + xCourseLine["String"] + " Y:" + yCourseLine["String"] + headingPlanetString
                 headingCode = "9w2y1r1y" + xCourseLine["Code"] + "w1w1r1y" + yCourseLine["Code"] + headingPlanetCode
             console.write(headingString, headingCode)
 
-            speedString = "   Speed - " + str(currentRoom.spaceshipObject.speed) + "%"
-            speedCode = "9w2y" + str(len(str(currentRoom.spaceshipObject.speed))) + "w1y"
+            currentSpeed = int(currentRoom.spaceshipObject.topSpeed * (currentRoom.spaceshipObject.speedPercent / 100.0))
+            currentSpeedString = ""
+            currentSpeedCode = ""
+            if currentRoom.spaceshipObject.speedPercent > 0:
+                currentSpeedLine = insertCommasInNumber(str(int(currentSpeed)))
+                currentSpeedString = " [" + currentSpeedLine["String"] + "]"
+                currentSpeedCode = "2y" +currentSpeedLine["Code"] + "w1y"
+            speedString = "   Speed - " + str(currentRoom.spaceshipObject.speedPercent) + "%" + currentSpeedString
+            speedCode = "9w2y" + str(len(str(currentRoom.spaceshipObject.speedPercent))) + "w1y" + currentSpeedCode
             console.write(speedString, speedCode)
 
             longestNameString = 0
@@ -3124,6 +3139,12 @@ class Player:
                 yPositionLine = insertCommasInNumber(str(int(planet.position[1])))
                 orbitString = " " + statusString
                 orbitCode = "1w" + statusCode
+                if currentRoom.spaceshipObject.landedLocation == None:
+                    orbitString = " [Orbiting]"
+                    orbitCode = "2y8w1y"
+                    if currentRoom.spaceshipObject.launchLandAction != None:
+                        orbitString = " [" + currentRoom.spaceshipObject.launchLandAction + "ing]"
+                        orbitCode = "2y" + str(len(currentRoom.spaceshipObject.launchLandAction)) + "w3w1y"
                 if currentRoom.spaceshipObject.planet != planet.planet:
                     orbitString = ""
                     orbitCode = ""
@@ -3131,42 +3152,48 @@ class Player:
                 displayCode = str(len(bufferString)) + "w" + planet.name["Code"] + "3y1r1y" + xPositionLine["Code"] + "2r1y" + yPositionLine["Code"] + orbitCode
                 console.write(displayString, displayCode)
 
-    def courseCheck(self, console, galaxyList, player, currentRoom, targetCourse):
+    def courseCheck(self, console, galaxyList, player, currentRoom, courseKey):
         if currentRoom.spaceshipObject == None or "Cockpit" not in currentRoom.flags:
             console.write("You must be in a cockpit to do that.", "35w1y", True)
         elif currentRoom.spaceshipObject.landedLocation != None:
-            if currentRoom.spaceshipObject.launchTick != -1:
-                console.write("You can't do that while launching.", "7w1y25w1y", True)
+            if currentRoom.spaceshipObject.launchLandTick != -1:
+                actionString = currentRoom.spaceshipObject.launchLandAction.lower() + "ing"
+                console.write("You can't do that while " + actionString + ".", "7w1y16w" + str(len(actionString)) + "w1y", True)
             else:
                 console.write("You can't do that while landed.", "7w1y22w1y", True)
-        elif targetCourse == "none" and currentRoom.spaceshipObject.course == None:
+        elif courseKey == "none" and (currentRoom.spaceshipObject.clearCourseCheck == True or currentRoom.spaceshipObject.course == None):
             console.write("Your heading is already clear.", "29w1y", True)
+        elif courseKey == None:
+            displayString = '''A computerized voice says, 'Set your course with "Course X Y/Destination".' '''
+            displayCode = "25w3y21w1y10w1r11w3y"
+            console.write(displayString, displayCode, True)
         
         else:
-            if targetCourse == "none":
-                currentRoom.spaceshipObject.course = None
-                currentRoom.spaceshipObject.targetPlanet = None
+            if courseKey == "none" and currentRoom.spaceshipObject.speedMod > 0:
+                currentRoom.spaceshipObject.clearCourseCheck = True
                 currentRoom.spaceshipObject.speedMod = 0
+                currentRoom.spaceshipObject.displaySlowDownMessage = 1
+                currentRoom.spaceshipObject.displaySpeedUpMessage = False
                 console.write("You clear the ships heading.", "27w1y", True)
 
             else:
                 targetPlanet = None
-                if isinstance(targetCourse, str) == True:
+                if isinstance(courseKey, str) == True:
                     for planet in galaxyList[self.galaxy].systemList[self.system].planetList:
-                        if targetCourse in planet.keyList:
+                        if courseKey in planet.keyList:
                             targetPlanet = planet
                             break
                 else:
                     rangeBound = 100
                     for planet in galaxyList[self.galaxy].systemList[self.system].planetList:
-                        if targetCourse[0] >= planet.position[0] - rangeBound and targetCourse[0] < planet.position[0] + rangeBound:
-                            if targetCourse[1] >= planet.position[1] - rangeBound and targetCourse[1] < planet.position[1] + rangeBound:
+                        if courseKey[0] >= planet.position[0] - rangeBound and courseKey[0] < planet.position[0] + rangeBound:
+                            if courseKey[1] >= planet.position[1] - rangeBound and courseKey[1] < planet.position[1] + rangeBound:
                                 targetPlanet = planet
                                 break
 
-                if isinstance(targetCourse, str) == True and targetPlanet == None:
+                if isinstance(courseKey, str) == True and targetPlanet == None:
                     console.write("You can't find it on the radar.", "7w1y22w1y", True)
-                elif isinstance(targetCourse, str) == True and targetPlanet.planet == self.planet:
+                elif isinstance(courseKey, str) == True and targetPlanet.planet == self.planet:
                     console.write("You are already orbiting " + targetPlanet.name["String"] + ".", "25w" + targetPlanet.name["Code"] + "1y", True)
 
                 else:
@@ -3175,11 +3202,18 @@ class Player:
                         currentRoom.spaceshipObject.targetPlanet = targetPlanet
                         console.write("You punch in the coordinates for " + targetPlanet.name["String"] + ".", "33w" + targetPlanet.name["Code"] + "1y", True)
                     else:
-                        currentRoom.spaceshipObject.course = targetCourse
+                        currentRoom.spaceshipObject.course = courseKey
                         console.write("You punch some coordinates into the ship's computer.", "40w1y10w1y", True)
 
+                    if currentRoom.spaceshipObject.planet != None:
+                        currentRoom.spaceshipObject.lastPlanet = galaxyList[currentRoom.spaceshipObject.galaxy].systemList[currentRoom.spaceshipObject.system].planetList[currentRoom.spaceshipObject.planet]
+                    else:
+                        currentRoom.spaceshipObject.lastPlanet = None
                     currentRoom.spaceshipObject.speedMod = 100
                     currentRoom.spaceshipObject.planet = None
+                    if currentRoom.spaceshipObject.speedPercent == 0:
+                        currentRoom.spaceshipObject.displaySpeedUpMessage = 1
+                    currentRoom.spaceshipObject.displaySlowDownMessage = False
                     if currentRoom.spaceshipObject.num == player.spaceship:
                         player.planet = None
                     for area in currentRoom.spaceshipObject.areaList:
@@ -3188,8 +3222,99 @@ class Player:
                                 mob.planet = None
 
     def throttleCheck(self, console, galaxyList, player, currentRoom, throttleKey):
-        pass
-    
+        if currentRoom.spaceshipObject == None or "Cockpit" not in currentRoom.flags:
+            console.write("You must be in a cockpit to do that.", "35w1y", True)
+        elif currentRoom.spaceshipObject.landedLocation != None:
+            if currentRoom.spaceshipObject.launchLandTick != -1:
+                actionString = currentRoom.spaceshipObject.launchLandAction.lower() + "ing"
+                console.write("You can't do that while " + actionString + ".", "7w1y16w" + str(len(actionString)) + "w1y", True)
+            else:
+                console.write("You can't do that while landed.", "7w1y22w1y", True)
+        elif currentRoom.spaceshipObject.planet != None:
+            console.write("There is no need to do that in orbit.", "36w1y", True)
+        elif currentRoom.spaceshipObject.speedPercent == 0 and currentRoom.spaceshipObject.course != None:
+            console.write('''A computerized voice says, 'Please choose a heading first.' ''', "25w3y29w2y", True)
+        
+        else:
+            targetSpeed = None
+            if throttleKey != None:
+                if stringIsNumber(throttleKey):
+                    targetSpeed = int(throttleKey)
+                    if targetSpeed < 0 : targetSpeed = 0
+                    elif targetSpeed > 100 : targetSpeed = 100
+                elif throttleKey == "max":
+                    targetSpeed = 100
+                elif throttleKey in ["none", "off"]:
+                    targetSpeed = 0
+
+            if targetSpeed == None:
+                displayString = '''A computerized voice says, 'Adjust speed using "Speed #/Max/None".' '''
+                displayCode = "25w3y19w1y7w1r3w1r4w3y" 
+                console.write(displayString, displayCode, True)
+            elif targetSpeed == currentRoom.spaceshipObject.speedMod:
+                console.write("The speed is already set to " + str(targetSpeed) + "%.", "28w" + str(len(str(targetSpeed))) + "w2y", True)
+
+            else:
+                if currentRoom.spaceshipObject.speedPercent == currentRoom.spaceshipObject.speedMod:
+                    if targetSpeed > currentRoom.spaceshipObject.speedPercent:
+                        currentRoom.spaceshipObject.displaySpeedUpMessage = 1
+                        currentRoom.spaceshipObject.displaySlowDownMessage = False
+                    else:
+                        currentRoom.spaceshipObject.displaySlowDownMessage = 1
+                        currentRoom.spaceshipObject.displaySpeedUpMessage = False
+                currentRoom.spaceshipObject.speedMod = targetSpeed
+                console.write("You adjust the throttle to " + str(targetSpeed) + "%.", "27w" + str(len(str(targetSpeed))) + "w2y", True)
+
+    def scanCheck(self, console, galaxyList, player, currentRoom):
+        if currentRoom.spaceshipObject == None or "Cockpit" not in currentRoom.flags:
+            console.write("You must be in a cockpit to do that.", "35w1y", True)
+        elif currentRoom.spaceshipObject.planet == None:
+            console.write("You must be in orbit to scan for landing sites.", "46w1y", True)
+        
+        else:
+            targetPlanet = galaxyList[currentRoom.spaceshipObject.galaxy].systemList[currentRoom.spaceshipObject.system].planetList[currentRoom.spaceshipObject.planet]
+            underline = createUnderlineString("Scanning: " + targetPlanet.name["String"])
+            console.write("Scanning: " + targetPlanet.name["String"], "8w2y" + targetPlanet.name["Code"], True)
+            console.write(underline["String"], underline["Code"])
+
+            landingRoomDataList = targetPlanet.getLandingRoomDataList()
+            if len(landingRoomDataList) == 0:
+                console.write("There are no suitable landing locations.", "39w1y", True)
+
+            else:
+                for i, landingData in enumerate(landingRoomDataList):
+                    displayString = "[" + str(i + 1) + "] [" + landingData["Area"].name["String"] + "] - " + landingData["Room"].name["String"]
+                    displayCode = "1r" + str(len(str(i + 1))) + "w1r2y" + landingData["Area"].name["Code"] + "4y" + landingData["Room"].name["Code"]
+                    console.write(displayString, displayCode)
+
+    def landCheck(self, console, galaxyList, player, currentRoom, landKey):
+        if currentRoom.spaceshipObject == None or "Cockpit" not in currentRoom.flags:
+            console.write("You must be in a cockpit to do that.", "35w1y", True)
+        elif currentRoom.spaceshipObject.landedLocation != None:
+            console.write("You are already landed.", "22w1y", True)
+        elif currentRoom.spaceshipObject.planet == None:
+            console.write("You must be in orbit to do that.", "31w1y", True)
+        elif landKey != None and stringIsNumber(landKey) == False:
+            console.write('''A computerized voice says, 'Choose a landing site using "Land #".' ''', "25w3y28w1y6w3y", True)
+
+        else:
+            targetPlanet = galaxyList[currentRoom.spaceshipObject.galaxy].systemList[currentRoom.spaceshipObject.system].planetList[currentRoom.spaceshipObject.planet]
+            landingRoomDataList = targetPlanet.getLandingRoomDataList()
+            targetLandingIndex = 0
+            if landKey != None:
+                targetLandingIndex = int(landKey) - 1
+                if targetLandingIndex < 0:
+                    targetLandingIndex = 0
+                elif targetLandingIndex > len(landingRoomDataList) - 1:
+                    targetLandingIndex = len(landingRoomDataList) - 1
+            
+            currentRoom.spaceshipObject.launchLandAction = "Land"
+            currentRoom.spaceshipObject.launchLandTick = 0
+            currentRoom.spaceshipObject.launchLandPhase = 0
+            landingData = landingRoomDataList[targetLandingIndex]
+            currentRoom.spaceshipObject.flags["Target Landing Location"] = [landingData["Area"].num, landingData["Room"].room]
+            console.write('A computerized voice says, "Initiating landing sequence."', "25w3y27w2y", True)
+
     def searchCheck(self, console, galaxyList, player, currentRoom, searchKey):
         searchData = None
         for tempSearchData in currentRoom.searchList:

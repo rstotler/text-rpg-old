@@ -174,6 +174,30 @@ def insertCommasInNumber(targetNumString):
         returnCode = "1w" + returnCode
     return {"String":returnString, "Code":returnCode}
 
+def createUnderlineString(targetString):
+    underlineString = ""
+    underlineCode = ""
+    for i in range(len(targetString)):
+        underlineChar = "-"
+        indentCount = int(len(targetString) * .15)
+        if indentCount <= 0:
+            indentCount = 1
+        if i not in range(0, indentCount) and i not in range(len(targetString) - indentCount, len(targetString)):
+            underlineChar = "="
+        underlineString = underlineString + underlineChar
+        if i % 2 == 1:
+            underlineCode = underlineCode + "1y"
+        else:
+            underlineCode = underlineCode + "1dy"
+    return {"String":underlineString, "Code":underlineCode}
+
+def createDefaultString(targetString):
+    if isinstance(targetString, dict):
+        return targetString
+    else:
+        targetCode = str(len(targetString)) + "w"
+        return {"String":targetString, "Code":targetCode}
+
 def writeCrashReport(errorString, input, player):
     with open("../CrashReport.txt", "w") as f:
         f.write(errorString + "\n")

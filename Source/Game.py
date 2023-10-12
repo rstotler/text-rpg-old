@@ -29,7 +29,7 @@ from Components.Utility import stringIsNumber
     # Peek Through Ship Exit Door
     # Jab(?)
     # refactor 'currentRoom' ?
-    # turning off course mid flight
+    # recheck spaceship error messages, commands while landing/launching
 
 class Game:
 
@@ -47,7 +47,7 @@ class Game:
         self.loadGame()
         # self.inputBar.inputList = ["n", "n", "w", "loot cab", "wear pis", "wear pis", "e", "s", "s", "reload"]
         # self.inputBar.inputList = ["n", "n", "w", "get sniper from cab", "get 5.56 from cab", "get 5.56 from cab", "get 5.56 from cab", "e", "s", "s", "wear sni", "reload"]
-        # self.inputBar.inputList = ["n", "n", "w", "get key from chest", "e", "s", "s", "s", "s", "board ship", "n"]
+        self.inputBar.inputList = ["n", "n", "w", "get key from chest", "e", "s", "s", "s", "s", "board ship", "n"]
 
     def loadGame(self):
         galaxyProtoMilkyWay = Galaxy()
@@ -65,13 +65,12 @@ class Game:
             systemProtoSol.planetList.append(starProtoSol)
             starProtoSol.type = "Star"
 
-            areaLimbo = Area(0)
+            areaLimboName = {"String":"Limbo", "Code":"5w"}
+            areaLimbo = Area(0, areaLimboName)
             starProtoSol.areaList.append(areaLimbo)
-            areaLimbo.name = {"String":"Limbo"}
 
-            roomLimbo = Room(0, 0, 0, 0, 0)
+            roomLimbo = Room(0, 0, 0, 0, 0, "Limbo")
             areaLimbo.roomList.append(roomLimbo)
-            roomLimbo.name = {"String":"Limbo"}
 
             protoEarthName = {"String":"Proto Earth", "Code":"1w5ddw1b4db"}
             planetProtoEarth = Planet(0, 0, 1, protoEarthName, "Planet", 93456, 1440, 525600, 23.43)
@@ -83,18 +82,18 @@ class Game:
             planetProtoEarth.updatePosition()
 
             protoMarsName = {"String":"Proto Mars", "Code":"1w5ddw1dr3ddr"}
-            planetProtoMars = Planet(1, 1, 4, protoMarsName, "Planet", 148120, 1477, 989280, 25.19)
+            planetProtoMars = Planet(0, 0, 2, protoMarsName, "Planet", 148120, 1477, 989280, 25.19)
             systemProtoSol.planetList.append(planetProtoMars)
 
         # (Area) Center of the Universe #
         if True:
-            areaCOTU = Area(0)
+            areaCOTUName = {"String":"Center of the Universe", "Code":"22w"}
+            areaCOTU = Area(0, areaCOTUName)
             planetProtoEarth.areaList.append(areaCOTU)
-            areaCOTU.name = {"String":"Center of the Universe"}
 
-            roomCOTU00 = Room(0, 0, 1, 0, 0)
+            roomCOTU00Name = {"String":"Center of the Universe", "Code":"1w1ddw1da2dw2da1dw2ddw1da1dw1w2w2dw2ddw1da2ddw"}
+            roomCOTU00 = Room(0, 0, 1, 0, 0, roomCOTU00Name)
             areaCOTU.roomList.append(roomCOTU00)
-            roomCOTU00.name = {"String":"Center of the Universe", "Code":"1w1ddw1da2dw2da1dw2ddw1da1dw1w2w2dw2ddw1da2ddw"}
             roomCOTU00.exit["South"] = [0, 0, 1, 0, 1]
             roomCOTU00.exit["North"] = [0, 0, 1, 0, 3]
             roomCOTU00.exit["East"] = [0, 0, 1, 1, 0]
@@ -103,29 +102,29 @@ class Game:
                                     {"String":"from ages past. You see a bridge leading to the Spaceport", "Code":"14w2y32w1w1dw2ddw1dw1w1dw1ddw1dw"},
                                     {"String":"to the South and a garden to the North.", "Code":"7w1w5ddw6w1g1dg1ddg1g1dg1ddg8w1w4ddw1y"}]
             
-            roomCOTU01 = Room(0, 0, 1, 0, 1)
+            roomCOTU01Name = {"String":"Bridge To The Spaceport", "Code":"14w1w1dw2ddw1dw1w1dw1ddw1dw"}
+            roomCOTU01 = Room(0, 0, 1, 0, 1, roomCOTU01Name)
             areaCOTU.roomList.append(roomCOTU01)
-            roomCOTU01.name = {"String":"Bridge To The Spaceport", "Code":"14w1w1dw2ddw1dw1w1dw1ddw1dw"}
             roomCOTU01.exit["North"] = [0, 0, 1, 0, 0]
             roomCOTU01.exit["South"] = [0, 0, 1, 0, 2]
             roomCOTU01.mobList.append(Player(0, 0, 1, 0, 1, None, 1))
 
-            roomCOTU02 = Room(0, 0, 1, 0, 2)
+            roomCOTU02Name = {"String":"Spaceport Entrance", "Code":"1w1dw2ddw1dw1w1dw1ddw1dw9w"}
+            roomCOTU02 = Room(0, 0, 1, 0, 2, roomCOTU02Name)
             areaCOTU.roomList.append(roomCOTU02)
-            roomCOTU02.name = {"String":"Spaceport Entrance", "Code":"1w1dw2ddw1dw1w1dw1ddw1dw9w"}
             roomCOTU02.exit["North"] = [0, 0, 1, 0, 1]
             roomCOTU02.exit["South"] = [0, 0, 1, 0, 5]
             roomCOTU02.inside = True
 
-            roomCOTU03 = Room(0, 0, 1, 0, 3)
+            roomCOTU03Name = {"String":"A Peaceful Garden", "Code":"2w1w1dw2ddw1dw1w1ddw1da1w1g1dg1ddg1g1dg1ddg"}
+            roomCOTU03 = Room(0, 0, 1, 0, 3, roomCOTU03Name)
             areaCOTU.roomList.append(roomCOTU03)
-            roomCOTU03.name = {"String":"A Peaceful Garden", "Code":"2w1w1dw2ddw1dw1w1ddw1da1w1g1dg1ddg1g1dg1ddg"}
             roomCOTU03.exit["South"] = [0, 0, 1, 0, 0]
             roomCOTU03.exit["West"] = [0, 0, 1, 0, 4]
 
-            roomCOTU04 = Room(0, 0, 1, 0, 4)
+            roomCOTU04Name = {"String":"A Little Wooden Shack", "Code":"9w1do1ddo1dddo1do1ddo1dddo6w"}
+            roomCOTU04 = Room(0, 0, 1, 0, 4, roomCOTU04Name)
             areaCOTU.roomList.append(roomCOTU04)
-            roomCOTU04.name = {"String":"A Little Wooden Shack", "Code":"9w1do1ddo1dddo1do1ddo1dddo6w"}
             roomCOTU04.exit["East"] = [0, 0, 1, 0, 3]
             roomCOTU04.inside = True
             roomCOTU04.itemList.append(Item(904))
@@ -159,10 +158,11 @@ class Game:
             weaponsCabinet.containerList.append(Item(209))
             weaponsCabinet.containerList.append(Item(210, 25))
 
-            roomCOTU05 = Room(0, 0, 1, 0, 5)
+            roomCOTU05Name ={"String":"COTU Landing Pad", "Code":"16w"}
+            roomCOTU05 = Room(0, 0, 1, 0, 5, roomCOTU05Name)
             areaCOTU.roomList.append(roomCOTU05)
-            roomCOTU05.name = {"String":"COTU Landing Pad"}
             roomCOTU05.exit["North"] = [0, 0, 1, 0, 2]
+            roomCOTU05.flags["Landing Site"] = True
 
             # Zero Area Coordinates #
             areaCOTU.zeroCoordinates(self.galaxyList)
@@ -181,31 +181,31 @@ class Game:
 
         # (Area) Ice Cavern
         if True:
-            areaIceCavern = Area(1)
+            areaIceCavernString = {"String":"Ice Cavern", "Code":"10w"}
+            areaIceCavern = Area(1, areaIceCavernString)
             planetProtoEarth.areaList.append(areaIceCavern)
-            areaIceCavern.name = {"String":"Ice Cavern"}
 
-            roomIceCavern00 = Room(0, 0, 1, 1, 0)
+            roomIceCavern00Name = {"String":"Frozen Entryway", "Code":"1dc1ddc1dw1dc1ddc1dw1dc1ddc1dw1dc1ddc1dw1dc1ddc1dw"}
+            roomIceCavern00 = Room(0, 0, 1, 1, 0, roomIceCavern00Name)
             areaIceCavern.roomList.append(roomIceCavern00)
-            roomIceCavern00.name = {"String":"Frozen Entryway", "Code":"1dc1ddc1dw1dc1ddc1dw1dc1ddc1dw1dc1ddc1dw1dc1ddc1dw"}
             roomIceCavern00.exit["West"] = [0, 0, 1, 0, 0]
             roomIceCavern00.exit["North"] = [0, 0, 1, 1, 1]
 
-            roomIceCavern01 = Room(0, 0, 1, 1, 1)
+            roomIceCavern01Name = {"String":"Ice Cavern", "Code":"4w6w"}
+            roomIceCavern01 = Room(0, 0, 1, 1, 1, roomIceCavern01Name)
             areaIceCavern.roomList.append(roomIceCavern01)
-            roomIceCavern01.name = {"String":"Ice Cavern", "Code":"4w6w"}
             roomIceCavern01.exit["South"] = [0, 0, 1, 1, 0]
             roomIceCavern01.exit["East"] = [0, 0, 1, 1, 2]
 
-            roomIceCavern02 = Room(0, 0, 1, 1, 2)
+            roomIceCavern02Name = {"String":"Ice Cavern", "Code":"4w6w"}
+            roomIceCavern02 = Room(0, 0, 1, 1, 2, roomIceCavern02Name)
             areaIceCavern.roomList.append(roomIceCavern02)
-            roomIceCavern02.name = {"String":"Ice Cavern", "Code":"4w6w"}
             roomIceCavern02.exit["West"] = [0, 0, 1, 1, 1]
             roomIceCavern02.exit["North"] = [0, 0, 1, 1, 3]
 
-            roomIceCavern03 = Room(0, 0, 1, 1, 3)
+            roomIceCavern03Name = {"String":"Ice Cavern", "Code":"4w6w"}
+            roomIceCavern03 = Room(0, 0, 1, 1, 3, roomIceCavern03Name)
             areaIceCavern.roomList.append(roomIceCavern03)
-            roomIceCavern03.name = {"String":"Ice Cavern", "Code":"4w6w"}
             roomIceCavern03.exit["South"] = [0, 0, 1, 1, 2]
 
             # Zero Area Coordinates #
@@ -1238,10 +1238,6 @@ class Game:
         elif len(input.split()) == 1 and input.lower() in ["launch", "launc", "laun", "lau"]:
             self.player.launchCheck(self.console, self.galaxyList, self.player, currentRoom)
 
-        # Land #
-        elif len(input.split()) == 1 and input.lower() in ["land", "lan"]:
-            self.player.landCheck(self.console, self.galaxyList, self.player, currentRoom)
-
         # Radar #
         elif len(input.split()) == 1 and input.lower() in ["radar", "rada", "rad"]:
             self.player.radarCheck(self.console, self.galaxyList, self.player, currentRoom)
@@ -1256,25 +1252,29 @@ class Game:
                 self.player.courseCheck(self.console, self.galaxyList, self.player, currentRoom, [targetX, targetY])
             
             # Course Target #
-            elif len(input.split()) > 1:
-                courseKey = ' '.join(input.lower().split()[1::])
+            else:
+                courseKey = None
+                if len(input.split()) > 1:
+                    courseKey = ' '.join(input.lower().split()[1::])
                 self.player.courseCheck(self.console, self.galaxyList, self.player, currentRoom, courseKey)
             
-            else:
-                displayString = '''A computerized voice says, 'Please set your course with "Course X Y" or "Course Destination".' '''
-                displayCode = "25w3y28w1y10w2y3w1y18w3y"
-                self.console.write(displayString, displayCode, True)
-
         # Throttle/Speed #
         elif input.lower().split()[0] in ["throttle", "throttl", "thrott", "throt", "speed", "spee", "spe"]:
+            throttleKey = None
             if len(input.split()) > 1:
                 throttleKey = ' '.join(input.lower().split()[1::])
-                self.player.throttleCheck(self.console, self.galaxyList, self.player, currentRoom, throttleKey)
+            self.player.throttleCheck(self.console, self.galaxyList, self.player, currentRoom, throttleKey)
 
-            else:
-                displayString = '''A computerized voice says, 'Adjust speed using "Speed 50" or "Speed Max".' '''
-                displayCOde = "25w3y19w1y8w1y4w1y9w3y" 
-                self.console.write(displayString, displayCode, True)
+        # Scan #
+        elif len(input.split()) == 1 and input.lower().split()[0] in ["scan", "sca"]:
+            self.player.scanCheck(self.console, self.galaxyList, self.player, currentRoom)
+
+        # Land #
+        elif input.lower().split()[0] in ["land", "lan"]:
+            landKey = None
+            if len(input.split()) > 1:
+                landKey = ' '.join(input.lower().split()[1::])
+            self.player.landCheck(self.console, self.galaxyList, self.player, currentRoom, landKey)
 
         # Calculate #
 

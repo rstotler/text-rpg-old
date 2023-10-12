@@ -124,3 +124,10 @@ class Planet:
 
         return dayCheck
         
+    def getLandingRoomDataList(self):
+        landingRoomDataList = []
+        for area in self.areaList:
+            for room in area.roomList:
+                if "Landing Site" in room.flags:
+                    landingRoomDataList.append({"Area":area, "Room":room})
+        return landingRoomDataList

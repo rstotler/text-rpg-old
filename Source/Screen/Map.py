@@ -110,8 +110,8 @@ class Map:
         if player.planet != None:
             targetPlanet = galaxyList[player.galaxy].systemList[player.system].planetList[player.planet]
             targetPlanetName = targetPlanet.name
-        writeFast("Planet: " + targetPlanetName["String"], [200, 200, 200], [0, 10], self.font, self.surface)
-        writeFast("Area: " + targetArea.name["String"], [200, 200, 200], [0, 0], self.font, self.surface)
+        writeFast("Planet: " + targetPlanetName["String"], [200, 200, 200], [0, 0], self.font, self.surface)
+        writeFast("Area: " + targetArea.name["String"], [200, 200, 200], [0, 10], self.font, self.surface)
                 
         window.blit(self.surface, [600, 0])
         

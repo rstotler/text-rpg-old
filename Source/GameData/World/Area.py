@@ -3,14 +3,14 @@ from GameData.World.Room import Room
 
 class Area:
 
-    def __init__(self, num):
+    def __init__(self, num, name):
         self.num = num
         self.roomList = []
         self.size = [0, 0]
         
-        self.name = {"String":"", "Code":""}
+        self.name = name
 
-        self.flavorTextTickMax = 300
+        self.flavorTextTickMax = 400
         self.flavorTextTick = 0
 
     def update(self, console):

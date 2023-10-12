@@ -1,14 +1,16 @@
 Traceback (most recent call last):
   File "D:\Codes\Python\Universe\Source\Screen\InputBar.py", line 50, in processInput
     game.processInputBarCommand(self.input)
-  File "D:\Codes\Python\Universe\Source\Game.py", line 1204, in processInputBarCommand
-    self.player.displayTime(self.console, self.galaxyList, currentPlanet)
-NameError: name 'currentPlanet' is not defined
+  File "D:\Codes\Python\Universe\Source\Game.py", line 1270, in processInputBarCommand
+    self.player.scanCheck(self.console, self.galaxyList, self.player, currentRoom)
+  File "D:\Codes\Python\Universe\Source\GameData\Player.py", line 3278, in scanCheck
+    displayCode = "1y" + landingData["Area"].name["Code"] + "4y" + landingData["Room"].name["Code"]
+KeyError: 'Code'
 
-Input: time
+Input: sca
 Player Loc: [0, 0, 1, 0, 0]
-Player Spaceship: None
+Player Spaceship: 1
 Player Targets: 0
 Player Group: 0
-Player Inventory: 0
+Player Inventory: 1
 Player Gear: 0
