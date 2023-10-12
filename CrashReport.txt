@@ -1,16 +1,18 @@
 Traceback (most recent call last):
   File "D:\Codes\Python\Universe\Source\Screen\InputBar.py", line 50, in processInput
     game.processInputBarCommand(self.input)
-  File "D:\Codes\Python\Universe\Source\Game.py", line 1270, in processInputBarCommand
-    self.player.scanCheck(self.console, self.galaxyList, self.player, currentRoom)
-  File "D:\Codes\Python\Universe\Source\GameData\Player.py", line 3278, in scanCheck
-    displayCode = "1y" + landingData["Area"].name["Code"] + "4y" + landingData["Room"].name["Code"]
-KeyError: 'Code'
+  File "D:\Codes\Python\Universe\Source\Game.py", line 418, in processInputBarCommand
+    self.player.lookTargetCheck(self.console, self.galaxyList, self.player, currentRoom, None, None, lookTarget)
+  File "D:\Codes\Python\Universe\Source\GameData\Player.py", line 177, in lookTargetCheck
+    lookDir = Room.getTargetDirection(lookDirKey)
+  File "D:\Codes\Python\Universe\Source\GameData\World\Room.py", line 576, in getTargetDirection
+    targetDirectionString = targetDirectionString.lower()
+AttributeError: 'NoneType' object has no attribute 'lower'
 
-Input: sca
-Player Loc: [0, 0, 1, 0, 0]
-Player Spaceship: 1
+Input: look panel
+Player Loc: [0, 0, 1, 0, 8]
+Player Spaceship: None
 Player Targets: 0
 Player Group: 0
 Player Inventory: 1
-Player Gear: 0
+Player Gear: 1

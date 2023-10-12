@@ -1,7 +1,7 @@
 import copy, random
 from GameData.World.Room import Room
 from GameData.World.Spaceship import Spaceship
-from GameData.Item import Item
+from GameData.Item.Item import Item
 from GameData.Skill import Skill
 from GameData.Action import Action
 from GameData.Combat import Combat
@@ -126,7 +126,8 @@ class Player:
 
         return messageDataList
 
-    def lookDirection(self, console, galaxyList, currentRoom, lookDir, count):
+    def lookDirection(self, console, galaxyList, currentRoom, lookDirKey, count):
+        lookDir = Room.getTargetDirection(lookDirKey)
         if isinstance(count, int) and count > 50:
             count = 50
         messageType = None
@@ -172,7 +173,10 @@ class Player:
         if lookCheck:
             currentRoom.display(console, galaxyList, self)
     
-    def lookTargetCheck(self, console, galaxyList, player, currentRoom, lookDir, count, lookTarget):
+    def lookTargetCheck(self, console, galaxyList, player, currentRoom, lookDirKey, count, lookTarget):
+        lookDir = None
+        if lookDirKey != None:
+            lookDir = Room.getTargetDirection(lookDirKey)
         if isinstance(count, int) and count > 50:
             count = 50
         messageType = None
@@ -260,11 +264,7 @@ class Player:
             roomCount = 0
             targetDir = None
             if targetDirKey != None and targetDirCount != None:
-                if targetDirKey in ["north", "nort", "nor", "no", "n"] : targetDir = "North"
-                elif targetDirKey in ["east", "eas", "ea", "e"] : targetDir = "East"
-                elif targetDirKey in ["south", "sout", "sou", "so", "s"] : targetDir = "South"
-                else : targetDir = "West"
-
+                targetDir = Room.getTargetDirection(targetDirKey)
                 for i in range(targetDirCount):
                     if targetRoom.exit[targetDir] == None:
                         messageType = "Can't See Further"
@@ -395,11 +395,7 @@ class Player:
             roomCount = 0
             targetDir = None
             if targetDirKey != None and targetDirCount != None:
-                if targetDirKey in ["north", "nort", "nor", "no", "n"] : targetDir = "North"
-                elif targetDirKey in ["east", "eas", "ea", "e"] : targetDir = "East"
-                elif targetDirKey in ["south", "sout", "sou", "so", "s"] : targetDir = "South"
-                else : targetDir = "West"
-
+                targetDir = Room.getTargetDirection(targetDirKey)
                 for i in range(targetDirCount):
                     if targetRoom.exit[targetDir] == None:
                         messageType = "Can't See Further"
@@ -540,7 +536,9 @@ class Player:
         if targetDirKey.lower() in ["north", "nort", "nor", "no", "n"] : targetDir = "North"
         elif targetDirKey.lower() in ["east", "eas", "ea", "e"] : targetDir = "East"
         elif targetDirKey.lower() in ["south", "sout", "sou", "so", "s"] : targetDir = "South"
-        else : targetDir = "West"
+        elif targetDirKey.lower() in ["west", "wes", "we", "w"] : targetDir = "West"
+        elif targetDirKey.lower() in ["up", "u"] : targetDir = "Up"
+        else : targetDir = "Down"
         
         if currentRoom.door[targetDir] != None and currentRoom.door[targetDir]["Status"] == "Locked" and "Password" in currentRoom.door[targetDir] and self.hasKey(currentRoom.door[targetDir]["Password"]) == False:
             if self.num == None:
@@ -708,11 +706,12 @@ class Player:
                 displayCode = str(len(self.prefix)) + "w1w" + self.name["Code"] + "17w" + str(len(Room.getOppositeDirection(targetDir))) + "w1y"
                 console.write(displayString, displayCode, True)
 
-    def openCloseDoorCheck(self, console, galaxyList, player, currentRoom, targetAction, targetDir):
+    def openCloseDoorCheck(self, console, galaxyList, player, currentRoom, targetAction, targetDirKey):
         targetDoorAction = targetAction
         if targetAction == "Close":
             targetDoorAction = "Closed"
 
+        targetDir = Room.getTargetDirection(targetDirKey)
         if currentRoom.door[targetDir] == None:
             console.write("There is no door in that direction.", "34w1y", True)
         elif currentRoom.door[targetDir]["Type"] == "Automatic":
@@ -753,12 +752,13 @@ class Player:
 
                 console.write("You " + unlockString + targetAction.lower() + " the door to the " + targetDir + ".", "4w" + unlockCode + str(len(targetAction)) + "w17w" + str(len(targetDir)) + "w1y", drawBlankLine)
 
-    def lockUnlockDoorCheck(self, console, galaxyList, player, currentRoom, targetAction, targetDir):
+    def lockUnlockDoorCheck(self, console, galaxyList, player, currentRoom, targetAction, targetDirKey):
         if targetAction == "Lock":
             targetActionStatus = "Locked"
         else:
             targetActionStatus = "Closed"
 
+        targetDir = Room.getTargetDirection(targetDirKey)
         if currentRoom.door[targetDir] == None:
             console.write("There is no door in that direction.", "34w1y", True)
         elif "Password" not in currentRoom.door[targetDir]:
@@ -2217,6 +2217,7 @@ class Player:
             removeCount = 0
             breakCheck = False
             removeItem = None
+            removeHand = None
             for gearSlot in self.gearDict:
 
                 # Focus On Dominant Hand First #
@@ -2237,7 +2238,6 @@ class Player:
                 if targetGearSlotIndex == None and isinstance(self.gearDict[gearSlot], list):
                     slotRange = len(self.gearDict[gearSlot])
                 for slotIndex in range(slotRange):
-                    slotIndex = -1
                     targetGearSlot = self.gearDict[gearSlot]
                     if isinstance(self.gearDict[gearSlot], list):
                         if isinstance(targetGearSlotIndex, int):
@@ -2246,7 +2246,6 @@ class Player:
                             slotIndex = targetGearSlotIndex
                         targetGearSlot = self.gearDict[gearSlot][slotIndex]
                     
-                        
                     if targetGearSlot != None:
                         if targetItemKey == "All" or targetItemKey in targetGearSlot.keyList:
                             self.itemDict[targetGearSlot.pocket].append(targetGearSlot)
@@ -2256,10 +2255,12 @@ class Player:
                                     removeItem = targetGearSlot
                                 elif removeItem.num != targetGearSlot.num:
                                     removeItem = "Multiple"
-                            if slotIndex != -1:
+                            if isinstance(self.gearDict[gearSlot], list):
                                 self.gearDict[gearSlot][slotIndex] = None
                             else:
                                 self.gearDict[gearSlot] = None
+                            if gearSlot in ["Left Hand", "Right Hand"]:
+                                removeHand = gearSlot
 
                             if count != "All" and removeCount >= count:
                                 breakCheck = True
@@ -2272,7 +2273,7 @@ class Player:
                 displayMessage = "You have nothing to remove."
                 displayCode = "26w1y"
                 console.write(displayMessage, displayCode, drawBlankLine)
-            elif targetItemKey == "All" and count == "All":
+            elif targetItemKey == "All" and count == "All" and removeItem == "Multiple":
                 displayString = "You remove all of your gear."
                 displayCode = "27w1y"
                 if random.randrange(10) == 0:
@@ -2287,8 +2288,8 @@ class Player:
                 if removeItem.pocket == "Weapon":
                     holdingString = " stop wielding"
                 handString = ""
-                if gearSlot in ["Left Hand", "Right Hand"]:
-                    handString = " in your " + gearSlot.lower()
+                if removeHand in ["Left Hand", "Right Hand"]:
+                    handString = " in your " + removeHand.lower()
                 displayString = "You" + holdingString + " " + removeItem.prefix + " " + removeItem.name["String"] + handString + "." + countString
                 displayCode = "3w" + str(len(holdingString)) + "w1w" + str(len(removeItem.prefix)) + "w1w" + removeItem.name["Code"] + str(len(handString)) + "w1y" + countCode
                 console.write(displayString, displayCode, drawBlankLine)
@@ -2374,10 +2375,7 @@ class Player:
                 targetArea, targetRoom = Room.getAreaAndRoom(galaxyList, self.targetList[0])
                 roomDistance, targetDirection, message = Room.getTargetRange(galaxyList, currentRoom, self.targetList[0], self.maxTargetDistance)
             elif directionCount != None:
-                if directionKey[0].lower() == "n" : targetDirection = "North"
-                elif directionKey[0].lower() == "e" : targetDirection = "East"
-                elif directionKey[0].lower() == "s" : targetDirection = "South"
-                else : targetDirection = "West"
+                targetDirection = Room.getTargetDirection(directionKey)
                 targetArea, targetRoom = Room.getAreaAndRoom(galaxyList, targetRoom)
                 targetArea, targetRoom, roomDistance, message = Room.getTargetRoomFromStartRoom(galaxyList, targetArea, targetRoom, targetDirection, directionCount, True)
             
@@ -3069,7 +3067,7 @@ class Player:
             currentRoom.spaceshipObject.launchLandAction = "Launch"
             currentRoom.spaceshipObject.landedLocation = None
             currentRoom.spaceshipObject.launchLandTick = 0
-            currentRoom.spaceshipObject.launchLandPhase = 3 # Debug, Original: 0 #
+            currentRoom.spaceshipObject.launchLandPhase = 0
 
             console.write('A computerized voice says, "Commencing launch countdown."', "25w3y27w2y", True)
     
@@ -3115,15 +3113,8 @@ class Player:
                 headingCode = "9w2y1r1y" + xCourseLine["Code"] + "w1w1r1y" + yCourseLine["Code"] + headingPlanetCode
             console.write(headingString, headingCode)
 
-            currentSpeed = int(currentRoom.spaceshipObject.topSpeed * (currentRoom.spaceshipObject.speedPercent / 100.0))
-            currentSpeedString = ""
-            currentSpeedCode = ""
-            if currentRoom.spaceshipObject.speedPercent > 0:
-                currentSpeedLine = insertCommasInNumber(str(int(currentSpeed)))
-                currentSpeedString = " [" + currentSpeedLine["String"] + "]"
-                currentSpeedCode = "2y" +currentSpeedLine["Code"] + "w1y"
-            speedString = "   Speed - " + str(currentRoom.spaceshipObject.speedPercent) + "%" + currentSpeedString
-            speedCode = "9w2y" + str(len(str(currentRoom.spaceshipObject.speedPercent))) + "w1y" + currentSpeedCode
+            speedString = "   Speed - " + str(currentRoom.spaceshipObject.speedPercent) + "%" 
+            speedCode = "9w2y" + str(len(str(currentRoom.spaceshipObject.speedPercent))) + "w1y" 
             console.write(speedString, speedCode)
 
             longestNameString = 0

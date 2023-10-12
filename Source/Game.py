@@ -12,7 +12,7 @@ from GameData.World.Planet import Planet
 from GameData.World.Area import Area
 from GameData.World.Room import Room
 from GameData.World.Spaceship import Spaceship
-from GameData.Item import Item
+from GameData.Item.Item import Item
 from GameData.Action import Action
 from Components.Utility import stringIsNumber
 
@@ -26,6 +26,8 @@ from Components.Utility import stringIsNumber
     # Dodge Command
     # Parry Command
     # Counter-Attack (Passive Skill)
+    # Hackable Limbs
+    # Bleeding
     # Peek Through Ship Exit Door
     # Jab(?)
     # refactor 'currentRoom' ?
@@ -45,10 +47,7 @@ class Game:
         self.frameTick = 0
         
         self.loadGame()
-        # self.inputBar.inputList = ["n", "n", "w", "loot cab", "wear pis", "wear pis", "e", "s", "s", "reload"]
-        # self.inputBar.inputList = ["n", "n", "w", "get sniper from cab", "get 5.56 from cab", "get 5.56 from cab", "get 5.56 from cab", "e", "s", "s", "wear sni", "reload"]
-        self.inputBar.inputList = ["n", "n", "w", "get key from chest", "e", "s", "s", "s", "s", "board ship", "n"]
-
+        
     def loadGame(self):
         galaxyProtoMilkyWay = Galaxy()
         self.galaxyList.append(galaxyProtoMilkyWay)
@@ -114,6 +113,7 @@ class Game:
             areaCOTU.roomList.append(roomCOTU02)
             roomCOTU02.exit["North"] = [0, 0, 1, 0, 1]
             roomCOTU02.exit["South"] = [0, 0, 1, 0, 5]
+            roomCOTU02.exit["East"] = [0, 0, 1, 0, 6]
             roomCOTU02.inside = True
 
             roomCOTU03Name = {"String":"A Peaceful Garden", "Code":"2w1w1dw2ddw1dw1w1ddw1da1w1g1dg1ddg1g1dg1ddg"}
@@ -158,11 +158,29 @@ class Game:
             weaponsCabinet.containerList.append(Item(209))
             weaponsCabinet.containerList.append(Item(210, 25))
 
-            roomCOTU05Name ={"String":"COTU Landing Pad", "Code":"16w"}
+            roomCOTU05Name = {"String":"COTU Landing Pad", "Code":"16w"}
             roomCOTU05 = Room(0, 0, 1, 0, 5, roomCOTU05Name)
             areaCOTU.roomList.append(roomCOTU05)
             roomCOTU05.exit["North"] = [0, 0, 1, 0, 2]
             roomCOTU05.flags["Landing Site"] = True
+
+            roomCOTU06Name = {"String":"COTU Training Center Hall", "Code":"25w"}
+            roomCOTU06 = Room(0, 0, 1, 0, 6, roomCOTU06Name)
+            areaCOTU.roomList.append(roomCOTU06)
+            roomCOTU06.exit["West"] = [0, 0, 1, 0, 2]
+            roomCOTU06.exit["Up"] = [0, 0, 1, 0, 7]
+
+            roomCOTU07Name = {"String":"COTU Training Center Floor 1", "Code":"28w"}
+            roomCOTU07 = Room(0, 0, 1, 0, 7, roomCOTU07Name)
+            areaCOTU.roomList.append(roomCOTU07)
+            roomCOTU07.exit["Down"] = [0, 0, 1, 0, 6]
+            roomCOTU07.exit["North"] = [0, 0, 1, 0, 8]
+
+            roomCOTU08Name = {"String":"Unarmed, Unskilled Mob Room", "Code":"7w1y19w"}
+            roomCOTU08 = Room(0, 0, 1, 0, 8, roomCOTU08Name)
+            areaCOTU.roomList.append(roomCOTU08)
+            roomCOTU08.exit["South"] = [0, 0, 1, 0, 7]
+            roomCOTU08.itemList.append(Item(905))
 
             # Zero Area Coordinates #
             areaCOTU.zeroCoordinates(self.galaxyList)
@@ -266,6 +284,13 @@ class Game:
         playerArea, playerRoom = Room.getAreaAndRoom(self.galaxyList, self.player)
         self.map.loadMap(playerArea)
 
+        # Test Variables #
+        # self.inputBar.inputList = ["n", "n", "w", "loot cab", "wear pis", "wear pis", "e", "s", "s", "reload"]
+        # self.inputBar.inputList = ["n", "n", "w", "get sniper from cab", "get 5.56 from cab", "get 5.56 from cab", "get 5.56 from cab", "e", "s", "s", "wear sni", "reload"]
+        # self.inputBar.inputList = ["n", "n", "w", "get key from chest", "e", "s", "s", "s", "s", "board ship", "n"]
+        self.player.itemDict["Misc"].append(Item(901))
+        self.player.gearDict["Finger"][0] = Item(8)
+
     def draw(self, window):
         window.fill([0, 0, 0])
 
@@ -348,7 +373,7 @@ class Game:
         self.keyboard.update()
 
     def processInputBarCommand(self, input):
-        directionStringList = ["north", "nort", "nor", "no", "n", "east", "eas", "ea", "e", "south", "sout", "sou", "so", "s", "west", "wes", "we", "w"]
+        directionStringList = ["north", "nort", "nor", "no", "n", "east", "eas", "ea", "e", "south", "sout", "sou", "so", "s", "west", "wes", "we", "w", "up", "u", "down", "dow", "do", "d"]
         combatSkill, parsedCombatInput = Skill.parseSkillString(input.lower(), self.player.getCombatSkillList())
         currentRoom = Room.exists(self.galaxyList, self.player.spaceship, self.player.galaxy, self.player.system, self.player.planet, self.player.area, self.player.room)
         if currentRoom == None:
@@ -357,42 +382,28 @@ class Game:
         ## Basic Commands ##
         # Look/Examine #
         if input.lower().split()[0] in ["look", "loo", "lo", "l", "examine", "examin", "exami", "exam", "exa", "ex"]:
-            targetDir = None
-            if len(input.split()) > 1:
-                if input.lower().split()[1] in ["north", "nort", "nor", "no", "n"]:
-                    targetDir = "North"
-                elif input.lower().split()[1] in ["east", "eas", "ea", "e"]:
-                    targetDir = "East"
-                elif input.lower().split()[1] in ["south", "sout", "sou", "so", "s"]:
-                    targetDir = "South"
-                elif input.lower().split()[1] in ["west", "wes", "we", "w"]:
-                    targetDir = "West"
             
             # Look 'Direction' #
-            if len(input.split()) == 2 and targetDir != None:
-                self.player.lookDirection(self.console, self.galaxyList, currentRoom, targetDir, 1)
+            if len(input.split()) == 2 and input.lower().split()[1] in directionStringList:
+                targetDirKey = input.lower().split()[1]
+                self.player.lookDirection(self.console, self.galaxyList, currentRoom, targetDirKey, 1)
 
             # Look 'Direction' '#' #
-            elif len(input.split()) == 3 and targetDir != None and stringIsNumber(input.split()[2]) and int(input.split()[2]) > 0:
-                self.player.lookDirection(self.console, self.galaxyList, currentRoom, targetDir, int(input.split()[2]))
+            elif len(input.split()) == 3 and input.lower().split()[1] in directionStringList and stringIsNumber(input.split()[2]) and int(input.split()[2]) > 0:
+                targetDirKey = input.lower().split()[1]
+                self.player.lookDirection(self.console, self.galaxyList, currentRoom, targetDirKey, int(input.split()[2]))
 
             # Look 'Direction' '#' Item/Mob/Spaceship #
             elif len(input.split()) > 3 and input.lower().split()[1] in directionStringList and stringIsNumber(input.split()[2]) and int(input.split()[2]) > 0:
-                if input.lower().split()[1] in ["north", "nort", "nor", "no", "n"] : targetDir = "North"
-                elif input.lower().split()[1] in ["east", "eas", "ea", "e"] : targetDir = "East"
-                elif input.lower().split()[1] in ["south", "sout", "sou", "so", "s"] : targetDir = "South"
-                else : targetDir = "West"
+                targetDirKey = input.lower().split()[1]
                 lookTarget = ' '.join(input.lower().split()[3::])
-                self.player.lookTargetCheck(self.console, self.galaxyList, self.player, currentRoom, targetDir, int(input.split()[2]), lookTarget)
+                self.player.lookTargetCheck(self.console, self.galaxyList, self.player, currentRoom, targetDirKey, int(input.split()[2]), lookTarget)
 
             # Look 'Direction' Item/Mob/Spaceship #
             elif len(input.split()) > 2 and input.lower().split()[1] in directionStringList:
-                if input.lower().split()[1] in ["north", "nort", "nor", "no", "n"] : targetDir = "North"
-                elif input.lower().split()[1] in ["east", "eas", "ea", "e"] : targetDir = "East"
-                elif input.lower().split()[1] in ["south", "sout", "sou", "so", "s"] : targetDir = "South"
-                else : targetDir = "West"
+                targetDirKey = input.lower().split()[1]
                 lookTarget = ' '.join(input.lower().split()[2::])
-                self.player.lookTargetCheck(self.console, self.galaxyList, self.player, currentRoom, targetDir, 1, lookTarget)
+                self.player.lookTargetCheck(self.console, self.galaxyList, self.player, currentRoom, targetDirKey, 1, lookTarget)
 
             # Look Item In Container #
             elif len(input.split()) > 3 and "in" in input.lower().split() and input.lower().split()[1] != "in" and input.lower().split()[-1] != "in":
@@ -496,7 +507,7 @@ class Game:
                 self.console.write("Target what?", "11w1y", True)
 
         # Untarget #
-        elif input.lower().split()[0] in ["untarget", "untarge", "untarg", "untar", "unta", "unt", "un", "u"]:
+        elif input.lower().split()[0] in ["untarget", "untarge", "untarg", "untar", "unta", "unt", "un"]:
 
             # Untarget All Mob 'Direction' '#' #
             if len(input.split()) > 4 and input.lower().split()[1] == "all" and input.lower().split()[-2] in directionStringList and stringIsNumber(input.split()[-1]) and int(input.split()[-1]) > 0:
@@ -589,11 +600,8 @@ class Game:
             
             # Open/Close 'Direction' #
             if len(input.split()) == 2 and input.lower().split()[1] in directionStringList:
-                if input.lower().split()[1] in ["north", "nort", "nor", "no", "n"] : targetDir = "North"
-                elif input.lower().split()[1] in ["east", "eas", "ea", "e"] : targetDir = "East"
-                elif input.lower().split()[1] in ["south", "sout", "sou", "so", "s"] : targetDir = "South"
-                else : targetDir = "West"
-                self.player.openCloseDoorCheck(self.console, self.galaxyList, self.player, currentRoom, targetAction, targetDir)
+                targetDirKey = input.lower().split()[1]
+                self.player.openCloseDoorCheck(self.console, self.galaxyList, self.player, currentRoom, targetAction, targetDirKey)
 
             # Open/Close Target #
             elif len(input.split()) > 1:
@@ -609,11 +617,8 @@ class Game:
 
             # Lock/Unlock 'Direction' #
             if len(input.split()) == 2 and input.lower().split()[1] in directionStringList:
-                if input.lower().split()[1] in ["north", "nort", "nor", "no", "n"] : targetDir = "North"
-                elif input.lower().split()[1] in ["east", "eas", "ea", "e"] : targetDir = "East"
-                elif input.lower().split()[1] in ["south", "sout", "sou", "so", "s"] : targetDir = "South"
-                else : targetDir = "West"
-                self.player.lockUnlockDoorCheck(self.console, self.galaxyList, self.player, currentRoom, targetAction, targetDir)
+                targetDirKey = input.lower().split()[1]
+                self.player.lockUnlockDoorCheck(self.console, self.galaxyList, self.player, currentRoom, targetAction, targetDirKey)
 
             # Lock/Unlock Target #
             elif len(input.split()) > 1:

@@ -1,5 +1,6 @@
 import copy
 from GameData.Skill import Skill
+from GameData.Item.Button import Button
 from Components.Utility import appendKeyList
 from Components.Utility import getCountString
 
@@ -16,6 +17,8 @@ class Item:
         self.description = {"String":"You see nothing special.", "Code":"23w1y"}
         self.keyList = []
 
+        self.skillList = []
+
         self.weight = 1.0
         self.pocket = "Misc"
         self.weaponType = None
@@ -31,7 +34,7 @@ class Item:
         self.containerPassword = None
         self.containerMaxLimit = None
 
-        self.skillList = []
+        self.buttonList = None
 
         self.loadItem(num)
 
@@ -240,13 +243,10 @@ class Item:
                 self.flags["Glowing"] = True
                 self.flags["No Get"] = True
             elif num == 905:
-                self.name = {"String":"Hamburger", "Code":"9w"}
-                self.roomDescription = {"String":"has been dropped on the ground.", "Code":"30w1y"}
-                self.pocket = "Food"
-            elif num == 906:
-                self.name = {"String":"Canteen", "Code":"7w"}
-                self.roomDescription = {"String":"has been dropped on the ground.", "Code":"30w1y"}
-                self.pocket = "Food"
+                self.name = {"String":"Control Panel", "Code":"13w"}
+                self.roomDescription = {"String":"is attatched to the wall.", "Code":"24w1y"}
+                self.flags["No Get"] = True
+                self.buttonList = [Button()]
 
         # Special Items #
         if self.name["String"] == "Debug Item":

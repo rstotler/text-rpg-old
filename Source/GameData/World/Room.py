@@ -1,5 +1,5 @@
 import copy
-from GameData.Item import Item
+from GameData.Item.Item import Item
 from Components.Utility import getCountString
 from Components.Utility import createUnderlineString
 from Components.Utility import createDefaultString
@@ -21,8 +21,8 @@ class Room:
         self.description = []
         self.searchList = []
 
-        self.exit = {"North": None, "East": None, "South": None, "West": None}
-        self.door = {"North": None, "East": None, "South": None, "West": None}
+        self.exit = {"North": None, "East": None, "South": None, "West": None, "Up":None, "Down":None}
+        self.door = {"North": None, "East": None, "South": None, "West": None, "Up":None, "Down":None}
 
         self.mobList = []
         self.itemList = []
@@ -59,54 +59,59 @@ class Room:
 
         # Exits #
         otherRoomSpaceshipNum = None
-        for exitDir in ["North", "East", "South", "West"]:
-            spaceString = ""
-            if exitDir in ["East", "West"]:
-                spaceString = " "
-            if self.exit[exitDir] != None and not (self.door[exitDir] != None and self.door[exitDir]["Type"] == "Hidden" and self.door[exitDir]["Status"] in ["Locked", "Closed"]):
-                exitRoom = None
-                if len(self.exit[exitDir]) == 5:
-                    exitRoom = Room.exists(galaxyList, None, self.exit[exitDir][0], self.exit[exitDir][1], self.exit[exitDir][2], self.exit[exitDir][3], self.exit[exitDir][4])
-                elif len(self.exit[exitDir]) == 3 and self.spaceshipObject != None:
-                    exitRoom = self.spaceshipObject.getRoom(self.exit[exitDir][1], self.exit[exitDir][2])
-                elif self.exit[exitDir] == "Spaceship Exit" and self.spaceshipObject.landedLocation != None:
-                    exitRoom = Room.exists(galaxyList, None, self.spaceshipObject.galaxy, self.spaceshipObject.system, self.spaceshipObject.planet, self.spaceshipObject.landedLocation[0], self.spaceshipObject.landedLocation[1])
-                if exitRoom == None:
-                    exitRoom = galaxyList[0].systemList[0].planetList[0].areaList[0].roomList[0]
-                
-                if self.door[exitDir] != None and self.door[exitDir]["Status"] in ["Closed", "Locked"]:
-                    exitRoomString = "( " + spaceString + exitDir + " ) - [Closed]"
-                    exitRoomCode = "2r1w4ddw2r3y1r6w1r"
-                elif roomIsLit == False and exitRoom.isLit(galaxyList, player, player) == False:
-                    exitRoomString = "( " + spaceString + exitDir + " ) - ( Black )"
-                    exitRoomCode = "2r1w4ddw2r3y2r1dw1a2da1dda2r"
-                else:
-                    exitRoomString = "( " + spaceString + exitDir + " ) - " + exitRoom.name["String"]
-                
-                if roomIsLit == False and exitRoom.isLit(galaxyList, player, player) == False:
-                    exitRoomNameCode = "2r1dw1a2da1dda2r"
-                else:
-                    exitRoomNameCode = str(len(exitRoomString)) + "w"
-                    if "Code" in exitRoom.name:
-                        exitRoomNameCode = exitRoom.name["Code"]
-                
-                if self.door[exitDir] == None or self.door[exitDir]["Status"] == "Open":
-                    if exitDir in ["East", "West"]:
-                        exitRoomCode = "3r1w" + str(len(exitDir) - 1) + "ddw2r3y" + exitRoomNameCode
+        for exitDir in ["North", "East", "South", "West", "Up", "Down"]:
+            if not (exitDir in ["Up", "Down"] and self.exit[exitDir] == None):
+                spaceString = ""
+                if exitDir in ["East", "West", "Down"] : spaceString = " "
+                elif exitDir == "Up" : spaceString = "   "
+                if self.exit[exitDir] != None and not (self.door[exitDir] != None and self.door[exitDir]["Type"] == "Hidden" and self.door[exitDir]["Status"] in ["Locked", "Closed"]):
+                    exitRoom = None
+                    if len(self.exit[exitDir]) == 5:
+                        exitRoom = Room.exists(galaxyList, None, self.exit[exitDir][0], self.exit[exitDir][1], self.exit[exitDir][2], self.exit[exitDir][3], self.exit[exitDir][4])
+                    elif len(self.exit[exitDir]) == 3 and self.spaceshipObject != None:
+                        exitRoom = self.spaceshipObject.getRoom(self.exit[exitDir][1], self.exit[exitDir][2])
+                    elif self.exit[exitDir] == "Spaceship Exit" and self.spaceshipObject.landedLocation != None:
+                        exitRoom = Room.exists(galaxyList, None, self.spaceshipObject.galaxy, self.spaceshipObject.system, self.spaceshipObject.planet, self.spaceshipObject.landedLocation[0], self.spaceshipObject.landedLocation[1])
+                    if exitRoom == None:
+                        exitRoom = galaxyList[0].systemList[0].planetList[0].areaList[0].roomList[0]
+                    
+                    if self.door[exitDir] != None and self.door[exitDir]["Status"] in ["Closed", "Locked"]:
+                        exitRoomString = "( " + spaceString + exitDir + " ) - [Closed]"
+                        exitRoomCode = "2r1w4ddw2r3y1r6w1r"
+                    elif roomIsLit == False and exitRoom.isLit(galaxyList, player, player) == False:
+                        exitRoomString = "( " + spaceString + exitDir + " ) - ( Black )"
+                        exitRoomCode = "2r1w4ddw2r3y2r1dw1a2da1dda2r"
                     else:
-                        exitRoomCode = "2r1w" + str(len(exitDir) - 1) + "ddw2r3y" + exitRoomNameCode
-                console.write(exitRoomString, exitRoomCode)
-            else:
-                if exitDir in ["East", "West"]:
-                    exitRoomCode = "3r1w" + str(len(exitDir) - 1) + "ddw2r3y2r1w6ddw2r"
+                        exitRoomString = "( " + spaceString + exitDir + " ) - " + exitRoom.name["String"]
+                    
+                    if roomIsLit == False and exitRoom.isLit(galaxyList, player, player) == False:
+                        exitRoomNameCode = "2r1dw1a2da1dda2r"
+                    else:
+                        exitRoomNameCode = str(len(exitRoomString)) + "w"
+                        if "Code" in exitRoom.name:
+                            exitRoomNameCode = exitRoom.name["Code"]
+                    
+                    if self.door[exitDir] == None or self.door[exitDir]["Status"] == "Open":
+                        if exitDir in ["East", "West", "Down"]:
+                            exitRoomCode = "3r1w" + str(len(exitDir) - 1) + "ddw2r3y" + exitRoomNameCode
+                        elif exitDir == "Up":
+                            exitRoomCode = "5r1w" + str(len(exitDir) - 1) + "ddw2r3y" + exitRoomNameCode
+                        else:
+                            exitRoomCode = "2r1w" + str(len(exitDir) - 1) + "ddw2r3y" + exitRoomNameCode
+                    console.write(exitRoomString, exitRoomCode)
                 else:
-                    exitRoomCode = "2r1w" + str(len(exitDir) - 1) + "ddw2r3y2r1w6ddw2r"
-                
-                if roomIsLit == False:
-                    exitRoomCode = exitRoomCode[0:-8] + "1dw1a2da1dda2r"
-                    console.write("( " + spaceString + exitDir + " ) - ( Black )", exitRoomCode)
-                else:
-                    console.write("( " + spaceString + exitDir + " ) - ( Nothing )", exitRoomCode)
+                    if exitDir in ["East", "West", "Down"]:
+                        exitRoomCode = "3r1w" + str(len(exitDir) - 1) + "ddw2r3y2r1w6ddw2r"
+                    elif exitDir == "Up":
+                        exitRoomCode = "5r1w" + str(len(exitDir) - 1) + "ddw2r3y2r1w6ddw2r"
+                    else:
+                        exitRoomCode = "2r1w" + str(len(exitDir) - 1) + "ddw2r3y2r1w6ddw2r"
+                    
+                    if roomIsLit == False:
+                        exitRoomCode = exitRoomCode[0:-8] + "1dw1a2da1dda2r"
+                        console.write("( " + spaceString + exitDir + " ) - ( Black )", exitRoomCode)
+                    else:
+                        console.write("( " + spaceString + exitDir + " ) - ( Nothing )", exitRoomCode)
 
         # Spaceships #
         if len(self.spaceshipList) > 0:
@@ -417,15 +422,15 @@ class Room:
 
     @staticmethod
     def getSurroundingRoomData(galaxyList, startArea, startRoom, targetRange):
-        oppositeDir = {"North":"South", "East":"West", "South":"North", "West":"East"}
+        oppositeDir = {"North":"South", "East":"West", "South":"North", "West":"East", "Up":"Down", "Down":"Up"}
         def examineRoomData(targetArea, targetRoom, targetRange, targetDir, examinedAreaList, examinedRoomList, viewLoc):
             if targetArea not in examinedAreaList:
                 examinedAreaList.append(targetArea)
             examinedRoomList.append(targetRoom)
 
-            if viewLoc[0] + viewLoc[1] < targetRange:
+            if viewLoc[0] + viewLoc[1] + viewLoc[2] < targetRange:
                 firstLoc = copy.deepcopy(viewLoc)
-                exitDirList = ["North", "East", "South", "West"]
+                exitDirList = ["North", "East", "South", "West", "Up", "Down"]
                 if targetDir != None and oppositeDir[targetDir] in exitDirList:
                     del exitDirList[exitDirList.index(oppositeDir[targetDir])]
                 for targetExitDir in exitDirList:
@@ -435,11 +440,12 @@ class Room:
                         nextArea, nextRoom, distance, message = Room.getTargetRoomFromStartRoom(galaxyList, targetArea, targetRoom, targetExitDir, 1, True)
                         if targetExitDir in ["East", "West"] : viewLoc[0] += 1
                         elif targetExitDir in ["North", "South"] : viewLoc[1] += 1
+                        elif targetExitDir in ["Up", "Down"] : viewLoc[2] += 1
                         if nextRoom not in examinedRoomList:
                             examinedAreaList, examinedRoomList = examineRoomData(nextArea, nextRoom, targetRange, targetExitDir, examinedAreaList, examinedRoomList, viewLoc)
 
             return examinedAreaList, examinedRoomList
-        return examineRoomData(startArea, startRoom, targetRange, None, [], [], [0, 0])
+        return examineRoomData(startArea, startRoom, targetRange, None, [], [], [0, 0, 0])
 
     @staticmethod
     def getTargetRange(galaxyList, startRoom, targetObject, maxRange):
@@ -455,11 +461,13 @@ class Room:
             if startRoom.sameRoomCheck(targetObject) == True:
                 return 0, None, None
 
-        sideDirList = {"North":["East", "West"],
-                        "East":["North", "South"],
-                        "South":["East", "West"],
-                        "West":["North", "South"]}
-        for searchDir in ["North", "East", "South", "West"]:
+        sideDirList = {"North":["East", "West", "Up", "Down"],
+                        "East":["North", "South", "Up", "Down"],
+                        "South":["East", "West", "Up", "Down"],
+                        "West":["North", "South", "Up", "Down"],
+                        "Up":["North", "East", "South", "West"],
+                        "Down":["North", "East", "South", "West"]}
+        for searchDir in ["North", "East", "South", "West", "Up", "Down"]:
             messageMaster = None
             currentRoom = startRoom
             if currentRoom.spaceshipObject != None:
@@ -559,4 +567,17 @@ class Room:
         if targetDirection[0] == "n" : return "South"
         elif targetDirection[0] == "e" : return "West"
         elif targetDirection[0] == "s" : return "North"
-        else : return "East"
+        elif targetDirection[0] == "w" : return "East"
+        elif targetDirection[0] == "u" : return "Down"
+        else : return "Up"
+
+    @staticmethod
+    def getTargetDirection(targetDirectionString):
+        targetDirectionString = targetDirectionString.lower()
+        if targetDirectionString[0] == "n" : lookDir = "North"
+        elif targetDirectionString[0] == "e" : lookDir = "East"
+        elif targetDirectionString[0] == "s" : lookDir = "South"
+        elif targetDirectionString[0] == "w" : lookDir = "West"
+        elif targetDirectionString[0] == "u" : lookDir = "Up"
+        else : lookDir = "Down"
+        return lookDir
