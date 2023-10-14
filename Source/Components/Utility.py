@@ -113,6 +113,8 @@ def appendKeyList(targetKeyList, targetString):
             phrase = targetString
         else:
             phrase = ' '.join(targetString.split()[i::])
+        if ',' in phrase:
+            phrase = phrase.replace(',', '')
         
         for cNum in range(len(phrase)):
             if cNum > 1:
@@ -124,8 +126,8 @@ def appendKeyList(targetKeyList, targetString):
                         newPhrase = phrase[0:cNum].strip().replace('-', ' ').strip()
                         if newPhrase not in targetKeyList and not (len(newPhrase) > 1 and newPhrase[-2] == ' ' and newPhrase[-1] in ["n", "e", "s", "w"]):
                             targetKeyList.append(newPhrase)
-
-        if phrase.strip() not in targetKeyList:
+                    
+        if len(phrase.strip()) > 0 and phrase.strip() not in targetKeyList:
             targetKeyList.append(phrase.strip())
 
 def getCountString(targetCount, blankSpace=True):
@@ -139,6 +141,28 @@ def getCountString(targetCount, blankSpace=True):
             displayCode = "1" + displayCode[1::]
     return displayString, displayCode
 
+def getDamageString(targetDamage):
+    stringWithCommas = insertCommasInNumber(str(targetDamage), "dr")
+    displayString = "(" + stringWithCommas["String"] + ")"
+    displayCode = "1y" + stringWithCommas["Code"] + "1y"
+    return {"String":displayString, "Code":displayCode}
+
+def getTargetUserString(target, posessive=True):
+    targetUserString = "Your "
+    targetUserCode = "5w"
+    if posessive == False:
+        targetUserString = "You "
+        targetUserCode = "4w"
+    if target.num != None:
+        sString = "'s "
+        sCode = "1y2w"
+        if posessive == False:
+            sString = " "
+            sCode = "1w"
+        targetUserString = target.prefix + " " + target.name["String"] + sString
+        targetUserCode = str(len(target.prefix)) + "w1w" + target.name["Code"] + sCode
+    return {"String":targetUserString, "Code":targetUserCode}
+
 def messageExistsCheck(messageDataList, messageType, stringHalf1, stringHalf2, codeHalf1, codeHalf2, drawBlankLine, combineCheck=True):
     if combineCheck == True:
         for messageData in messageDataList:
@@ -150,7 +174,7 @@ def messageExistsCheck(messageDataList, messageType, stringHalf1, stringHalf2, c
                 return
     messageDataList.append({"String":stringHalf1 + stringHalf2, "Code":codeHalf1 + codeHalf2, "Draw Blank Line":drawBlankLine, "Count":1, "Message Type":messageType, "Original String":stringHalf1 + stringHalf2, "String Half 1":stringHalf1, "String Half 2":stringHalf2, "Code Half 1":codeHalf1, "Code Half 2":codeHalf2})
 
-def insertCommasInNumber(targetNumString):
+def insertCommasInNumber(targetNumString, color="w"):
     returnString = ""
     returnCode = ""
 
@@ -165,13 +189,13 @@ def insertCommasInNumber(targetNumString):
         if startIndex > len(targetNumString):
             startIndex = len(targetNumString)
         returnString = "," + targetNumString[-startIndex::] + returnString
-        returnCode = "1y" + str(len(targetNumString[-startIndex::])) + "w" + returnCode
+        returnCode = "1y" + str(len(targetNumString[-startIndex::])) + color + returnCode
         targetNumString = targetNumString[0:-startIndex]
     returnString = targetNumString + returnString
-    returnCode = str(len(targetNumString)) + "w" + returnCode
+    returnCode = str(len(targetNumString)) + color + returnCode
     if negativeCheck == True:
         returnString = '-' + returnString
-        returnCode = "1w" + returnCode
+        returnCode = "1y" + returnCode
     return {"String":returnString, "Code":returnCode}
 
 def createUnderlineString(targetString):

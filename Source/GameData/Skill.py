@@ -15,8 +15,10 @@ class Skill:
         self.maxRange = 0
 
         self.healCheck = False
-        self.ruleDict = {}
+        self.cutLimbPercent = None
         self.onTarget = False
+
+        self.ruleDict = {}
 
         self.loadSkill(num)
 
@@ -27,6 +29,7 @@ class Skill:
         if num == 1:
             self.name = {"String":"Punch", "Code":"5w"}
             self.weaponTypeList = ["Open Hand"]
+            self.cutLimbPercent = 100
         elif num == 2:
             self.name = {"String":"Spin Fist", "Code":"9w"}
             self.weaponTypeList = ["Open Hand", "Open Hand"]
@@ -35,6 +38,7 @@ class Skill:
         elif num == 3:
             self.name = {"String":"Fireball", "Code":"8w"}
             self.maxRange = 2
+            self.cutLimbPercent = 5
         elif num == 4:
             self.name = {"String":"Inferno", "Code":"7w"}
             self.maxTargets = "All"
@@ -45,6 +49,7 @@ class Skill:
             self.ruleDict["All Only"] = True
             self.maxRange = 1
             self.offHandAttacks = False
+            self.cutLimbPercent = 20
             # self.maxTargets = "All" # Is Automatically Set Below
         elif num == 6:
             self.name = {"String":"Snipe", "Code":"5w"}
@@ -60,19 +65,20 @@ class Skill:
         elif num == 8:
             self.name = {"String":"Slash", "Code":"5w"}
             self.weaponTypeList = ["Sword"]
+            self.cutLimbPercent = 10
         elif num == 9:
             self.name = {"String":"Slash All", "Code":"9w"}
             self.weaponTypeList = ["Sword"]
             self.ruleDict["All Only"] = True
             self.offHandAttacks = False
+            self.cutLimbPercent = 5
             # self.maxTargets = "All" # Is Automatically Set Below
         elif num == 10:
             self.name = {"String":"Bash", "Code":"4w"}
             self.ruleDict["Gear Num List"] = [102]
         elif num == 11:
             self.name = {"String":"Pray", "Code":"4w"}
-            self.maxTargets = "All"
-            self.maxRange = 1
+            self.maxTargets = 1
             self.healCheck = True
         elif num == 12:
             self.name = {"String":"Bless", "Code":"5w"}

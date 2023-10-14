@@ -13,6 +13,7 @@ from GameData.World.Area import Area
 from GameData.World.Room import Room
 from GameData.World.Spaceship import Spaceship
 from GameData.Item.Item import Item
+from GameData.Item.Button import Button
 from GameData.Action import Action
 from Components.Utility import stringIsNumber
 
@@ -23,6 +24,7 @@ from Components.Utility import stringIsNumber
     # Auto-Reload
     # Auto-Combat
     # Move Direction '#'
+    # Grapple, cant grapple small enemies
     # Dodge Command
     # Parry Command
     # Counter-Attack (Passive Skill)
@@ -30,8 +32,10 @@ from Components.Utility import stringIsNumber
     # Bleeding
     # Peek Through Ship Exit Door
     # Jab(?)
+    # look self
     # refactor 'currentRoom' ?
     # recheck spaceship error messages, commands while landing/launching
+    # ensure mob cant use cut limbs to attack
 
 class Game:
 
@@ -176,11 +180,14 @@ class Game:
             roomCOTU07.exit["Down"] = [0, 0, 1, 0, 6]
             roomCOTU07.exit["North"] = [0, 0, 1, 0, 8]
 
-            roomCOTU08Name = {"String":"Unarmed, Unskilled Mob Room", "Code":"7w1y19w"}
+            roomCOTU08Name = {"String":"Unarmed Mobs Room", "Code":"17w"}
             roomCOTU08 = Room(0, 0, 1, 0, 8, roomCOTU08Name)
             areaCOTU.roomList.append(roomCOTU08)
             roomCOTU08.exit["South"] = [0, 0, 1, 0, 7]
-            roomCOTU08.itemList.append(Item(905))
+            unarmedUnskilledControlPanel = Item(905)
+            unarmedUnskilledFlagList = {"Num":2, "Label":{"String":"[1] - Unarmed, Unskilled Mob", "Code":"1r1w1r3y7w2y13w"}, "Key List":["1"], "Skill List":[], "Gear Dict":{}}
+            unarmedUnskilledControlPanel.buttonList.append(Button("Spawn Mob", unarmedUnskilledFlagList))
+            roomCOTU08.itemList.append(unarmedUnskilledControlPanel)
 
             # Zero Area Coordinates #
             areaCOTU.zeroCoordinates(self.galaxyList)
@@ -288,6 +295,8 @@ class Game:
         # self.inputBar.inputList = ["n", "n", "w", "loot cab", "wear pis", "wear pis", "e", "s", "s", "reload"]
         # self.inputBar.inputList = ["n", "n", "w", "get sniper from cab", "get 5.56 from cab", "get 5.56 from cab", "get 5.56 from cab", "e", "s", "s", "wear sni", "reload"]
         # self.inputBar.inputList = ["n", "n", "w", "get key from chest", "e", "s", "s", "s", "s", "board ship", "n"]
+        self.inputBar.inputList = ["s", "e", "u", "n"]
+        self.player.combatSkillList = [Skill(1), Skill(2), Skill(3), Skill(4), Skill(5), Skill(6), Skill(7), Skill(8), Skill(9), Skill(11), Skill(12), Skill(13)]
         self.player.itemDict["Misc"].append(Item(901))
         self.player.gearDict["Finger"][0] = Item(8)
 
@@ -423,7 +432,7 @@ class Game:
 
             # Examine #
             elif len(input.split()) == 1 and len(self.player.targetList) > 0:
-                self.player.targetList[0].lookDescription(self.console)
+                self.player.targetList[0].lookDescription(self.console, self.galaxyList, self.player, currentRoom)
                 
             else:
                 self.console.write("Examine what?", "12w1y", True)
@@ -699,37 +708,6 @@ class Game:
             else:
                 self.console.write("Get what?", "8w1y", True)
 
-        # Loot #
-        elif input.lower().split()[0] in ["loot"]:
-
-            # Loot Item From All #
-            if len(input.split()) > 3 and input.lower().split()[-2] == "from" and input.lower().split()[-1] == "all":
-                fromIndex = input.lower().split().index("from")
-                targetItemKey = ' '.join(input.lower().split()[1:fromIndex])
-                self.player.getCheck(self.console, self.galaxyList, self.player, currentRoom, targetItemKey, "All", "All")
-
-            # Loot Item From Container #
-            elif len(input.split()) > 3 and "from" in input.lower().split() and input.lower().split()[1] != "from" and input.lower().split()[-1] != "from":
-                fromIndex = input.lower().split().index("from")
-                targetItemKey = ' '.join(input.lower().split()[1:fromIndex])
-                targetContainerKey = ' '.join(input.lower().split()[fromIndex + 1::])
-                self.player.getCheck(self.console, self.galaxyList, self.player, currentRoom, targetItemKey, targetContainerKey, "All")
-
-            # Loot All #
-            elif len(input.split()) == 2 and input.lower().split()[1] == "all":
-                self.player.getCheck(self.console, self.galaxyList, self.player, currentRoom, "All", "All", "All")
-
-            # Loot Container #
-            elif len(input.split()) > 1:
-                self.player.getCheck(self.console, self.galaxyList, self.player, currentRoom, "All", ' '.join(input.lower().split()[1::]), "All")
-
-            else:
-                self.console.write("Loot what?", "9w1y", True)
-
-        # Empty #
-
-            # Empty Container/Drink #
-
         # Put #
         elif input.lower().split()[0] in ["put", "pu", "p"]:
 
@@ -762,6 +740,33 @@ class Game:
             else:
                 self.console.write("Put what in what?", "16w1y", True)
 
+        # Loot #
+        elif input.lower().split()[0] in ["loot"]:
+
+            # Loot Item From All #
+            if len(input.split()) > 3 and input.lower().split()[-2] == "from" and input.lower().split()[-1] == "all":
+                fromIndex = input.lower().split().index("from")
+                targetItemKey = ' '.join(input.lower().split()[1:fromIndex])
+                self.player.getCheck(self.console, self.galaxyList, self.player, currentRoom, targetItemKey, "All", "All")
+
+            # Loot Item From Container #
+            elif len(input.split()) > 3 and "from" in input.lower().split() and input.lower().split()[1] != "from" and input.lower().split()[-1] != "from":
+                fromIndex = input.lower().split().index("from")
+                targetItemKey = ' '.join(input.lower().split()[1:fromIndex])
+                targetContainerKey = ' '.join(input.lower().split()[fromIndex + 1::])
+                self.player.getCheck(self.console, self.galaxyList, self.player, currentRoom, targetItemKey, targetContainerKey, "All")
+
+            # Loot All #
+            elif len(input.split()) == 2 and input.lower().split()[1] == "all":
+                self.player.getCheck(self.console, self.galaxyList, self.player, currentRoom, "All", "All", "All")
+
+            # Loot Container #
+            elif len(input.split()) > 1:
+                self.player.getCheck(self.console, self.galaxyList, self.player, currentRoom, "All", ' '.join(input.lower().split()[1::]), "All")
+
+            else:
+                self.console.write("Loot what?", "9w1y", True)
+
         # Drop #
         elif input.lower().split()[0] in ["drop", "dro", "dr"]:
 
@@ -792,6 +797,10 @@ class Game:
             else:
                 self.console.write("Drop what?", "9w1y", True)
         
+        # Empty #
+
+            # Empty Container/Drink #
+
         # Wear #
         elif input.lower().split()[0] in ["wear", "wea"]:
 
@@ -881,16 +890,6 @@ class Game:
 
             else:
                 self.console.write("Remove what?", "11w1y", True)
-
-        # Say #
-        elif input.lower().split()[0] in ["say", "sa"]:
-            if len(input.split()) > 1:
-                sayKey = ' '.join(input.lower().split()[1::])
-                sayText = {"String":sayKey, "Code":str(len(sayKey)) + "w"}
-                self.player.sayCheck(self.console, self.galaxyList, self.player, currentRoom, sayText)
-
-            else:
-                self.console.write("Say what?", "8w1y", True)
 
         ## Combat Commands ##
         # Attack #
@@ -1213,6 +1212,34 @@ class Game:
         # Astro(?) #
 
         ## Other Commands ##
+        # Search #
+        elif input.lower().split()[0] in ["search", "searc", "sear", "sea", "se"]:
+            if len(input.split()) > 1:
+                searchKey = ' '.join(input.lower().split()[1::])
+                self.player.searchCheck(self.console, self.galaxyList, self.player, currentRoom, searchKey)
+            
+            else:
+                self.console.write("What should you search?", "22w1y", True)
+
+        # Push/Press #
+        elif input.lower().split()[0] in ["push", "pus", "pu", "press", "pres", "pre", "pr"]:
+            if len(input.split()) > 1:
+                pushKey = ' '.join(input.lower().split()[1::])
+                self.player.pushCheck(self.console, self.galaxyList, self.player, currentRoom, pushKey)
+
+            else:
+                self.console.write("Push what?", "9w1y", True)
+
+        # Say #
+        elif input.lower().split()[0] in ["say", "sa"]:
+            if len(input.split()) > 1:
+                sayKey = ' '.join(input.lower().split()[1::])
+                sayText = {"String":sayKey, "Code":str(len(sayKey)) + "w"}
+                self.player.sayCheck(self.console, self.galaxyList, self.player, currentRoom, sayText)
+
+            else:
+                self.console.write("Say what?", "8w1y", True)
+
         # Eat/Drink #
         elif input.lower().split()[0] in ["eat", "drink", "drin", "dri"]:
             if len(input.split()) > 1:
@@ -1220,6 +1247,8 @@ class Game:
                 self.player.consumeCheck(self.console, self.galaxyList, self.player, currentRoom, consumeKey)
 
             else:
+                if input.lower()[0] == "e" : actionString = "Eat"
+                else : actionString = "Drink"
                 self.console.write(actionString + " what?", str(len(actionString)) + "w5w1y", True)
 
         # Fill #
@@ -1285,16 +1314,7 @@ class Game:
 
         # System #
 
-        ## Crafting/Exploration Commands ##
-        # Search #
-        elif input.lower().split()[0] in ["search", "searc", "sear", "sea", "se"]:
-            if len(input.split()) > 1:
-                searchKey = ' '.join(input.lower().split()[1::])
-                self.player.searchCheck(self.console, self.galaxyList, self.player, currentRoom, searchKey)
-            
-            else:
-                self.console.write("What should you search?", "22w1y", True)
-
+        ## Crafting Commands ##
         # Inspect #
         
         # Prospect #

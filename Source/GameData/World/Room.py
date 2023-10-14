@@ -358,6 +358,19 @@ class Room:
                 if (isinstance(targetObjectKey, str) and targetObjectKey in tempObject.keyList) or \
                 (isinstance(targetObjectKey, int) and targetObjectKey == tempObject.num):
                     return tempObject
+
+        if "Button" in includeList or "Buttons" in includeList:
+            for item in self.itemList:
+                if item.buttonList != None:
+                    for button in item.buttonList:
+                        if targetObjectKey in button.keyList:
+                            return button
+
+        if "Hidden Object" in includeList or "Hidden Objects" in includeList:
+            for exitDir in self.door:
+                if self.door[exitDir] != None and self.door[exitDir]["Type"] == "Hidden":
+                    return self.door[exitDir]
+
         return None
         
     @staticmethod

@@ -1,6 +1,5 @@
 import copy
 from GameData.Skill import Skill
-from GameData.Item.Button import Button
 from Components.Utility import appendKeyList
 from Components.Utility import getCountString
 
@@ -29,6 +28,8 @@ class Item:
         self.ammoType = None
         self.magazine = None  # Guns with no magazine - Ammo Item Object, Guns with a magazine - Magazine Item Object
         self.shellCapacity = None
+
+        self.armorRating = None
 
         self.containerList = None
         self.containerPassword = None
@@ -219,6 +220,21 @@ class Item:
                 self.pocket = "Ammo"
                 self.ammoType = "5.56"
 
+        # Food (801 - 900) #
+        if self.name["String"] == "Debug Item":
+            if num == 801:
+                self.name = {"String":"Hamburger", "Code":"9w"}
+                self.pocket = "Food"
+            if num == 802:
+                self.name = {"String":"Panini", "Code":"6w"}
+                self.pocket = "Food"
+            if num == 803:
+                self.name = {"String":"Salad", "Code":"5w"}
+                self.pocket = "Food"
+            if num == 804:
+                self.name = {"String":"Cookie", "Code":"6w"}
+                self.pocket = "Food"
+
         # Other (901 - 1000) #
         if self.name["String"] == "Debug Item":
             if num == 901:
@@ -246,7 +262,12 @@ class Item:
                 self.name = {"String":"Control Panel", "Code":"13w"}
                 self.roomDescription = {"String":"is attatched to the wall.", "Code":"24w1y"}
                 self.flags["No Get"] = True
-                self.buttonList = [Button()]
+                self.buttonList = []
+            elif num == 906:
+                self.name = {"String":"Fast Food Menu", "Code":"14w"}
+                self.roomDescription = {"String":"is attatched to the wall.", "Code":"24w1y"}
+                self.flags["No Get"] = True
+                self.buttonList = []
 
         # Special Items #
         if self.name["String"] == "Debug Item":
@@ -254,6 +275,13 @@ class Item:
                 self.name = {"String":"Corpse", "Code":"6w"}
                 self.roomDescription = {"String":"is laying on the ground.", "Code":"23w1y"}
                 self.containerList = []
+            elif num == 667:
+                self.name = {"String":"Body Part", "Code":"9w"}
+                self.roomDescription = {"String":"is laying on the ground.", "Code":"23w1y"}
+
+        # Armor Setup #
+        if self.pocket == "Armor":
+            self.armorRating = {"Piercing":0, "Cutting":0, "Blunt":0}
 
         # Quantity Item Setup #
         if self.quantity == None:
@@ -305,6 +333,7 @@ class Item:
         elif self.containerList == None:
             console.write(self.description["String"], self.description["Code"])
 
+        # Container #
         if self.containerList != None and lookDistance == 0:
             if self.containerPassword != None and passwordCheck == False:
                 console.write("It's locked.", "2w1y8w1y")
@@ -344,9 +373,26 @@ class Item:
                     weaponStatusString, weaponStatusCode = itemData["ItemData"].getWeaponStatusString()
                     console.write(displayString + weaponStatusString + modString + countString, displayCode + weaponStatusCode + modCode + countCode)
             
+        # Gun #
         elif self.ranged == True:
             displayString, displayCode = self.getWeaponStatusString()
             console.write("Rounds:" + displayString, "6w1y" + displayCode)
+
+        # Buttons #
+        if self.buttonList != None and len(self.buttonList) > 0:
+            if len(self.buttonList) == 1 and self.buttonList[0].label == None:
+                console.write("It has an unlabled button.", "25w")
+            elif len(self.buttonList) == 1:
+                console.write("It has a button labled, '" + self.buttonList[0].label["String"] + "'.", "22w3y" + self.buttonList[0].label["Code"] + "2y", True)
+            else:
+                console.write("It has several buttons:", "22w1y")
+                for button in self.buttonList:
+                    if button.label == None:
+                        console.write("An unlabled button.", "18w")
+                    else:
+                        displayString = "A button labled, '" + button.label["String"] + "'."
+                        displayCode = "15w3y" + button.label["Code"] + "2y"
+                        console.write(displayString, displayCode)
 
     def getWeight(self, multiplyQuantity=True):
         if self.quantity == None:
@@ -471,12 +517,24 @@ class Item:
             appendKeyList(corpseItem.keyList, "your corpse")
         else:
             corpseItem.prefix = "The corpse of"
+            if "Head" in targetMob.cutLimbList:
+                corpseItem.prefix = "The headless corpse of"
+                appendKeyList(corpseItem.keyList, "headless")
             corpseItem.name["String"] = targetMob.prefix.lower() + " " + targetMob.name["String"]
             corpseItem.name["Code"] = str(len(targetMob.prefix)) + "w1w" + targetMob.name["Code"]
         for item in targetMob.getAllItemList():
             corpseItem.containerList.append(item)
         appendKeyList(corpseItem.keyList, corpseItem.name["String"].lower())
         return corpseItem
+
+    @staticmethod
+    def createBodyPart(targetMob, targetLimb):
+        bodyPartItem = Item(667)
+        bodyPartItem.prefix = "The"
+        bodyPartItem.name["String"] = targetLimb.lower() + " of " + targetMob.prefix.lower() + " " + targetMob.name["String"]
+        bodyPartItem.name["Code"] = str(len(targetLimb)) + "w4w" + str(len(targetMob.prefix)) + "w1w" + targetMob.name["Code"]
+        appendKeyList(bodyPartItem.keyList, bodyPartItem.name["String"].lower())
+        return bodyPartItem
 
     @staticmethod
     def getSpecialItemNum(targetItem):

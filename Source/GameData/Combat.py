@@ -1,28 +1,61 @@
 import random
+from GameData.Item.Item import Item
 
 class Combat:
 
     @staticmethod
-    def hitCheck(user, attackSkill, target):
+    def hitCheck(attackDisplayList, user, attackSkill, target, targetRoom):
+
+        # Miss Attack #
         if attackSkill.healCheck == False and random.randrange(4) == 0:
-            dataDict = {}
             if len(attackSkill.weaponDataList) == 0:
-                dataDict["Miss Check"] = "Miss Attack"
-                dataDict["Weapon Data List"] = "Non-Weapon Attack"
+                attackDisplayList["Miss Check"] = "Miss Attack"
+                attackDisplayList["Weapon Data List"] = "Non-Weapon Attack"
             elif len(attackSkill.weaponDataList) == 2:
-                dataDict["Miss Check"] = "Miss Attack"
-                dataDict["Weapon Data List"] = attackSkill.weaponDataList
+                attackDisplayList["Miss Check"] = "Miss Attack"
+                attackDisplayList["Weapon Data List"] = attackSkill.weaponDataList
             elif len(attackSkill.weaponDataList) == 1:
                 if attackSkill.weaponDataList[0] != "Open Hand" and attackSkill.weaponDataList[0].weaponType == "Gun":
-                    dataDict["Miss Check"] = "Miss Attack"
+                    attackDisplayList["Miss Check"] = "Miss Attack"
                 else:
-                    dataDict["Miss Check"] = "Miss Attack"
-                dataDict["Weapon Data List"] = [attackSkill.weaponDataList[0]]
+                    attackDisplayList["Miss Check"] = "Miss Attack"
+                attackDisplayList["Weapon Data List"] = [attackSkill.weaponDataList[0]]
 
-            return False, dataDict
+            return False, attackDisplayList
 
+        # Hit Attack #
         if attackSkill.healCheck == False:
             target.currentHealth -= 1
+            attackDisplayList["Attack Damage"] = 1
+
+            # Cut Off Limb #
+            if target.num != None and attackSkill.cutLimbPercent != None and attackSkill.cutLimbPercent > 0:
+                if len(target.cutLimbList) == 0 and random.randrange(100) + 1 <= attackSkill.cutLimbPercent:
+                    limbList = ["Left Arm", "Left Arm", "Right Arm", "Right Arm", "Head"]
+                    targetLimb = random.choice(limbList)
+                    target.cutLimbList.append(targetLimb)
+                    limbItem = Item.createBodyPart(target, targetLimb)
+                    targetRoom.itemList.append(limbItem)
+                    attackDisplayList["Cut Limb"] = targetLimb
+                    if targetLimb == "Head":
+                        attackDisplayList["Attack Damage"] = target.currentHealth + attackDisplayList["Attack Damage"]
+                    else:
+                        if targetLimb.split()[0] == "Left" : targetGearSlot = "Left Hand"
+                        else : targetGearSlot = "Right Hand"
+                        if target.gearDict[targetGearSlot] != None:
+                            attackDisplayList["Cut Limb Weapon"] = target.gearDict[targetGearSlot]
+                            targetRoom.itemList.append(target.gearDict[targetGearSlot])
+                            target.gearDict[targetGearSlot] = None
+
+                        # Opposite Hand 2-Handed Weapon Check #
+                        oppositeHandWeapon = target.gearDict[target.getOppositeHand(targetGearSlot)]
+                        if oppositeHandWeapon != None and oppositeHandWeapon.twoHanded == True and target.debugDualWield == False:
+                            targetRoom.itemList.append(oppositeHandWeapon)
+                            attackDisplayList["Return Weapon To Inventory"] = oppositeHandWeapon
+                            target.gearDict[target.getOppositeHand(targetGearSlot)] = None
+
         else:
             target.currentHealth += 1
-        return True, None
+            attackDisplayList["Attack Damage"] = 1
+
+        return True, attackDisplayList

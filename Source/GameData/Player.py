@@ -2,12 +2,15 @@ import copy, random
 from GameData.World.Room import Room
 from GameData.World.Spaceship import Spaceship
 from GameData.Item.Item import Item
+from GameData.Item.Button import Button
 from GameData.Skill import Skill
 from GameData.Action import Action
 from GameData.Combat import Combat
 from Components.Utility import appendKeyList
 from Components.Utility import stringIsNumber
 from Components.Utility import getCountString
+from Components.Utility import getDamageString
+from Components.Utility import getTargetUserString
 from Components.Utility import messageExistsCheck
 from Components.Utility import insertCommasInNumber
 from Components.Utility import createUnderlineString
@@ -30,9 +33,9 @@ class Player:
         self.keyList = []
 
         self.actionList = []
-        self.combatSkillList = [Skill(1), Skill(2), Skill(3), Skill(4), Skill(5), Skill(6), Skill(7), Skill(8), Skill(9), Skill(11), Skill(12), Skill(13)]
+        self.combatSkillList = []
 
-        self.currentHealth = 30
+        self.currentHealth = 10
 
         self.maxLookDistance = 2
         self.maxTargetDistance = 1
@@ -42,9 +45,10 @@ class Player:
 
         self.itemDict = {"Armor":[], "Weapon":[], "Ammo":[], "Misc":[], "Food":[]}
         self.gearDict = {"Head":None, "Face":None, "Neck":[None, None], "Body Under":None, "Body Over":None, "About Body":None, "Hands":None, "Finger":[None, None], "Legs Under":None, "Legs Over":None, "Feet":None, "Left Hand":None, "Right Hand":None}
+        self.cutLimbList = []
         self.dominantHand = "Right Hand"
 
-        self.emoteList = ["hmm", "hm", "nod", "nodnod", "tap", "boggle", "ahah", "jump", "gasp", "haha", "lol", "cheer", "smile", "swear", "sigh", "grin", "snicker"]
+        self.emoteList = ["hmm", "hm", "nod", "nodnod", "tap", "boggle", "ahah", "jump", "gasp", "haha", "lol", "cheer", "smile", "swear", "sigh", "grin", "snicker", "whistle"]
 
         self.autoLoot = False
         self.autoReload = False
@@ -112,9 +116,6 @@ class Player:
                         if self.speechIndex >= len(self.speechList):
                             self.speechIndex = 0
                             self.speechTick =  -150
-
-        # if self.num != None and len(self.actionList) == 0:
-            # self.moveCheck(console, map, galaxyList, player, currentRoom, "north")
 
         return messageDataList
 
@@ -224,9 +225,13 @@ class Player:
             if count == None:
                 roomTarget, playerItemLocation = self.getTargetItem(lookTarget)
             if roomTarget == None:
-                roomTarget = currentRoom.getTargetObject(lookTarget)
+                roomTarget = currentRoom.getTargetObject(lookTarget, ["Mobs", "Items", "Spaceships", "Buttons", "Hidden Objects"])
 
-            if currentRoom.isLit(galaxyList, player, self) == False and not (isinstance(roomTarget, Item) and roomTarget.containerList != None and roomTarget.lightInContainerCheck() == True):
+            if roomTarget != None and isinstance(roomTarget, dict) and "Type" in roomTarget and roomTarget["Type"] == "Hidden":
+                console.write("It looks a little out of place.", "30w1y", True)
+            elif roomTarget != None and isinstance(roomTarget, Button) == True:
+                console.write("It's a button.", "2w1y10w1y", True)
+            elif currentRoom.isLit(galaxyList, player, self) == False and not (isinstance(roomTarget, Item) and roomTarget.containerList != None and roomTarget.lightInContainerCheck() == True):
                 console.write("It's too dark to see.", "2w1y17w1y", True)
             elif roomTarget == None:
                 console.write("You don't see anything like that.", "7w1y24w1y", True)
@@ -236,8 +241,10 @@ class Player:
                     if roomTarget.containerPassword != None:
                         passwordCheck = self.hasKey(roomTarget.containerPassword)
                     roomTarget.lookDescription(console, lookCount, passwordCheck)
-                else:
+                elif isinstance(roomTarget, Spaceship):
                     roomTarget.lookDescription(console)
+                else:
+                    roomTarget.lookDescription(console, galaxyList, player, currentRoom)
 
     def lookItemInContainerCheck(self, console, currentRoom, targetItemKey, targetContainerKey):
         targetContainer = currentRoom.getTargetObject(targetContainerKey)
@@ -1251,6 +1258,385 @@ class Player:
                 dropCode = "9w" + itemNameCode + "14w1y" + countCode
                 console.write(dropString, dropCode, drawBlankLine)
 
+    def wearCheck(self, console, galaxyList, player, targetItemKey, count, targetGearSlotIndex=None):
+        drawBlankLine = self.stopActions(console, galaxyList, player)
+
+        wearItem = None
+        otherItem = None
+        if targetItemKey != "All":
+            for item in self.itemDict["Armor"] + self.itemDict["Weapon"]:
+                if targetItemKey in item.keyList:
+                    wearItem = item
+                    break
+            if wearItem == None:
+                for item in self.getAllItemList(["Inventory"]):
+                    if targetItemKey in item.keyList:
+                        otherItem = item
+                        break
+        
+        if targetItemKey != "All" and otherItem != None:
+            console.write("You can't wear that.", "7w1y11w1y", drawBlankLine)
+        elif targetItemKey != "All" and wearItem == None:
+            console.write("You can't find it.", "7w1y9w1y", drawBlankLine)
+        elif targetItemKey != "All" and wearItem.pocket == "Weapon":
+            tempCount = count
+            if tempCount == "All":
+                tempCount = 2
+            self.wieldCheck(console, galaxyList, player, targetItemKey, targetGearSlotIndex, tempCount)
+            return
+
+        else:
+            wearCount = 0
+            wearItem = None
+            delInvList = []
+            previousWornItemList = []
+            wornItemSlotList = []
+            breakCheck = False
+            for itemIndex, item in enumerate(self.itemDict["Armor"]):
+                if item.gearSlot != None and item.gearSlot in self.gearDict:
+                    targetGearSlot = self.gearDict[item.gearSlot]
+                    slotRange = 1
+                    if targetGearSlotIndex == None and isinstance(targetGearSlot, list):
+                        slotRange = len(targetGearSlot)
+                    for slotIndex in range(slotRange):
+                        if isinstance(self.gearDict[item.gearSlot], list) and count == 1 and self.gearDict[item.gearSlot][0] != None and self.gearDict[item.gearSlot][1] == None:
+                            slotIndex = 1
+                        elif isinstance(self.gearDict[item.gearSlot], list) and item.gearSlot in wornItemSlotList:
+                            slotIndex = 1
+                                    
+                        if targetGearSlotIndex != None:
+                            if targetGearSlotIndex in ["left", "lef", "le", "l"]:
+                                targetGearSlotIndex = 0
+                            elif targetGearSlotIndex in ["right", "righ", "rig", "ri", "r"]:
+                                targetGearSlotIndex = 1
+                            elif stringIsNumber(targetGearSlotIndex):
+                                targetGearSlotIndex = int(targetGearSlotIndex)
+                            if isinstance(self.gearDict[item.gearSlot], list):
+                                if targetGearSlotIndex > len(self.gearDict[item.gearSlot]) - 1:
+                                    targetGearSlotIndex = len(self.gearDict[item.gearSlot]) - 1
+                            slotIndex = targetGearSlotIndex
+                            
+                        if isinstance(self.gearDict[item.gearSlot], list):
+                            targetGearSlot = self.gearDict[item.gearSlot][slotIndex]
+                        if targetGearSlot == None or targetItemKey != "All":
+                            if targetItemKey == "All" or targetItemKey in item.keyList:
+                                if isinstance(self.gearDict[item.gearSlot], list):
+                                    if True:
+                                        if self.gearDict[item.gearSlot][slotIndex] != None:
+                                            previousWornItemList.append(self.gearDict[item.gearSlot][slotIndex])
+                                        if item.gearSlot not in wornItemSlotList:
+                                            wornItemSlotList.append(item.gearSlot)
+                                        self.gearDict[item.gearSlot][slotIndex] = item
+                                        wearCount += 1
+                                else:
+                                    if True:
+                                        if self.gearDict[item.gearSlot] != None:
+                                            previousWornItemList.append(self.gearDict[item.gearSlot])
+                                        if item.gearSlot not in wornItemSlotList:
+                                            wornItemSlotList.append(item.gearSlot)
+                                        self.gearDict[item.gearSlot] = item
+                                        wearCount += 1
+                                        
+                                if wearItem != "Multiple":
+                                    if wearItem == None:
+                                        wearItem = item
+                                    elif wearItem.num != item.num:
+                                        wearItem = "Multiple"
+                                delInvList.append(itemIndex)
+
+                                if count != "All" and wearCount >= count:
+                                    breakCheck = True
+                                break
+                if breakCheck:
+                    break
+
+            delInvList.reverse()
+            for delIndex in delInvList:
+                del self.itemDict["Armor"][delIndex]
+            for wornItem in previousWornItemList:
+                self.itemDict[wornItem.pocket].append(wornItem)
+
+            # Messages #
+            if wearCount == 0 and len(self.itemDict["Armor"]) == 0:
+                console.write("You don't have any gear to wear.", "7w1y23w1y", drawBlankLine)    
+            elif wearCount == 0:
+                console.write("You are already wearing something.", "33w1y", drawBlankLine)    
+            elif len(previousWornItemList) > 0 and wearCount > 1:
+                console.write("You switch around some of your gear.", "35w1y", drawBlankLine)
+            elif len(previousWornItemList) == 0 and wearCount > 1 and wearItem == "Multiple":
+                console.write("You put on some armor.", "21w1y", drawBlankLine)
+            elif len(previousWornItemList) == 1 and isinstance(wearItem, Item):
+                wearString = "You remove " + previousWornItemList[0].prefix.lower() + " " + previousWornItemList[0].name["String"] + " and wear " + wearItem.prefix.lower() + " " + wearItem.name["String"] + "."
+                wearCode = "11w" + str(len(previousWornItemList[0].prefix)) + "w1w" + previousWornItemList[0].name["Code"] + "10w" + str(len(wearItem.prefix)) + "w1w" + wearItem.name["Code"] + "1y"
+                console.write(wearString, wearCode, drawBlankLine)
+            elif len(previousWornItemList) == 0 and isinstance(wearItem, Item):
+                wearString = "You wear " + wearItem.prefix.lower() + " " + wearItem.name["String"] + " on your " + wearItem.gearSlot.lower() + "."
+                wearCode = "9w" + str(len(wearItem.prefix)) + "w1w" + wearItem.name["Code"] + "9w" + str(len(wearItem.gearSlot)) + "w1y"
+                countString = ""
+                countCode = ""
+                if wearItem != "Multiple" and wearCount > 1:
+                    countString = " (" + str(wearCount) + ")"
+                    countCode = "2r" + str(len(str(wearCount))) + "w1r"
+                console.write(wearString + countString, wearCode + countCode, drawBlankLine)
+
+            # Wield Check #
+            if targetItemKey == "All" and count == "All":
+                self.wieldCheck(console, galaxyList, player, "All", None, 2, False)
+
+    def wieldCheck(self, console, galaxyList, player, targetItemKey, targetGearSlotKey, count, blankCheck=True):
+        drawBlankLine = self.stopActions(console, galaxyList, player)
+
+        wieldItem = None
+        checkItem = None
+        for pocket in self.itemDict:
+            for item in self.itemDict[pocket]:
+                if targetItemKey == "All" or targetItemKey in item.keyList:
+                    if item.pocket == "Weapon" and wieldItem == None:
+                        wieldItem = item
+                    if checkItem == None:
+                        checkItem = item
+
+        if targetItemKey == "All" and (wieldItem == None or wieldItem.pocket != "Weapon"):
+            if blankCheck == True:
+                console.write("You don't have anything to wield.", "7w1y24w1y", drawBlankLine)
+        elif wieldItem == None and checkItem != None and checkItem.pocket != "Weapon":
+            console.write("You can't wield that.", "7w1y12w1y", blankCheck == True and drawBlankLine)
+        elif wieldItem == None:
+            console.write("You can't find it.", "7w1y9w1y", blankCheck == True and drawBlankLine)
+        elif wieldItem.pocket != "Weapon":
+            console.write("You can't wield that.", "7w1y12w1y", blankCheck == True and drawBlankLine)
+
+        else:
+            targetGearSlot = None
+            if targetGearSlotKey != None:
+                if stringIsNumber(targetGearSlotKey) == False:
+                    if targetGearSlotKey in ["left", "lef", "le", "l"]:
+                        targetGearSlot = "Left Hand"
+                    elif targetGearSlotKey in ["right", "righ", "rig", "ri", "r"]:
+                        targetGearSlot = "Right Hand"
+                else:
+                    if int(targetGearSlotKey) == 1 : targetGearSlot = "Left Hand"
+                    else : targetGearSlot = "Right Hand"
+                if wieldItem != None and wieldItem.twoHanded and (self.debugDualWield == False or wieldItem.ranged == True):
+                    targetGearSlot = self.dominantHand
+
+            wieldCount = 0
+            slotCount = 0
+            slotItem = None
+            breakCheck = False
+            for c in range(count):
+                defaultGearSlot = self.dominantHand
+                if (targetItemKey == "All" and self.gearDict[defaultGearSlot] != None and self.gearDict[defaultGearSlot].twoHanded == False and (self.debugDualWield == False or self.gearDict[defaultGearSlot].ranged == True)) or \
+                (targetItemKey != "All" and self.gearDict[defaultGearSlot] != None and self.gearDict[self.getOppositeHand(defaultGearSlot)] == None and self.gearDict[defaultGearSlot].twoHanded == False and wieldItem.twoHanded == False and count == 1) or \
+                (c == 1 and not (self.gearDict[defaultGearSlot] != None and self.gearDict[defaultGearSlot].twoHanded == True and (self.debugDualWield == False or self.gearDict[defaultGearSlot].ranged == True))) or \
+                (targetItemKey != "All" and self.gearDict[defaultGearSlot] != None and self.gearDict[self.getOppositeHand(defaultGearSlot)] == None and wieldItem.twoHanded == True and wieldItem.ranged == False and self.debugDualWield == True and self.gearDict[defaultGearSlot].ranged == False):
+                    defaultGearSlot = self.getOppositeHand(self.dominantHand)
+                if targetGearSlot != None:
+                    defaultGearSlot = targetGearSlot
+                delIndex = -1
+                for i, item in enumerate(self.itemDict["Weapon"]):
+                    if targetItemKey == "All" or targetItemKey in item.keyList:
+                        if not (targetItemKey == "All" and self.gearDict[defaultGearSlot] != None) and \
+                        not (targetItemKey == "All" and item.twoHanded == True and (self.gearDict[self.dominantHand] != None or self.gearDict[self.getOppositeHand(self.dominantHand)] != None) and (self.debugDualWield == False or item.ranged == True)):
+                            if self.gearDict[defaultGearSlot] != None:
+                                self.itemDict[self.gearDict[defaultGearSlot].pocket].append(self.gearDict[defaultGearSlot])
+                                slotCount += 1
+                                if slotItem == None:
+                                    slotItem = self.gearDict[defaultGearSlot]
+                                elif slotItem != "Multiple" and slotItem.num != self.gearDict[defaultGearSlot].num:
+                                    slotItem = "Multiple"
+                            oppositeHand = self.gearDict[self.getOppositeHand(defaultGearSlot)]
+                            if oppositeHand != None and (item.twoHanded == True or oppositeHand.twoHanded == True) and (self.debugDualWield == False or ((item.twoHanded == True and item.ranged == True) or (oppositeHand.twoHanded == True and oppositeHand.ranged == True))):
+                                self.itemDict[oppositeHand.pocket].append(oppositeHand)
+                                self.gearDict[self.getOppositeHand(defaultGearSlot)] = None
+                                slotCount += 1
+                                if slotItem == None:
+                                    slotItem = oppositeHand
+                                elif slotItem != "Multiple" and slotItem.num != oppositeHand.num:
+                                    slotItem = "Multiple"
+                            self.gearDict[defaultGearSlot] = item
+                            wieldCount += 1
+                            if wieldItem == None:
+                                wieldItem = item
+                            elif wieldItem != "Multiple" and wieldItem.num != item.num:
+                                wieldItem = "Multiple"
+                            delIndex = i
+                            break
+                if delIndex != -1:
+                    if self.itemDict["Weapon"][delIndex].twoHanded == True and (self.debugDualWield == False or self.itemDict["Weapon"][delIndex].ranged == True):
+                        breakCheck = True
+                    del self.itemDict["Weapon"][delIndex]
+                if breakCheck:
+                    break
+
+            if wieldCount == 0:
+                if blankCheck == True:
+                    console.write("You're already holding something.", "3w1y28w1y", drawBlankLine)
+            elif wieldItem == "Multiple":
+                if slotItem == None:
+                    console.write("You hold some weapons in your hands.", "35w1y", blankCheck == True and drawBlankLine)
+                else:
+                    console.write("You switch some weapons around.", "30w1y", blankCheck == True and drawBlankLine)
+            elif slotItem == None:
+                countString = ""
+                countCode = ""
+                handsString = defaultGearSlot.lower()
+                handsCode = str(len(defaultGearSlot)) + "w"
+                if wieldCount == 2 or wieldItem.twoHanded == True:
+                    if wieldItem.twoHanded == False:
+                        countString = " (2)"
+                        countCode = "2r1w1r"
+                    if self.debugDualWield == False:
+                        handsString = "hands"
+                        handsCode = "5w"
+                displayString = "You hold " + wieldItem.prefix.lower() + " " + wieldItem.name["String"] + countString + " in your " + handsString + "."
+                displayCode = "9w" + str(len(wieldItem.prefix)) + "w1w" + wieldItem.name["Code"] + countCode + "9w" + handsCode + "1y"
+                console.write(displayString, displayCode, blankCheck == True and drawBlankLine)
+            else:
+                slotString = "some gear"
+                slotCode = "9w"
+                slotCountString = ""
+                slotCountCode = ""
+                wieldString = "some gear"
+                wieldCode = "9w"
+                wieldCountString = ""
+                wieldCountCode = ""
+                if slotItem != "Multiple":
+                    slotString = slotItem.prefix.lower() + " " + slotItem.name["String"]
+                    slotCode = str(len(slotItem.prefix)) + "w1w" + slotItem.name["Code"]
+                    if slotCount > 1:
+                        slotCountString = " (2)"
+                        slotCountCode = "2r1w1r"
+                if wieldItem != "Multiple":
+                    handsString = defaultGearSlot.lower()
+                    if slotItem == "Multiple" or (wieldItem.twoHanded == True and self.debugDualWield == False):
+                        handsString = "hands"
+                    wieldString = wieldItem.prefix.lower() + " " + wieldItem.name["String"] + " in your " + handsString
+                    wieldCode = str(len(wieldItem.prefix)) + "w1w" + wieldItem.name["Code"] + "9w" + str(len(handsString)) + "w"
+                    if wieldCount > 1:
+                        wieldCountString = " (2)"
+                        wieldCountCode = "2r1w1r"
+                displayString = "You remove " + slotString + slotCountString + " and wield " + wieldString + "." + wieldCountString
+                displayCode = "11w" + slotCode + slotCountCode + "11w" + wieldCode + "1y" + wieldCountCode
+                console.write(displayString, displayCode, blankCheck == True and drawBlankLine)
+                           
+    def removeCheck(self, console, galaxyList, player, targetItemKey, count, targetGearSlotIndex=None):
+        drawBlankLine = self.stopActions(console, galaxyList, player)
+
+        removeItem = None
+        if targetItemKey != "All":
+            for gearSlot in self.gearDict:
+
+                # Focus On Dominant Hand First #
+                if targetItemKey not in ["All", None] and targetGearSlotIndex == None:
+                    if gearSlot == "Left Hand" and self.dominantHand != "Left Hand":
+                        gearSlot = "Right Hand"
+                    elif gearSlot == "Right Hand" and self.dominantHand == "Right Hand":
+                        gearSlot = "Left Hand"
+
+                # Focus On Target Hand Only #
+                if isinstance(targetGearSlotIndex, str):
+                    if targetGearSlotIndex == "left":
+                        gearSlot = "Left Hand"
+                    elif targetGearSlotIndex == "right":
+                        gearSlot = "Right Hand"
+
+                targetGearSlot = self.gearDict[gearSlot]
+                slotRange = 1
+                if targetGearSlotIndex == None and isinstance(targetGearSlot, list):
+                    slotRange = len(targetGearSlot)
+                for slotIndex in range(slotRange):
+                    if isinstance(self.gearDict[gearSlot], list):
+                        targetGearSlot = self.gearDict[gearSlot][slotIndex]
+                    if targetGearSlot != None:
+                        if targetItemKey in targetGearSlot.keyList:
+                            removeItem = targetGearSlot
+                            break
+        
+        if targetItemKey != "All" and removeItem == None:
+            console.write("You can't find it.", "7w1y9w1y", drawBlankLine)
+
+        else:
+            removeCount = 0
+            breakCheck = False
+            removeItem = None
+            removeHand = None
+            for gearSlot in self.gearDict:
+
+                # Focus On Dominant Hand First #
+                if targetItemKey not in ["All", None] and targetGearSlotIndex == None:
+                    if gearSlot == "Left Hand" and self.dominantHand != "Left Hand":
+                        gearSlot = "Right Hand"
+                    elif gearSlot == "Right Hand" and self.dominantHand == "Right Hand":
+                        gearSlot = "Left Hand"
+
+                # Focus On Target Hand Only #
+                if isinstance(targetGearSlotIndex, str):
+                    if targetGearSlotIndex == "left":
+                        gearSlot = "Left Hand"
+                    elif targetGearSlotIndex == "right":
+                        gearSlot = "Right Hand"
+
+                slotRange = 1
+                if targetGearSlotIndex == None and isinstance(self.gearDict[gearSlot], list):
+                    slotRange = len(self.gearDict[gearSlot])
+                for slotIndex in range(slotRange):
+                    targetGearSlot = self.gearDict[gearSlot]
+                    if isinstance(self.gearDict[gearSlot], list):
+                        if isinstance(targetGearSlotIndex, int):
+                            if targetGearSlotIndex >= len(self.gearDict[gearSlot]):
+                                targetGearSlotIndex = len(self.gearDict[gearSlot]) - 1
+                            slotIndex = targetGearSlotIndex
+                        targetGearSlot = self.gearDict[gearSlot][slotIndex]
+                    
+                    if targetGearSlot != None:
+                        if targetItemKey == "All" or targetItemKey in targetGearSlot.keyList:
+                            self.itemDict[targetGearSlot.pocket].append(targetGearSlot)
+                            removeCount += 1
+                            if removeItem != "Multiple":
+                                if removeItem == None:
+                                    removeItem = targetGearSlot
+                                elif removeItem.num != targetGearSlot.num:
+                                    removeItem = "Multiple"
+                            if isinstance(self.gearDict[gearSlot], list):
+                                self.gearDict[gearSlot][slotIndex] = None
+                            else:
+                                self.gearDict[gearSlot] = None
+                            if gearSlot in ["Left Hand", "Right Hand"]:
+                                removeHand = gearSlot
+
+                            if count != "All" and removeCount >= count:
+                                breakCheck = True
+                                break
+                if breakCheck:
+                    break
+
+            # Messages #
+            if removeCount == 0:
+                displayMessage = "You have nothing to remove."
+                displayCode = "26w1y"
+                console.write(displayMessage, displayCode, drawBlankLine)
+            elif targetItemKey == "All" and count == "All" and removeItem == "Multiple":
+                displayString = "You remove all of your gear."
+                displayCode = "27w1y"
+                if random.randrange(10) == 0:
+                    displayString = "You strip down to your birthday suit."
+                    displayCode = "36w1y"
+                console.write(displayString, displayCode, drawBlankLine)
+            elif removeItem == "Multiple":
+                console.write("You remove some gear.", "20w1y", drawBlankLine)
+            elif isinstance(removeItem, Item):
+                countString, countCode = getCountString(removeCount)
+                holdingString = " remove"
+                if removeItem.pocket == "Weapon":
+                    holdingString = " stop wielding"
+                handString = ""
+                if removeHand in ["Left Hand", "Right Hand"]:
+                    handString = " in your " + removeHand.lower()
+                displayString = "You" + holdingString + " " + removeItem.prefix + " " + removeItem.name["String"] + handString + "." + countString
+                displayCode = "3w" + str(len(holdingString)) + "w1w" + str(len(removeItem.prefix)) + "w1w" + removeItem.name["Code"] + str(len(handString)) + "w1y" + countCode
+                console.write(displayString, displayCode, drawBlankLine)
+
     def switchCheck(self, console):
         oldHand = self.dominantHand
         if self.dominantHand == "Left Hand":
@@ -1914,415 +2300,7 @@ class Player:
             console.write("You aren't doing anything.", "8w1y16w1y", True)
         else:
             self.stopActions(console, galaxyList, player)
-           
-    def wearCheck(self, console, galaxyList, player, targetItemKey, count, targetGearSlotIndex=None):
-        drawBlankLine = self.stopActions(console, galaxyList, player)
-
-        wearItem = None
-        otherItem = None
-        if targetItemKey != "All":
-            for item in self.itemDict["Armor"] + self.itemDict["Weapon"]:
-                if targetItemKey in item.keyList:
-                    wearItem = item
-                    break
-            if wearItem == None:
-                for item in self.getAllItemList(["Inventory"]):
-                    if targetItemKey in item.keyList:
-                        otherItem = item
-                        break
-        
-        if targetItemKey != "All" and otherItem != None:
-            console.write("You can't wear that.", "7w1y11w1y", drawBlankLine)
-        elif targetItemKey != "All" and wearItem == None:
-            console.write("You can't find it.", "7w1y9w1y", drawBlankLine)
-        elif targetItemKey != "All" and wearItem.pocket == "Weapon":
-            tempCount = count
-            if tempCount == "All":
-                tempCount = 2
-            self.wieldCheck(console, galaxyList, player, targetItemKey, targetGearSlotIndex, tempCount)
-            return
-
-        else:
-            wearCount = 0
-            wearItem = None
-            delInvList = []
-            previousWornItemList = []
-            wornItemSlotList = []
-            breakCheck = False
-            for itemIndex, item in enumerate(self.itemDict["Armor"]):
-                if item.gearSlot != None and item.gearSlot in self.gearDict:
-                    targetGearSlot = self.gearDict[item.gearSlot]
-                    slotRange = 1
-                    if targetGearSlotIndex == None and isinstance(targetGearSlot, list):
-                        slotRange = len(targetGearSlot)
-                    for slotIndex in range(slotRange):
-                        if isinstance(self.gearDict[item.gearSlot], list) and count == 1 and self.gearDict[item.gearSlot][0] != None and self.gearDict[item.gearSlot][1] == None:
-                            slotIndex = 1
-                        elif isinstance(self.gearDict[item.gearSlot], list) and item.gearSlot in wornItemSlotList:
-                            slotIndex = 1
-                                    
-                        if targetGearSlotIndex != None:
-                            if targetGearSlotIndex in ["left", "lef", "le", "l"]:
-                                targetGearSlotIndex = 0
-                            elif targetGearSlotIndex in ["right", "righ", "rig", "ri", "r"]:
-                                targetGearSlotIndex = 1
-                            elif stringIsNumber(targetGearSlotIndex):
-                                targetGearSlotIndex = int(targetGearSlotIndex)
-                            if isinstance(self.gearDict[item.gearSlot], list):
-                                if targetGearSlotIndex > len(self.gearDict[item.gearSlot]) - 1:
-                                    targetGearSlotIndex = len(self.gearDict[item.gearSlot]) - 1
-                            slotIndex = targetGearSlotIndex
-                            
-                        if isinstance(self.gearDict[item.gearSlot], list):
-                            targetGearSlot = self.gearDict[item.gearSlot][slotIndex]
-                        if targetGearSlot == None or targetItemKey != "All":
-                            if targetItemKey == "All" or targetItemKey in item.keyList:
-                                if isinstance(self.gearDict[item.gearSlot], list):
-                                    if True:
-                                        if self.gearDict[item.gearSlot][slotIndex] != None:
-                                            previousWornItemList.append(self.gearDict[item.gearSlot][slotIndex])
-                                        if item.gearSlot not in wornItemSlotList:
-                                            wornItemSlotList.append(item.gearSlot)
-                                        self.gearDict[item.gearSlot][slotIndex] = item
-                                        wearCount += 1
-                                else:
-                                    if True:
-                                        if self.gearDict[item.gearSlot] != None:
-                                            previousWornItemList.append(self.gearDict[item.gearSlot])
-                                        if item.gearSlot not in wornItemSlotList:
-                                            wornItemSlotList.append(item.gearSlot)
-                                        self.gearDict[item.gearSlot] = item
-                                        wearCount += 1
-                                        
-                                if wearItem != "Multiple":
-                                    if wearItem == None:
-                                        wearItem = item
-                                    elif wearItem.num != item.num:
-                                        wearItem = "Multiple"
-                                delInvList.append(itemIndex)
-
-                                if count != "All" and wearCount >= count:
-                                    breakCheck = True
-                                break
-                if breakCheck:
-                    break
-
-            delInvList.reverse()
-            for delIndex in delInvList:
-                del self.itemDict["Armor"][delIndex]
-            for wornItem in previousWornItemList:
-                self.itemDict[wornItem.pocket].append(wornItem)
-
-            # Messages #
-            if wearCount == 0 and len(self.itemDict["Armor"]) == 0:
-                console.write("You don't have any gear to wear.", "7w1y23w1y", drawBlankLine)    
-            elif wearCount == 0:
-                console.write("You are already wearing something.", "33w1y", drawBlankLine)    
-            elif len(previousWornItemList) > 0 and wearCount > 1:
-                console.write("You switch around some of your gear.", "35w1y", drawBlankLine)
-            elif len(previousWornItemList) == 0 and wearCount > 1 and wearItem == "Multiple":
-                console.write("You put on some armor.", "21w1y", drawBlankLine)
-            elif len(previousWornItemList) == 1 and isinstance(wearItem, Item):
-                wearString = "You remove " + previousWornItemList[0].prefix.lower() + " " + previousWornItemList[0].name["String"] + " and wear " + wearItem.prefix.lower() + " " + wearItem.name["String"] + "."
-                wearCode = "11w" + str(len(previousWornItemList[0].prefix)) + "w1w" + previousWornItemList[0].name["Code"] + "10w" + str(len(wearItem.prefix)) + "w1w" + wearItem.name["Code"] + "1y"
-                console.write(wearString, wearCode, drawBlankLine)
-            elif len(previousWornItemList) == 0 and isinstance(wearItem, Item):
-                wearString = "You wear " + wearItem.prefix.lower() + " " + wearItem.name["String"] + " on your " + wearItem.gearSlot.lower() + "."
-                wearCode = "9w" + str(len(wearItem.prefix)) + "w1w" + wearItem.name["Code"] + "9w" + str(len(wearItem.gearSlot)) + "w1y"
-                countString = ""
-                countCode = ""
-                if wearItem != "Multiple" and wearCount > 1:
-                    countString = " (" + str(wearCount) + ")"
-                    countCode = "2r" + str(len(str(wearCount))) + "w1r"
-                console.write(wearString + countString, wearCode + countCode, drawBlankLine)
-
-            # Wield Check #
-            if targetItemKey == "All" and count == "All":
-                self.wieldCheck(console, galaxyList, player, "All", None, 2, False)
-
-    def wieldCheck(self, console, galaxyList, player, targetItemKey, targetGearSlotKey, count, blankCheck=True):
-        drawBlankLine = self.stopActions(console, galaxyList, player)
-
-        wieldItem = None
-        checkItem = None
-        for pocket in self.itemDict:
-            for item in self.itemDict[pocket]:
-                if targetItemKey == "All" or targetItemKey in item.keyList:
-                    if item.pocket == "Weapon" and wieldItem == None:
-                        wieldItem = item
-                    if checkItem == None:
-                        checkItem = item
-
-        if targetItemKey == "All" and (wieldItem == None or wieldItem.pocket != "Weapon"):
-            if blankCheck == True:
-                console.write("You don't have anything to wield.", "7w1y24w1y", drawBlankLine)
-        elif wieldItem == None and checkItem != None and checkItem.pocket != "Weapon":
-            console.write("You can't wield that.", "7w1y12w1y", blankCheck == True and drawBlankLine)
-        elif wieldItem == None:
-            console.write("You can't find it.", "7w1y9w1y", blankCheck == True and drawBlankLine)
-        elif wieldItem.pocket != "Weapon":
-            console.write("You can't wield that.", "7w1y12w1y", blankCheck == True and drawBlankLine)
-
-        else:
-            targetGearSlot = None
-            if targetGearSlotKey != None:
-                if stringIsNumber(targetGearSlotKey) == False:
-                    if targetGearSlotKey in ["left", "lef", "le", "l"]:
-                        targetGearSlot = "Left Hand"
-                    elif targetGearSlotKey in ["right", "righ", "rig", "ri", "r"]:
-                        targetGearSlot = "Right Hand"
-                else:
-                    if int(targetGearSlotKey) == 1 : targetGearSlot = "Left Hand"
-                    else : targetGearSlot = "Right Hand"
-                if wieldItem != None and wieldItem.twoHanded and (self.debugDualWield == False or wieldItem.ranged == True):
-                    targetGearSlot = self.dominantHand
-
-            wieldCount = 0
-            slotCount = 0
-            slotItem = None
-            breakCheck = False
-            for c in range(count):
-                defaultGearSlot = self.dominantHand
-                if (targetItemKey == "All" and self.gearDict[defaultGearSlot] != None and self.gearDict[defaultGearSlot].twoHanded == False and (self.debugDualWield == False or self.gearDict[defaultGearSlot].ranged == True)) or \
-                (targetItemKey != "All" and self.gearDict[defaultGearSlot] != None and self.gearDict[self.getOppositeHand(defaultGearSlot)] == None and self.gearDict[defaultGearSlot].twoHanded == False and wieldItem.twoHanded == False and count == 1) or \
-                (c == 1 and not (self.gearDict[defaultGearSlot] != None and self.gearDict[defaultGearSlot].twoHanded == True and (self.debugDualWield == False or self.gearDict[defaultGearSlot].ranged == True))) or \
-                (targetItemKey != "All" and self.gearDict[defaultGearSlot] != None and self.gearDict[self.getOppositeHand(defaultGearSlot)] == None and wieldItem.twoHanded == True and wieldItem.ranged == False and self.debugDualWield == True and self.gearDict[defaultGearSlot].ranged == False):
-                    defaultGearSlot = self.getOppositeHand(self.dominantHand)
-                if targetGearSlot != None:
-                    defaultGearSlot = targetGearSlot
-                delIndex = -1
-                for i, item in enumerate(self.itemDict["Weapon"]):
-                    if targetItemKey == "All" or targetItemKey in item.keyList:
-                        if not (targetItemKey == "All" and self.gearDict[defaultGearSlot] != None) and \
-                        not (targetItemKey == "All" and item.twoHanded == True and (self.gearDict[self.dominantHand] != None or self.gearDict[self.getOppositeHand(self.dominantHand)] != None) and (self.debugDualWield == False or item.ranged == True)):
-                            if self.gearDict[defaultGearSlot] != None:
-                                self.itemDict[self.gearDict[defaultGearSlot].pocket].append(self.gearDict[defaultGearSlot])
-                                slotCount += 1
-                                if slotItem == None:
-                                    slotItem = self.gearDict[defaultGearSlot]
-                                elif slotItem != "Multiple" and slotItem.num != self.gearDict[defaultGearSlot].num:
-                                    slotItem = "Multiple"
-                            oppositeHand = self.gearDict[self.getOppositeHand(defaultGearSlot)]
-                            if oppositeHand != None and (item.twoHanded == True or oppositeHand.twoHanded == True) and (self.debugDualWield == False or ((item.twoHanded == True and item.ranged == True) or (oppositeHand.twoHanded == True and oppositeHand.ranged == True))):
-                                self.itemDict[oppositeHand.pocket].append(oppositeHand)
-                                self.gearDict[self.getOppositeHand(defaultGearSlot)] = None
-                                slotCount += 1
-                                if slotItem == None:
-                                    slotItem = oppositeHand
-                                elif slotItem != "Multiple" and slotItem.num != oppositeHand.num:
-                                    slotItem = "Multiple"
-                            self.gearDict[defaultGearSlot] = item
-                            wieldCount += 1
-                            if wieldItem == None:
-                                wieldItem = item
-                            elif wieldItem != "Multiple" and wieldItem.num != item.num:
-                                wieldItem = "Multiple"
-                            delIndex = i
-                            break
-                if delIndex != -1:
-                    if self.itemDict["Weapon"][delIndex].twoHanded == True and (self.debugDualWield == False or self.itemDict["Weapon"][delIndex].ranged == True):
-                        breakCheck = True
-                    del self.itemDict["Weapon"][delIndex]
-                if breakCheck:
-                    break
-
-            if wieldCount == 0:
-                if blankCheck == True:
-                    console.write("You're already holding something.", "3w1y28w1y", drawBlankLine)
-            elif wieldItem == "Multiple":
-                if slotItem == None:
-                    console.write("You hold some weapons in your hands.", "35w1y", blankCheck == True and drawBlankLine)
-                else:
-                    console.write("You switch some weapons around.", "30w1y", blankCheck == True and drawBlankLine)
-            elif slotItem == None:
-                countString = ""
-                countCode = ""
-                handsString = defaultGearSlot.lower()
-                handsCode = str(len(defaultGearSlot)) + "w"
-                if wieldCount == 2 or wieldItem.twoHanded == True:
-                    if wieldItem.twoHanded == False:
-                        countString = " (2)"
-                        countCode = "2r1w1r"
-                    if self.debugDualWield == False:
-                        handsString = "hands"
-                        handsCode = "5w"
-                displayString = "You hold " + wieldItem.prefix.lower() + " " + wieldItem.name["String"] + countString + " in your " + handsString + "."
-                displayCode = "9w" + str(len(wieldItem.prefix)) + "w1w" + wieldItem.name["Code"] + countCode + "9w" + handsCode + "1y"
-                console.write(displayString, displayCode, blankCheck == True and drawBlankLine)
-            else:
-                slotString = "some gear"
-                slotCode = "9w"
-                slotCountString = ""
-                slotCountCode = ""
-                wieldString = "some gear"
-                wieldCode = "9w"
-                wieldCountString = ""
-                wieldCountCode = ""
-                if slotItem != "Multiple":
-                    slotString = slotItem.prefix.lower() + " " + slotItem.name["String"]
-                    slotCode = str(len(slotItem.prefix)) + "w1w" + slotItem.name["Code"]
-                    if slotCount > 1:
-                        slotCountString = " (2)"
-                        slotCountCode = "2r1w1r"
-                if wieldItem != "Multiple":
-                    handsString = defaultGearSlot.lower()
-                    if slotItem == "Multiple" or (wieldItem.twoHanded == True and self.debugDualWield == False):
-                        handsString = "hands"
-                    wieldString = wieldItem.prefix.lower() + " " + wieldItem.name["String"] + " in your " + handsString
-                    wieldCode = str(len(wieldItem.prefix)) + "w1w" + wieldItem.name["Code"] + "9w" + str(len(handsString)) + "w"
-                    if wieldCount > 1:
-                        wieldCountString = " (2)"
-                        wieldCountCode = "2r1w1r"
-                displayString = "You remove " + slotString + slotCountString + " and wield " + wieldString + "." + wieldCountString
-                displayCode = "11w" + slotCode + slotCountCode + "11w" + wieldCode + "1y" + wieldCountCode
-                console.write(displayString, displayCode, blankCheck == True and drawBlankLine)
-                           
-    def removeCheck(self, console, galaxyList, player, targetItemKey, count, targetGearSlotIndex=None):
-        drawBlankLine = self.stopActions(console, galaxyList, player)
-
-        removeItem = None
-        if targetItemKey != "All":
-            for gearSlot in self.gearDict:
-
-                # Focus On Dominant Hand First #
-                if targetItemKey not in ["All", None] and targetGearSlotIndex == None:
-                    if gearSlot == "Left Hand" and self.dominantHand != "Left Hand":
-                        gearSlot = "Right Hand"
-                    elif gearSlot == "Right Hand" and self.dominantHand == "Right Hand":
-                        gearSlot = "Left Hand"
-
-                # Focus On Target Hand Only #
-                if isinstance(targetGearSlotIndex, str):
-                    if targetGearSlotIndex == "left":
-                        gearSlot = "Left Hand"
-                    elif targetGearSlotIndex == "right":
-                        gearSlot = "Right Hand"
-
-                targetGearSlot = self.gearDict[gearSlot]
-                slotRange = 1
-                if targetGearSlotIndex == None and isinstance(targetGearSlot, list):
-                    slotRange = len(targetGearSlot)
-                for slotIndex in range(slotRange):
-                    if isinstance(self.gearDict[gearSlot], list):
-                        targetGearSlot = self.gearDict[gearSlot][slotIndex]
-                    if targetGearSlot != None:
-                        if targetItemKey in targetGearSlot.keyList:
-                            removeItem = targetGearSlot
-                            break
-        
-        if targetItemKey != "All" and removeItem == None:
-            console.write("You can't find it.", "7w1y9w1y", drawBlankLine)
-
-        else:
-            removeCount = 0
-            breakCheck = False
-            removeItem = None
-            removeHand = None
-            for gearSlot in self.gearDict:
-
-                # Focus On Dominant Hand First #
-                if targetItemKey not in ["All", None] and targetGearSlotIndex == None:
-                    if gearSlot == "Left Hand" and self.dominantHand != "Left Hand":
-                        gearSlot = "Right Hand"
-                    elif gearSlot == "Right Hand" and self.dominantHand == "Right Hand":
-                        gearSlot = "Left Hand"
-
-                # Focus On Target Hand Only #
-                if isinstance(targetGearSlotIndex, str):
-                    if targetGearSlotIndex == "left":
-                        gearSlot = "Left Hand"
-                    elif targetGearSlotIndex == "right":
-                        gearSlot = "Right Hand"
-
-                slotRange = 1
-                if targetGearSlotIndex == None and isinstance(self.gearDict[gearSlot], list):
-                    slotRange = len(self.gearDict[gearSlot])
-                for slotIndex in range(slotRange):
-                    targetGearSlot = self.gearDict[gearSlot]
-                    if isinstance(self.gearDict[gearSlot], list):
-                        if isinstance(targetGearSlotIndex, int):
-                            if targetGearSlotIndex >= len(self.gearDict[gearSlot]):
-                                targetGearSlotIndex = len(self.gearDict[gearSlot]) - 1
-                            slotIndex = targetGearSlotIndex
-                        targetGearSlot = self.gearDict[gearSlot][slotIndex]
-                    
-                    if targetGearSlot != None:
-                        if targetItemKey == "All" or targetItemKey in targetGearSlot.keyList:
-                            self.itemDict[targetGearSlot.pocket].append(targetGearSlot)
-                            removeCount += 1
-                            if removeItem != "Multiple":
-                                if removeItem == None:
-                                    removeItem = targetGearSlot
-                                elif removeItem.num != targetGearSlot.num:
-                                    removeItem = "Multiple"
-                            if isinstance(self.gearDict[gearSlot], list):
-                                self.gearDict[gearSlot][slotIndex] = None
-                            else:
-                                self.gearDict[gearSlot] = None
-                            if gearSlot in ["Left Hand", "Right Hand"]:
-                                removeHand = gearSlot
-
-                            if count != "All" and removeCount >= count:
-                                breakCheck = True
-                                break
-                if breakCheck:
-                    break
-
-            # Messages #
-            if removeCount == 0:
-                displayMessage = "You have nothing to remove."
-                displayCode = "26w1y"
-                console.write(displayMessage, displayCode, drawBlankLine)
-            elif targetItemKey == "All" and count == "All" and removeItem == "Multiple":
-                displayString = "You remove all of your gear."
-                displayCode = "27w1y"
-                if random.randrange(10) == 0:
-                    displayString = "You strip down to your birthday suit."
-                    displayCode = "36w1y"
-                console.write(displayString, displayCode, drawBlankLine)
-            elif removeItem == "Multiple":
-                console.write("You remove some gear.", "20w1y", drawBlankLine)
-            elif isinstance(removeItem, Item):
-                countString, countCode = getCountString(removeCount)
-                holdingString = " remove"
-                if removeItem.pocket == "Weapon":
-                    holdingString = " stop wielding"
-                handString = ""
-                if removeHand in ["Left Hand", "Right Hand"]:
-                    handString = " in your " + removeHand.lower()
-                displayString = "You" + holdingString + " " + removeItem.prefix + " " + removeItem.name["String"] + handString + "." + countString
-                displayCode = "3w" + str(len(holdingString)) + "w1w" + str(len(removeItem.prefix)) + "w1w" + removeItem.name["Code"] + str(len(handString)) + "w1y" + countCode
-                console.write(displayString, displayCode, drawBlankLine)
-
-    def sayCheck(self, console, galaxyList, player, currentRoom, sayKey):
-        sayString = "say"
-        if sayKey["String"][-1] == '?':
-            sayString = "ask"
-        userString = "You " + sayString
-        userCode = "7w"
-        if self.num != None and currentRoom.sameRoomCheck(player) == True:
-            userString = self.prefix + " " + self.name["String"] + " says"
-            userCode = str(len(self.prefix)) + "w1w" + self.name["Code"] + "5w"
-            if currentRoom.isLit(galaxyList, player, self) == False:
-                userString = "Someone says"
-                userCode = "12w"
-
-        targetString = userString + ", '"
-        targetCode = userCode + "3y"
-        periodString = '.'
-        keyString = sayKey["String"]
-        if sayKey["String"][-1] == '.':
-            keyString = ' '.join(sayKey["String"].split()[0:-1] + [sayKey["String"].split()[-1].replace('.', '')])
-        elif sayKey["String"][-1] == '?':
-            keyString = ' '.join(sayKey["String"].split()[0:-1] + [sayKey["String"].split()[-1].replace('?', '')])
-            periodString = "?"
-        elif sayKey["String"][-1] == '!':
-            keyString = ' '.join(sayKey["String"].split()[0:-1] + [sayKey["String"].split()[-1].replace('!', '')])
-            periodString = "!"
-        displayString = targetString + keyString + periodString + "'"
-        displayCode = targetCode + str(len(keyString)) + "w1y" + "1y"
-        console.write(displayString, displayCode, True)
-
+    
     def attackCheck(self, console, galaxyList, player, currentRoom, mobKey):
         if mobKey == None and len(self.targetList) == 0:
             console.write("Attack who?", "10w1y", True)
@@ -2457,11 +2435,9 @@ class Player:
         targetMob = flags["targetMob"]
         targetMobList = flags["targetMobList"]
 
-        targetUserString = "Your "
-        targetUserCode = "5w"
-        if self.num != None:
-            targetUserString = self.prefix + " " + self.name["String"] + "'s "
-            targetUserCode = str(len(self.prefix)) + "w1w" + self.name["Code"] + "1y2w"
+        targetUserLine = getTargetUserString(self)
+        targetUserString = targetUserLine["String"]
+        targetUserCode = targetUserLine["Code"]
 
         directionString = ""
         directionCode = ""
@@ -2502,9 +2478,9 @@ class Player:
                 healString = "heals themself with "
             if not (self.num != None and targetRoom.sameRoomCheck(player) == False):
                 stringHalf1 = targetUserStringHeal
-                stringHalf2 = healString + combatSkill.name["String"] + "."
+                stringHalf2 = healString + combatSkill.name["String"] + ". " + getDamageString(attackData["Attack Damage"])["String"]
                 codeHalf1 = targetUserCodeHeal
-                codeHalf2 = str(len(healString)) + "w" + combatSkill.name["Code"] + "1y"
+                codeHalf2 = str(len(healString)) + "w" + combatSkill.name["Code"] + "2y" + getDamageString(attackData["Attack Damage"])["Code"]
                 drawBlankLineCheck = drawBlankLine and (len(messageDataList) == 0 or (len(messageDataList) > 0 and messageDataList[-1]["Message Type"] != messageType))
                 combineLinesCheck = self.num != None
                 messageExistsCheck(messageDataList, messageType, stringHalf1, stringHalf2, codeHalf1, codeHalf2, drawBlankLineCheck, combineLinesCheck)
@@ -2556,9 +2532,9 @@ class Player:
                     if attackData["Mob Data"] == "Multiple":
                         if not (self.num != None and targetRoom.sameRoomCheck(player) == False):
                             stringHalf1 = targetUserString
-                            stringHalf2 = attackData["Attack Data"].name["String"] + directionString + directionCountString + hitString + " the group!"
+                            stringHalf2 = attackData["Attack Data"].name["String"] + directionString + directionCountString + hitString + " the group! " + getDamageString(attackData["Attack Damage"])["String"]
                             codeHalf1 = targetUserCode
-                            codeHalf2 = attackData["Attack Data"].name["Code"] + directionCode + directionCountCode + hitCode + "10w1y"
+                            codeHalf2 = attackData["Attack Data"].name["Code"] + directionCode + directionCountCode + hitCode + "10w2y" + getDamageString(attackData["Attack Damage"])["Code"]
                             drawBlankLineCheck = drawBlankLine and (len(messageDataList) == 0 or (len(messageDataList) > 0 and messageDataList[-1]["Message Type"] != messageType))
                             combineLinesCheck = self.num != None
                             messageExistsCheck(messageDataList, messageType, stringHalf1, stringHalf2, codeHalf1, codeHalf2, drawBlankLineCheck, combineLinesCheck)
@@ -2571,13 +2547,39 @@ class Player:
                             targetEnemyCode = "3w"
                         if not (self.num != None and targetRoom.sameRoomCheck(player) == False):
                             stringHalf1 = targetUserString
-                            stringHalf2 = attackData["Attack Data"].name["String"] + directionString + directionCountString + hitString + " " + targetEnemyString + "!" + countString
+                            stringHalf2 = attackData["Attack Data"].name["String"] + directionString + directionCountString + hitString + " " + targetEnemyString + "!" + countString + " " + getDamageString(attackData["Attack Damage"])["String"]
                             codeHalf1 = targetUserCode
-                            codeHalf2 = attackData["Attack Data"].name["Code"] + directionCode + directionCountCode + hitCode + "1w" + targetEnemyCode + "1y" + countCode
+                            codeHalf2 = attackData["Attack Data"].name["Code"] + directionCode + directionCountCode + hitCode + "1w" + targetEnemyCode + "1y" + countCode + "1w" + getDamageString(attackData["Attack Damage"])["Code"]
                             drawBlankLineCheck = drawBlankLine and (len(messageDataList) == 0 or (len(messageDataList) > 0 and messageDataList[-1]["Message Type"] != messageType))
                             combineLinesCheck = self.num != None
                             messageExistsCheck(messageDataList, messageType, stringHalf1, stringHalf2, codeHalf1, codeHalf2, drawBlankLineCheck, combineLinesCheck)
             
+                    if "Cut Limb" in attackData:
+                        if attackData["Cut Limb"] == "Head":
+                            stringHalf1 = targetUserString
+                            stringHalf2 = attackData["Attack Data"].name["String"] + " completely DECAPITATES " + attackData["Mob Data"].prefix.lower() + " " + attackData["Mob Data"].name["String"] + "!"
+                            codeHalf1 = targetUserCode
+                            codeHalf2 = attackData["Attack Data"].name["Code"] + "24w" + str(len(attackData["Mob Data"].prefix)) + "w1w" + attackData["Mob Data"].name["Code"] + "1y"
+                            drawBlankLineCheck = drawBlankLine and (len(messageDataList) == 0 or (len(messageDataList) > 0 and messageDataList[-1]["Message Type"] != messageType))
+                            combineLinesCheck = self.num != None
+                            messageExistsCheck(messageDataList, messageType, stringHalf1, stringHalf2, codeHalf1, codeHalf2, drawBlankLineCheck, combineLinesCheck)
+            
+                        else:
+                            targetLimb = attackData["Cut Limb"]
+                            if "Cut Limb Weapon" in attackData:
+                                stringHalf1 = attackData["Mob Data"].prefix + " " + attackData["Mob Data"].name["String"] + "'s " + attackData["Cut Limb Weapon"].name["String"] + " falls to the ground as " + targetUserString.lower()
+                                stringHalf2 = attackData["Attack Data"].name["String"] + " cuts off their " + targetLimb.lower() + "!"
+                                codeHalf1 = str(len(attackData["Mob Data"].prefix)) + "w1w" + attackData["Mob Data"].name["Code"] + "1y2w" + attackData["Cut Limb Weapon"].name["Code"] + "24w" + targetUserCode
+                                codeHalf2 = attackData["Attack Data"].name["Code"] + "16w" + str(len(targetLimb)) + "w1y"
+                            else:
+                                stringHalf1 = targetUserString
+                                stringHalf2 = attackData["Attack Data"].name["String"] + " cuts off " + attackData["Mob Data"].prefix.lower() + " " + attackData["Mob Data"].name["String"] + "'s " + targetLimb.lower() + "!"
+                                codeHalf1 = targetUserCode
+                                codeHalf2 = attackData["Attack Data"].name["Code"] + "10w" + str(len(attackData["Mob Data"].prefix)) + "w1w" + attackData["Mob Data"].name["Code"] + "1y2w" + str(len(targetLimb)) + "w1y"
+                            drawBlankLineCheck = drawBlankLine and (len(messageDataList) == 0 or (len(messageDataList) > 0 and messageDataList[-1]["Message Type"] != messageType))
+                            combineLinesCheck = self.num != None
+                            messageExistsCheck(messageDataList, messageType, stringHalf1, stringHalf2, codeHalf1, codeHalf2, drawBlankLineCheck, combineLinesCheck)
+
             if attackDisplayList[0]["Kill Count"] > 0:
                 countString, countCode = getCountString(attackData["Kill Count"])
                 if attackData["Killed Mob Data"] == "Multiple":
@@ -2607,6 +2609,16 @@ class Player:
                         codeHalf2 = ""
                         drawBlankLineCheck = drawBlankLine and (len(messageDataList) == 0 or (len(messageDataList) > 0 and messageDataList[-1]["Message Type"] != messageType))
                         messageExistsCheck(messageDataList, messageType, stringHalf1, stringHalf2, codeHalf1, codeHalf2, drawBlankLineCheck)
+
+            for attackData in attackDisplayList:
+                if "Return Weapon To Inventory" in attackData:
+                    stringHalf1 = attackData["Mob Data"].prefix + " " + attackData["Mob Data"].name["String"] + " drops " + attackData["Return Weapon To Inventory"].prefix.lower() + " " + attackData["Return Weapon To Inventory"].name["String"] + " on the ground."
+                    stringHalf2 = ""
+                    codeHalf1 = str(len(attackData["Mob Data"].prefix)) + "w1w" + attackData["Mob Data"].name["Code"] + "7w" + str(len(attackData["Return Weapon To Inventory"].prefix.lower())) + "w1w" + attackData["Return Weapon To Inventory"].name["Code"] + "14w1y"
+                    codeHalf2 = ""
+                    drawBlankLineCheck = drawBlankLine and (len(messageDataList) == 0 or (len(messageDataList) > 0 and messageDataList[-1]["Message Type"] != messageType))
+                    combineLinesCheck = self.num != None
+                    messageExistsCheck(messageDataList, messageType, stringHalf1, stringHalf2, codeHalf1, codeHalf2, drawBlankLineCheck, combineLinesCheck)
 
         return messageDataList
 
@@ -2682,28 +2694,25 @@ class Player:
                                         hitCheck = False
                                         if len(attackSkill.weaponDataList) in [0, 2]:
                                             if copyCheck != False:
-                                                attackHitCheck, attackHitData = Combat.hitCheck(self, attackSkill, copy.deepcopy(mob))
+                                                attackHitCheck, attackDisplayList[i] = Combat.hitCheck(attackDisplayList[i], self, attackSkill, copy.deepcopy(mob), copy.deepcopy(targetRoom))
                                             else:
-                                                attackHitCheck, attackHitData = Combat.hitCheck(self, attackSkill, mob)
-                                            if attackHitCheck == False:
-                                                attackDisplayList[i].update(attackHitData)
-                                            else:
+                                                attackHitCheck, attackDisplayList[i] = Combat.hitCheck(attackDisplayList[i], self, attackSkill, mob, targetRoom)
+                                            if attackHitCheck == True:
                                                 hitCheck = True
                                         else:
-                                            for weapon in attackSkill.weaponDataList:
+                                            for w, weapon in enumerate(attackSkill.weaponDataList):
                                                 if weapon != "Open Hand" and weapon.weaponType == "Gun" and weapon.isLoaded(1) == False:
                                                     # Is This Needed Above, For Two Weapon Attacks? #
                                                     attackDisplayList[i]["Miss Check"] = "Out Of Ammo"
                                                     attackDisplayList[i]["Weapon Data List"] = [attackSkill.weaponDataList[0]]
                                                 else:
-                                                    if copyCheck != False:
-                                                        attackHitCheck, attackHitData = Combat.hitCheck(self, attackSkill, copy.deepcopy(mob))
-                                                    else:
-                                                        attackHitCheck, attackHitData = Combat.hitCheck(self, attackSkill, mob)
-                                                    if attackHitCheck == False:
-                                                        attackDisplayList[i].update(attackHitData)
-                                                    else:
-                                                        hitCheck = True
+                                                    if w == 0:
+                                                        if copyCheck != False:
+                                                            attackHitCheck, attackDisplayList[i] = Combat.hitCheck(attackDisplayList[i], self, attackSkill, copy.deepcopy(mob), copy.deepcopy(targetRoom))
+                                                        else:
+                                                            attackHitCheck, attackDisplayList[i] = Combat.hitCheck(attackDisplayList[i], self, attackSkill, mob, targetRoom)
+                                                        if attackHitCheck == True:
+                                                            hitCheck = True
 
                                                     if copyCheck == False and weapon != "Open Hand" and weapon.weaponType == "Gun" and weapon.isLoaded(1) == True:
                                                         weapon.shoot()
@@ -2717,6 +2726,12 @@ class Player:
                                                 attackDisplayList[i]["Count"] += 1
                                             else:
                                                 attackDisplayList[i]["Miss Count"] += 1
+
+                                        if "Head" in mob.cutLimbList:
+                                            mob.currentHealth = 0
+                                        if mob.currentHealth <= 0 and len(attackList) > 1 and i == 0:
+                                            del attackList[1]
+                                            break
 
                                     targetMobList.append(mob)
 
@@ -2908,11 +2923,13 @@ class Player:
                     displayCode = ""
                 displayedList.append(skill.name["String"])
 
-    def displayGear(self, console, galaxyList, player, currentRoom):
-        gearSlotDisplayDict = {"Body Under":{"String":"(Under) Body", "Code":"1r5w2r4w"}, "Body Over":{"String":"(Over) Body", "Code":"1r4w2r4w"}, "Legs Under":{"String":"(Under) Legs", "Code":"1r5w2r4w"}, "Legs Over":{"String":"(Over) Legs", "Code":"1r4w2r4w"}, "Left Hand":{"String":"L-Hand", "Code":"1w1y4w"}, "Right Hand":{"String":"R-Hand", "Code":"1w1y4w"}}
+    def displayGear(self, console, galaxyList, player, currentRoom, descriptionCheck=False):
+        gearSlotDisplayDict = {"Body Under":{"String":"(Under) Body", "Code":"1r1w4ddw2r4w"}, "Body Over":{"String":"(Over) Body", "Code":"1r1w3ddw2r4w"}, "Legs Under":{"String":"(Under) Legs", "Code":"1r1w4ddw2r4w"}, "Legs Over":{"String":"(Over) Legs", "Code":"1r1w3ddw2r4w"}, "Left Hand":{"String":"L-Hand", "Code":"1w1y4w"}, "Right Hand":{"String":"R-Hand", "Code":"1w1y4w"}}
 
-        console.write("Worn Gear", "1w4ddw1w3ddw", True)
-        console.write("--=====--", "1y1dy1y1dy1y1dy1y1dy1y")
+        if descriptionCheck == False:
+            console.write("Worn Gear", "1w4ddw1w3ddw", True)
+            console.write("--=====--", "1y1dy1y1dy1y1dy1y1dy1y")
+
         for gearSlot in self.gearDict:
             gearSlotString = gearSlot
             if gearSlot in gearSlotDisplayDict and "String" in gearSlotDisplayDict[gearSlot]:
@@ -2922,7 +2939,7 @@ class Player:
                 gearSlotCode = gearSlotDisplayDict[gearSlot]["Code"]
             
             if gearSlotString in ["L-Hand", "R-Hand"]:
-                if self.dominantHand[0] == gearSlotString[0]:
+                if self.dominantHand[0] == gearSlotString[0] and descriptionCheck == False:
                     gearSlotString = "(D) " + gearSlotString
                     gearSlotCode = "1y1w2y" + gearSlotCode
 
@@ -2937,6 +2954,10 @@ class Player:
             for slotIndex in range(slotRange):
                 gearString = "(Nothing)"
                 gearCode = "1r1w6ddw1r"
+                if gearSlot in ["Left Hand", "Right Hand"]:
+                    targetLimb = gearSlot.split()[0] + " Arm"
+                    if targetLimb in self.cutLimbList:
+                        gearString = "(Missing)"
                 weaponStatusString = ""
                 weaponStatusCode = ""
                 modString = ""
@@ -2964,6 +2985,13 @@ class Player:
                             gearCode = targetSlot.name["Code"]
                     weaponStatusString, weaponStatusCode = targetSlot.getWeaponStatusString()
                 console.write(gearSlotString + ": " + gearString + weaponStatusString + modString, gearSlotCode + "2y" + gearCode + weaponStatusCode + modCode)
+
+        defenseRatingData = self.getArmorRating()
+        defenseRatingString = str(defenseRatingData["Piercing"]) + "/" + str(defenseRatingData["Cutting"]) + "/" + str(defenseRatingData["Blunt"])
+        defenseRatingCode = str(len(str(defenseRatingData["Piercing"]))) + "w1r" + str(len(str(defenseRatingData["Cutting"]))) + "w1r" + str(len(str(defenseRatingData["Blunt"]) )) + "w"
+        upperArmorString = "Armor Rating: " + defenseRatingString
+        upperArmorCode = "12w2y" + defenseRatingCode
+        console.write(upperArmorString, upperArmorCode, True)
 
     def displayStatus(self, console):
         console.write("Player Status", "1w9ddw1w5ddw", True)
@@ -3017,6 +3045,70 @@ class Player:
         else:
             console.lineList.insert(0, {"Blank": True})
             console.lineList.insert(0, {"String":"The time is " + str(hoursString) + ":" + str(minutesString) + ".", "Code":"12w" + str(len(hoursString)) +"w1y" + str(len(minutesString)) + "w1y"})
+       
+    def searchCheck(self, console, galaxyList, player, currentRoom, searchKey):
+        searchData = None
+        for tempSearchData in currentRoom.searchList:
+            if "Key List" in tempSearchData and searchKey in tempSearchData["Key List"]:
+                searchData = tempSearchData
+                break
+        if searchData == None:
+            console.write("You search but don't find anything..", "18w1y15w2y", True)
+
+        else:
+            targetDir = searchData["Target Direction"]
+            if searchData["Type"] == "Hidden Door" and "Target Direction" in searchData and currentRoom.door[targetDir] != None:
+                targetDoor = currentRoom.door[targetDir]
+                if targetDoor["Status"] == "Open":
+                    console.write("The hidden entrance is already open.", "35w1y", True)
+                elif targetDoor["Status"] == "Locked" and self.hasKey(targetDoor["Password"]) == False:
+                    console.write("You lack the key.", "16w1y")
+
+                else:
+                    currentRoom.openCloseDoor(galaxyList, "Open", searchData["Target Direction"])
+                    console.write(searchData["Open Display String"], searchData["Open Display Code"], True)
+
+    def pushCheck(self, console, galaxyList, player, currentRoom, pushKey):
+        targetButton = currentRoom.getTargetObject(pushKey, ["Mobs", "Items", "Spaceships", "Buttons"])
+        if targetButton == None:
+            targetButton = self.getTargetItem(pushKey)
+
+        if targetButton == None:
+            console.write("You don't see it.", "7w1y8w1y", True)
+        elif isinstance(targetButton, Button) == False:
+            console.write("That's not a button.", "4w1y14w1y", True)
+
+        else:
+            targetButton.push(console, player, self, currentRoom)
+
+    def sayCheck(self, console, galaxyList, player, currentRoom, sayKey):
+        sayString = "say"
+        if sayKey["String"][-1] == '?':
+            sayString = "ask"
+        userString = "You " + sayString
+        userCode = "7w"
+        if self.num != None and currentRoom.sameRoomCheck(player) == True:
+            userString = self.prefix + " " + self.name["String"] + " says"
+            userCode = str(len(self.prefix)) + "w1w" + self.name["Code"] + "5w"
+            if currentRoom.isLit(galaxyList, player, self) == False:
+                userString = "Someone says"
+                userCode = "12w"
+
+        targetString = userString + ", '"
+        targetCode = userCode + "3y"
+        periodString = '.'
+        keyString = sayKey["String"]
+        if sayKey["String"][-1] == '.':
+            keyString = ' '.join(sayKey["String"].split()[0:-1] + [sayKey["String"].split()[-1].replace('.', '')])
+        elif sayKey["String"][-1] == '?':
+            keyString = ' '.join(sayKey["String"].split()[0:-1] + [sayKey["String"].split()[-1].replace('?', '')])
+            periodString = "?"
+        elif sayKey["String"][-1] == '!':
+            keyString = ' '.join(sayKey["String"].split()[0:-1] + [sayKey["String"].split()[-1].replace('!', '')])
+            periodString = "!"
+        displayString = targetString + keyString + periodString + "'"
+        displayCode = targetCode + str(len(keyString)) + "w1y" + "1y"
+        console.write(displayString, displayCode, True)
 
     def consumeCheck(self, console, galaxyList, player, currentRoom, consumeKey):
         pass
@@ -3306,28 +3398,6 @@ class Player:
             currentRoom.spaceshipObject.flags["Target Landing Location"] = [landingData["Area"].num, landingData["Room"].room]
             console.write('A computerized voice says, "Initiating landing sequence."', "25w3y27w2y", True)
 
-    def searchCheck(self, console, galaxyList, player, currentRoom, searchKey):
-        searchData = None
-        for tempSearchData in currentRoom.searchList:
-            if "Key List" in tempSearchData and searchKey in tempSearchData["Key List"]:
-                searchData = tempSearchData
-                break
-        if searchData == None:
-            console.write("You search but don't find anything..", "18w1y15w2y", True)
-
-        else:
-            targetDir = searchData["Target Direction"]
-            if searchData["Type"] == "Hidden Door" and "Target Direction" in searchData and currentRoom.door[targetDir] != None:
-                targetDoor = currentRoom.door[targetDir]
-                if targetDoor["Status"] == "Open":
-                    console.write("The hidden entrance is already open.", "35w1y", True)
-                elif targetDoor["Status"] == "Locked" and self.hasKey(targetDoor["Password"]) == False:
-                    console.write("You lack the key.", "16w1y")
-
-                else:
-                    currentRoom.openCloseDoor(galaxyList, "Open", searchData["Target Direction"])
-                    console.write(searchData["Open Display String"], searchData["Open Display Code"], True)
-
     def manifestCheck(self, console, currentRoom, targetType, targetNum, targetCount):
         manifestTarget = None
         if currentRoom.spaceshipObject != None:
@@ -3431,7 +3501,7 @@ class Player:
                 if not ("Requires Two-Handed Weapon" in combatSkill.ruleDict and targetWeapon not in ["Open Hand", None] and targetWeapon.twoHanded == False):
                     return True
 
-        elif len(combatSkill.weaponTypeList) == 2 and targetWeapon == "Unused":
+        elif len(combatSkill.weaponTypeList) == 2 and targetWeapon == "Unused" and len(self.cutLimbList) == 0:
             correctWeaponTypeList = []
             playerHeldList = [self.gearDict["Left Hand"], self.gearDict["Right Hand"]]
             for weaponType in combatSkill.weaponTypeList:
@@ -3463,6 +3533,26 @@ class Player:
         if magazineIndex != -1:
             returnIndex = magazineIndex
         return returnItem, returnIndex
+
+    def getArmorRating(self):
+        defenseDict = {"Piercing":0, "Cutting":0, "Blunt":0}
+        for gearSlot in self.gearDict:
+            if gearSlot not in ["Left Hand", "Right Hand"]:
+                slotRange = 1
+                if isinstance(self.gearDict[gearSlot], list):
+                    slotRange = 2
+                for slotNum in range(slotRange):
+                    if isinstance(self.gearDict[gearSlot], list):
+                        targetSlot = self.gearDict[gearSlot][slotNum]
+                    else:
+                        targetSlot = self.gearDict[gearSlot]
+                        
+                    if targetSlot != None:
+                        defenseDict["Piercing"] += targetSlot.armorRating["Piercing"]
+                        defenseDict["Cutting"] += targetSlot.armorRating["Cutting"]
+                        defenseDict["Blunt"] += targetSlot.armorRating["Blunt"]
+
+        return defenseDict
 
     def stopActions(self, console, galaxyList, player):
         if len(self.actionList) > 0:
@@ -3614,6 +3704,8 @@ class Player:
             console.write("You grin.", "8w1y", True)
         elif input == "snicker":
             console.write("You snicker softly.", "18w1y", True)
+        elif input == "whistle":
+            console.write("You whistle innocently.", "22w1y", True)
         
     # Mob Functions #
     def loadMob(self, num):
@@ -3622,8 +3714,7 @@ class Player:
             self.speechList = [{"String":"Welcome to the COTU Spaceport!", "Code":"29w1y"}, \
                                {"String":"Please have your badge ready.", "Code":"28w1y"}]
         elif num == 2:
-            self.name = {"String":"Mummy", "Code":"5w"}
-            self.flags ["No Chase"] = True
+            self.name = {"String":"Man", "Code":"3w"}
         elif num == 3:
             self.name = {"String":"Reptoid", "Code":"7w"}
         elif num == 4:
@@ -3632,6 +3723,8 @@ class Player:
         # Create Key List #
         appendKeyList(self.keyList, self.name["String"].lower())
 
-    def lookDescription(self, console):
+    def lookDescription(self, console, galaxyList, player, currentRoom):
         console.write("You look at " + self.prefix.lower() + " " + self.name["String"] + ".", "12w" + str(len(self.prefix)) + "w1w" + self.name["Code"] + "1y", True)
         console.write("You see nothing special.", "23w1y")
+        console.write("They are wearing:", "16w1y")
+        self.displayGear(console, galaxyList, player, currentRoom, True)
