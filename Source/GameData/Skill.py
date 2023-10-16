@@ -28,11 +28,10 @@ class Skill:
         # "All Only" Skills Hit Everyone (Ignore Team Damage/Heal Enemies)
         if num == 1:
             self.name = {"String":"Punch", "Code":"5w"}
-            self.weaponTypeList = ["Open Hand"]
-            self.cutLimbPercent = 100
+            self.weaponTypeList = [["Open Hand"]]
         elif num == 2:
             self.name = {"String":"Spin Fist", "Code":"9w"}
-            self.weaponTypeList = ["Open Hand", "Open Hand"]
+            self.weaponTypeList = [["Open Hand"], ["Open Hand"]]
             self.maxTargets = "All"
             self.offHandAttacks = False
         elif num == 3:
@@ -55,20 +54,20 @@ class Skill:
             self.name = {"String":"Snipe", "Code":"5w"}
             self.ruleDict["From Another Room"] = True
             self.ruleDict["Requires Two-Handed Weapon"] = True
-            self.weaponTypeList = ["Gun"]
+            self.weaponTypeList = [["Gun"]]
             self.maxRange = 3
             self.offHandAttacks = False
         elif num == 7:
             self.name = {"String":"Shoot", "Code":"5w"}
-            self.weaponTypeList = ["Gun"]
+            self.weaponTypeList = [["Gun"]]
             self.maxRange = 2
         elif num == 8:
             self.name = {"String":"Slash", "Code":"5w"}
-            self.weaponTypeList = ["Sword"]
+            self.weaponTypeList = [["Sword", "Dagger", "Axe"]]
             self.cutLimbPercent = 10
         elif num == 9:
             self.name = {"String":"Slash All", "Code":"9w"}
-            self.weaponTypeList = ["Sword"]
+            self.weaponTypeList = [["Sword", "Axe"]]
             self.ruleDict["All Only"] = True
             self.offHandAttacks = False
             self.cutLimbPercent = 5
@@ -88,11 +87,17 @@ class Skill:
             # self.maxTargets = "All" # Is Automatically Set Below
         elif num == 13:
             self.name = {"String":"Bullet Storm", "Code":"12w"}
-            self.weaponTypeList = ["Gun"]
+            self.weaponTypeList = [["Gun"]]
             self.ruleDict["All Only"] = True
             self.maxRange = 1
             self.offHandAttacks = False
             # self.maxTargets = "All" # Is Automatically Set Below
+        elif num == 14:
+            self.name = {"String":"Block", "Code":"5w"}
+        elif num == 15:
+            self.name = {"String":"Dodge", "Code":"5w"}
+        elif num == 16:
+            self.name = {"String":"Grapple", "Code":"7w"}
 
         if "All Only" in self.ruleDict:
             self.maxTargets = "All"
@@ -128,16 +133,16 @@ class Skill:
             return False
         elif len(self.weaponTypeList) == 0:
             return True
-        elif len(self.weaponTypeList) == 1 and self.weaponTypeList[0] == "Open Hand":
+        elif len(self.weaponTypeList) == 1 and "Open Hand" in self.weaponTypeList[0]:
             self.weaponDataList = ["Open Hand"]
             return True
-        elif len(self.weaponTypeList) == 2 and self.weaponTypeList[0] == "Open Hand" and self.weaponTypeList[1] == "Open Hand":
+        elif len(self.weaponTypeList) == 2 and "Open Hand" in self.weaponTypeList[0] and "Open Hand" in self.weaponTypeList[1]:
             self.weaponDataList = ["Open Hand", "Open Hand"]
             return True
         elif len(self.weaponTypeList) == 1:
-            if mainHandWeapon != None and mainHandWeapon.weaponType == self.weaponTypeList[0]:
+            if mainHandWeapon != None and mainHandWeapon.weaponType in self.weaponTypeList[0]:
                 self.weaponDataList = [mainHandWeapon]
-            elif offHandWeapon not in [None, "Unused"] and offHandWeapon.weaponType == self.weaponTypeList[0]:
+            elif offHandWeapon not in [None, "Unused"] and offHandWeapon.weaponType in self.weaponTypeList[0]:
                 self.weaponDataList = [offHandWeapon]
             return True
         return False

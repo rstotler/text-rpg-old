@@ -39,7 +39,7 @@ class InputBar:
                     self.input = ""            
 
         elif keyName == "return":
-            if len(self.input) > 0 and len(self.inputList) == 0:
+            if len(self.input) > 0 and len(self.inputList) == 0 and not (game.player.getCombatAction() in ["Dodge", "Block"] or (len(game.player.actionList) > 0 and game.player.actionList[0].actionType in ["Stun", "Stumble"])):
                 self.input = self.input.strip()
                 if len(self.input) > 0:
                     try:
@@ -75,20 +75,25 @@ class InputBar:
         if len(self.input) > 0 and game.keyboard.backspaceTick == 0:
             self.input = self.input[0:len(self.input) - 1]
 
-    def draw(self, window):
+    def draw(self, window, galaxyList, player):
         self.inputBlinkerTimer += 1
         if self.inputBlinkerTimer >= 60:
             self.inputBlinkerTimer = 0
 
         self.surface.fill([10, 30, 70])
         
+        carrotColor = "y"
+        if (player.getCombatAction() != None and player.getCombatAction().name["String"] in ["Block", "Dodge"]) or (len(player.actionList) > 0 and player.actionList[0].actopmType in ["Stun", "Stumble"]):
+            carrotColor = "r"
+        elif player.inStunnedTargetRoom(galaxyList) == True:
+            carrotColor = "g"
         displayInput = self.input
         if len(displayInput) >= 57:
             displayInput = displayInput[-56:]
         if self.inputBlinkerTimer >= 30:
             displayInput = displayInput + "_"
         displayInput = "> " + displayInput
-        labelCode = "2y" + str(len(displayInput)) + "w"
+        labelCode = "2" + carrotColor + str(len(displayInput)) + "w"
         writeColor(displayInput, labelCode, [5, 1], self.font, self.surface)
 
         window.blit(self.surface, [0, 600 - self.surface.get_height()])

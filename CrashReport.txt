@@ -1,15 +1,15 @@
 Traceback (most recent call last):
   File "D:\Codes\Python\Universe\Source\Screen\InputBar.py", line 50, in processInput
     game.processInputBarCommand(self.input)
-  File "D:\Codes\Python\Universe\Source\Game.py", line 1239, in processInputBarCommand
-    self.player.pushCheck(self.console, self.galaxyList, self.player, currentRoom, pushKey)
-  File "D:\Codes\Python\Universe\Source\GameData\Player.py", line 3082, in pushCheck
-    targetButton.push(console, player, self, currentRoom)
-  File "D:\Codes\Python\Universe\Source\GameData\Item\Button.py", line 65, in push
-    if self.num != None:
-AttributeError: 'Button' object has no attribute 'num'
+  File "D:\Codes\Python\Universe\Source\Game.py", line 1018, in processInputBarCommand
+    self.player.combatSkillCheck(self.console, self.galaxyList, self.player, currentRoom, combatSkill, mobCount, mobKey, None, None)
+  File "D:\Codes\Python\Universe\Source\GameData\Player.py", line 2399, in combatSkillCheck
+    flags = self.combatSkillFunction(player, combatSkill, currentRoom, targetRoom, roomDistance, mobKey, mobCount, directionKey, True, {})
+  File "D:\Codes\Python\Universe\Source\GameData\Player.py", line 2785, in combatSkillFunction
+    if mob.dodgeBlockCheck() == "Dodge":
+AttributeError: 'Player' object has no attribute 'dodgeBlockCheck'
 
-Input: push 1
+Input: pun man
 Player Loc: [0, 0, 1, 0, 8]
 Player Spaceship: None
 Player Targets: 0

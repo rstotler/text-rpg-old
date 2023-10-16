@@ -25,17 +25,17 @@ from Components.Utility import stringIsNumber
     # Auto-Combat
     # Move Direction '#'
     # Grapple, cant grapple small enemies
-    # Dodge Command
-    # Parry Command
+    # Block Command
     # Counter-Attack (Passive Skill)
-    # Hackable Limbs
     # Bleeding
-    # Peek Through Ship Exit Door
     # Jab(?)
     # look self
     # refactor 'currentRoom' ?
-    # recheck spaceship error messages, commands while landing/launching
     # ensure mob cant use cut limbs to attack
+    # make sure two handed weapons dont attack twice
+    # dodge/block tick time limit between uses (prevent using over and over w "stop")
+    # add mob to player target list if mob attacks first
+    # prevent all actions (?) while grappled
 
 class Game:
 
@@ -185,7 +185,7 @@ class Game:
             areaCOTU.roomList.append(roomCOTU08)
             roomCOTU08.exit["South"] = [0, 0, 1, 0, 7]
             unarmedUnskilledControlPanel = Item(905)
-            unarmedUnskilledFlagList = {"Num":2, "Label":{"String":"[1] - Unarmed, Unskilled Mob", "Code":"1r1w1r3y7w2y13w"}, "Key List":["1"], "Skill List":[], "Gear Dict":{}}
+            unarmedUnskilledFlagList = {"Num":2, "Label":{"String":"[1] - Unarmed, Unskilled Mob", "Code":"1r1w1r3y7w2y13w"}, "Key List":["1"], "Skill List":[1], "Gear Dict":{}}
             unarmedUnskilledControlPanel.buttonList.append(Button("Spawn Mob", unarmedUnskilledFlagList))
             roomCOTU08.itemList.append(unarmedUnskilledControlPanel)
 
@@ -296,7 +296,7 @@ class Game:
         # self.inputBar.inputList = ["n", "n", "w", "get sniper from cab", "get 5.56 from cab", "get 5.56 from cab", "get 5.56 from cab", "e", "s", "s", "wear sni", "reload"]
         # self.inputBar.inputList = ["n", "n", "w", "get key from chest", "e", "s", "s", "s", "s", "board ship", "n"]
         self.inputBar.inputList = ["s", "e", "u", "n"]
-        self.player.combatSkillList = [Skill(1), Skill(2), Skill(3), Skill(4), Skill(5), Skill(6), Skill(7), Skill(8), Skill(9), Skill(11), Skill(12), Skill(13)]
+        self.player.combatSkillList = [Skill(1), Skill(2), Skill(3), Skill(4), Skill(5), Skill(6), Skill(7), Skill(8), Skill(9), Skill(11), Skill(12), Skill(13), Skill(14), Skill(15), Skill(16)]
         self.player.itemDict["Misc"].append(Item(901))
         self.player.gearDict["Finger"][0] = Item(8)
 
@@ -304,7 +304,7 @@ class Game:
         window.fill([0, 0, 0])
 
         self.console.draw(window)
-        self.inputBar.draw(window)
+        self.inputBar.draw(window, self.galaxyList, self.player)
         self.map.draw(window, self.galaxyList, self.player)
 
     def update(self, window):

@@ -4,10 +4,19 @@ from GameData.Item.Item import Item
 class Combat:
 
     @staticmethod
-    def hitCheck(attackDisplayList, user, attackSkill, target, targetRoom):
+    def hitCheck(attackDisplayList, user, attackSkill, target, targetRoom, roundNum):
 
         # Miss Attack #
-        if attackSkill.healCheck == False and random.randrange(4) == 0:
+        hitChance = 4
+        if roundNum == 0 and target.getCombatAction() != None and target.getCombatAction().name["String"] == "Dodge":
+            hitChance = 1
+        elif roundNum == 0 and target.getCombatAction() != None and target.getCombatAction().name["String"] == "Block":
+            hitChance = None # 100% Hit-Rate
+            attackDisplayList["Block Check"] = True
+        elif len(target.actionList) > 0 and target.actionList[0].actionType in ["Stun", "Stumble"]:
+            hitChance = None # 100% Hit-Rate
+
+        if hitChance != None and attackSkill.healCheck == False and random.randrange(hitChance) == 0:
             if len(attackSkill.weaponDataList) == 0:
                 attackDisplayList["Miss Check"] = "Miss Attack"
                 attackDisplayList["Weapon Data List"] = "Non-Weapon Attack"
@@ -15,16 +24,13 @@ class Combat:
                 attackDisplayList["Miss Check"] = "Miss Attack"
                 attackDisplayList["Weapon Data List"] = attackSkill.weaponDataList
             elif len(attackSkill.weaponDataList) == 1:
-                if attackSkill.weaponDataList[0] != "Open Hand" and attackSkill.weaponDataList[0].weaponType == "Gun":
-                    attackDisplayList["Miss Check"] = "Miss Attack"
-                else:
-                    attackDisplayList["Miss Check"] = "Miss Attack"
+                attackDisplayList["Miss Check"] = "Miss Attack"
                 attackDisplayList["Weapon Data List"] = [attackSkill.weaponDataList[0]]
 
             return False, attackDisplayList
 
         # Hit Attack #
-        if attackSkill.healCheck == False:
+        if "Block Check" not in attackDisplayList and attackSkill.healCheck == False:
             target.currentHealth -= 1
             attackDisplayList["Attack Damage"] = 1
 
@@ -54,7 +60,8 @@ class Combat:
                             attackDisplayList["Return Weapon To Inventory"] = oppositeHandWeapon
                             target.gearDict[target.getOppositeHand(targetGearSlot)] = None
 
-        else:
+        # Heal Attack #
+        elif attackSkill.healCheck == True:
             target.currentHealth += 1
             attackDisplayList["Attack Damage"] = 1
 

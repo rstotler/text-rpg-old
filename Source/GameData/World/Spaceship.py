@@ -37,7 +37,7 @@ class Spaceship:
 
         self.launchLandAction = None
         self.launchLandTick = -1
-        self.launchLandTickMax = 1
+        self.launchLandTickMax = 4
         self.launchLandPhase = 0
 
         self.buildSpaceship(galaxyList)

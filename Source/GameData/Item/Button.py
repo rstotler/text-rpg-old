@@ -65,5 +65,5 @@ class Button:
                 if targetUser.num != None:
                     pushString = "pushes"
                 displayString = targetUserLine["String"] + pushString + " the button and " + spawnedMob.prefix.lower() + " " + spawnedMob.name["String"] + " materializes in the room."
-                displayCode = targetUserLine["Code"] + str(len(pushString)) + "w19w" + str(len(spawnedMob.prefix)) + "w1w" + spawnedMob.name["Code"] + "25w1y"
+                displayCode = targetUserLine["Code"] + str(len(pushString)) + "w16w" + str(len(spawnedMob.prefix)) + "w1w" + spawnedMob.name["Code"] + "25w1y"
                 console.write(displayString, displayCode, True)

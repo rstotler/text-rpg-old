@@ -34,6 +34,8 @@ class Player:
 
         self.actionList = []
         self.combatSkillList = []
+        self.stunList = []
+        self.stunnedByList = []
 
         self.currentHealth = 10
 
@@ -68,7 +70,7 @@ class Player:
             self.loadMob(num)
 
     def update(self, console, map, galaxyList, player, currentRoom, messageDataList):
-        messageDataList = self.updateAction(console, galaxyList, player, messageDataList)
+        messageDataList = self.updateAction(console, galaxyList, player, currentRoom, messageDataList)
         
         # Mob Update #
         if self.num != None:
@@ -81,7 +83,7 @@ class Player:
                         for skill in self.getCombatSkillList():
                             if skill.ruleCheck({"Distance":distanceToPlayer, "Disable Healing":True}) == True:
                                 if self.skillWeaponCheck(skill) == True:
-                                    if len(skill.weaponTypeList) > 0 and skill.weaponTypeList[0] == "Gun" and ((self.gearDict[self.dominantHand] != None and self.gearDict[self.dominantHand].weaponType == "Gun" and self.gearDict[self.dominantHand].isEmpty(True) == True) and (self.gearDict[self.getOppositeHand(self.dominantHand)] == None or (self.gearDict[self.getOppositeHand(self.dominantHand)] != None and self.gearDict[self.getOppositeHand(self.dominantHand)].weaponType == "Gun" and self.gearDict[self.getOppositeHand(self.dominantHand)].isEmpty(True) == True))):
+                                    if len(skill.weaponTypeList) > 0 and "Gun" in skill.weaponTypeList[0] and ((self.gearDict[self.dominantHand] != None and self.gearDict[self.dominantHand].weaponType == "Gun" and self.gearDict[self.dominantHand].isEmpty(True) == True) and (self.gearDict[self.getOppositeHand(self.dominantHand)] == None or (self.gearDict[self.getOppositeHand(self.dominantHand)] != None and self.gearDict[self.getOppositeHand(self.dominantHand)].weaponType == "Gun" and self.gearDict[self.getOppositeHand(self.dominantHand)].isEmpty(True) == True))):
                                         # No Ammo
                                         pass
                                     else:
@@ -119,10 +121,11 @@ class Player:
 
         return messageDataList
 
-    def updateAction(self, console, galaxyList, player, messageDataList):
+    def updateAction(self, console, galaxyList, player, currentRoom, messageDataList):
         if len(self.actionList) > 0:
-            messageDataList = self.actionList[0].update(console, galaxyList, player, self, messageDataList)
-            if self.actionList[0].currentTick >= self.actionList[0].maxTick:
+            targetAction = self.actionList[0]
+            messageDataList = targetAction.update(console, galaxyList, player, self, currentRoom, messageDataList)
+            if len(self.actionList) > 0 and targetAction.currentTick >= targetAction.maxTick:
                 del self.actionList[0]
 
         return messageDataList
@@ -134,13 +137,15 @@ class Player:
         messageType = None
         lookCheck = False
         lookDistance = count
+        peerThroughDoorCheck = False
         if lookDistance > self.maxLookDistance:
             lookDistance = self.maxLookDistance
         for i in range(lookDistance):
             if currentRoom.exit[lookDir] == None or (currentRoom.door[lookDir] != None and currentRoom.door[lookDir]["Type"] == "Hidden" and currentRoom.door[lookDir]["Status"] != "Open"):
                 messageType = "Can't See Further"
                 break
-            elif currentRoom.door[lookDir] != None and currentRoom.door[lookDir]["Status"] in ["Closed", "Locked"]:
+            elif currentRoom.door[lookDir] != None and currentRoom.door[lookDir]["Status"] in ["Closed", "Locked"] and \
+            not (currentRoom.spaceshipObject != None and i == 0 and currentRoom.exit[lookDir] == "Spaceship Exit"):
                 messageType = "View Obstructed"
                 break
             else:
@@ -151,7 +156,10 @@ class Player:
                     currentRoom = Room.exists(galaxyList, None, currentRoom.exit[lookDir][0], currentRoom.exit[lookDir][1], currentRoom.exit[lookDir][2], currentRoom.exit[lookDir][3], currentRoom.exit[lookDir][4])
                     if currentRoom == None:
                         currentRoom = galaxyList[0].systemList[0].planetList[0].areaList[0].roomList[0]
-                    
+                elif currentRoom.exit[lookDir] == "Spaceship Exit":
+                    currentRoom = galaxyList[currentRoom.spaceshipObject.galaxy].systemList[currentRoom.spaceshipObject.system].planetList[currentRoom.spaceshipObject.planet].areaList[currentRoom.spaceshipObject.landedLocation[0]].roomList[currentRoom.spaceshipObject.landedLocation[1]]
+                    peerThroughDoorCheck = True
+
         countString = ""
         countCode = ""
         if i > 0 or count > self.maxLookDistance:
@@ -164,13 +172,17 @@ class Player:
             if sString == "" : countCode = "2r" + str(len(str(i))) + "w10w1r"
             else : countCode = "2r" + str(len(str(i))) + "w11w1r"
 
+        drawBlankLine = True
+        if peerThroughDoorCheck == True:
+            console.write("You peer through the opening in the door.", "40w1y", drawBlankLine)
+            drawBlankLine = False
         if messageType == None and count > self.maxLookDistance:
-            console.write("You can't see that far." + countString, "7w1y14w1y" + countCode, True)
+            console.write("You can't see that far." + countString, "7w1y14w1y" + countCode, drawBlankLine)
         elif messageType != None:
             if messageType == "Can't See Further":
-                console.write("You can't see any farther to the " + lookDir + "." + countString, "7w1y25w" + str(len(lookDir)) + "w1y" + countCode, True)
+                console.write("You can't see any farther to the " + lookDir + "." + countString, "7w1y25w" + str(len(lookDir)) + "w1y" + countCode, drawBlankLine)
             elif messageType == "View Obstructed":
-                console.write("Your view to the " + lookDir + " is obstructed by a door." + countString, "17w" + str(len(lookDir)) + "w24w1y" + countCode, True)
+                console.write("Your view to the " + lookDir + " is obstructed by a door." + countString, "17w" + str(len(lookDir)) + "w24w1y" + countCode, drawBlankLine)
         if lookCheck:
             currentRoom.display(console, galaxyList, self)
     
@@ -1059,7 +1071,7 @@ class Player:
                             getString = "You " + pickUpString + itemNameString + countString + fromString + "."
                             getCode = "4w" + pickUpCode + itemNameCode + countCode + fromCode + "1y"
                             console.write(getString, getCode, drawBlankLine)
-         
+        
     def putCheck(self, console, galaxyList, player, currentRoom, targetItemKey, targetContainerKey, count):
         drawBlankLine = self.stopActions(console, galaxyList, player)
 
@@ -1519,7 +1531,7 @@ class Player:
                 displayString = "You remove " + slotString + slotCountString + " and wield " + wieldString + "." + wieldCountString
                 displayCode = "11w" + slotCode + slotCountCode + "11w" + wieldCode + "1y" + wieldCountCode
                 console.write(displayString, displayCode, blankCheck == True and drawBlankLine)
-                           
+
     def removeCheck(self, console, galaxyList, player, targetItemKey, count, targetGearSlotIndex=None):
         drawBlankLine = self.stopActions(console, galaxyList, player)
 
@@ -1958,8 +1970,6 @@ class Player:
             console.write("It's too dark to see.", "2w1y17w1y", True)
 
         else:
-            drawBlankLine = self.stopActions(console, galaxyList, player)
-
             unloadSlot = None
             if unloadSlotKey != None:
                 if unloadSlotKey in ["left", "lef", "le", "l", "1"] : unloadSlot = "Left Hand"
@@ -2031,24 +2041,26 @@ class Player:
                         break
 
             if unloadKey not in ["All", None] and len(unloadList) == 0 and targetItem != None and targetItem.ranged == False:
-                console.write("You can't unload that.", "7w1y13w1y", drawBlankLine)
+                console.write("You can't unload that.", "7w1y13w1y", True)
             elif alreadyUnloadedCheck == True:
                 displayString = "It's already unloaded."
                 displayCode = "2w1y18w1y"
                 if len(unloadList) > 1:
                     displayString = "Your weapons are already unloaded."
                     displayCode = "33w1y"
-                console.write(displayString, displayCode, drawBlankLine)
+                console.write(displayString, displayCode, True)
             elif unloadKey == "All" and len(unloadList) == 0:
-                console.write("You don't have anything to unload.", "7w1y25w1y", drawBlankLine)
+                console.write("You don't have anything to unload.", "7w1y25w1y", True)
             elif unloadKey not in ["All", None] and len(unloadList) == 0 and targetItem == None:
-                console.write("You can't find it.", "7w1y9w1y", drawBlankLine)
+                console.write("You can't find it.", "7w1y9w1y", True)
             elif (unloadSlot != None or unloadKey not in ["All", None]) and len(unloadList) == 0 and targetItem != None and not (unloadKey not in ["All", None] and unloadSlotKey == None and ammoKey == None):
-                console.write("You can't unload that.", "7w1y13w1y", drawBlankLine)
+                console.write("You can't unload that.", "7w1y13w1y", True)
             elif unloadSlot != None and len(unloadList) == 0 and targetItem == None:
-                console.write("You aren't holding anything.", "8w1y18w1y", drawBlankLine)
+                console.write("You aren't holding anything.", "8w1y18w1y", True)
 
             else:
+                drawBlankLine = self.stopActions(console, galaxyList, player)
+
                 flags = self.unloadFunction(copy.deepcopy(self), copy.deepcopy(unloadList), roomItem, ammoKey)
                 unloadWeapon = flags["unloadWeapon"]
                 unloadCount = flags["unloadCount"]
@@ -2328,297 +2340,374 @@ class Player:
                 self.combatSkillCheck(console, galaxyList, player, currentRoom, randomCombatSkill, 1, mobKey, directionKey, directionCount)
 
     def combatSkillCheck(self, console, galaxyList, player, currentRoom, combatSkill, mobCount, mobKey, directionKey, directionCount, messageDataList=None):
-        if self.skillWeaponCheck(combatSkill) == False:
-            if self.num == None:
-                console.write("You can't use that now.", "7w1y14w1y", True)
-        elif mobKey == None and directionKey == None and len(self.targetList) == 0 and "All Only" not in combatSkill.ruleDict and combatSkill.healCheck == False:
-            if self.num == None:
-                console.write("You aren't targeting anyone.", "8w1y18w1y", True)
-        elif ((directionCount != None and directionCount > combatSkill.maxRange) or (mobKey == None and len(self.targetList) > 0 and Room.getTargetRange(galaxyList, currentRoom, self.targetList[0], combatSkill.maxRange)[0] == -1)):
-            if self.num == None:
-                console.write("That's too far.", "4w1y9w1y", True)
-        elif mobKey == None and "From Another Room" in combatSkill.ruleDict and Room.getTargetRange(galaxyList, currentRoom, self.targetList[0], combatSkill.maxRange)[0] == 0:
-            if self.num == None:
-                console.write("You're too close!", "3w1y12w1y", True)
-        elif mobKey == "Self" and combatSkill.healCheck == False:
-            if self.num == None:
-                console.write("You can't use it on yourself.", "7w1y20w1y", True)
-        
+        if combatSkill.name["String"] in ["Block", "Dodge"]:
+            if len(self.actionList) > 0 and self.actionList[0].actionType == "Combat Skill" and self.actionList[0].flags["combatSkill"].name["String"] in ["Dodge", "Block"]:
+                self.actionList = []
+                self.actionList.append(Action("Stagger", {}))
+                console.write("You trip over yourself trying to do too much at once.", "52w1y", True)
+
+            else:
+                drawBlankLine = True
+                if len(self.actionList) > 0:
+                    drawBlankLine = self.stopActions(console, galaxyList, player)
+                
+                actionFlags = {"combatSkill":combatSkill}
+                self.actionList.append(Action("Combat Skill", actionFlags, 3))
+                if self.num != None and currentRoom.sameRoomCheck(player):
+                    console.write(self.prefix + " " + self.name["String"] + " prepares to attack..", str(len(self.prefix)) + "w1w" + self.name["Code"] + "19w2y", drawBlankLine)
+                elif self.num == None:
+                    console.write("You prepare to " + combatSkill.name["String"] + " an incoming attack..", "15w" + combatSkill.name["Code"] + "19w2y", drawBlankLine)
+
         else:
-            message = None
-            roomDistance = 0
-            targetRoom = currentRoom
-            targetDirection = None
-            if mobKey == None and len(self.targetList) > 0:
-                targetArea, targetRoom = Room.getAreaAndRoom(galaxyList, self.targetList[0])
-                roomDistance, targetDirection, message = Room.getTargetRange(galaxyList, currentRoom, self.targetList[0], self.maxTargetDistance)
-            elif directionCount != None:
-                targetDirection = Room.getTargetDirection(directionKey)
-                targetArea, targetRoom = Room.getAreaAndRoom(galaxyList, targetRoom)
-                targetArea, targetRoom, roomDistance, message = Room.getTargetRoomFromStartRoom(galaxyList, targetArea, targetRoom, targetDirection, directionCount, True)
-            
-            if message == "No Exit":
+            if self.skillWeaponCheck(combatSkill) == False:
                 if self.num == None:
-                    console.write("There is nothing there.", "22w1y", True)
-            elif message == "Door Is Closed":
+                    console.write("You can't use that now.", "7w1y14w1y", True)
+            elif mobKey == None and directionKey == None and len(self.targetList) == 0 and "All Only" not in combatSkill.ruleDict and combatSkill.healCheck == False:
                 if self.num == None:
-                    console.write("The door is closed.", "18w1y", True)
+                    console.write("You aren't targeting anyone.", "8w1y18w1y", True)
+            elif ((directionCount != None and directionCount > combatSkill.maxRange) or (mobKey == None and len(self.targetList) > 0 and Room.getTargetRange(galaxyList, currentRoom, self.targetList[0], combatSkill.maxRange)[0] == -1)):
+                if self.num == None:
+                    console.write("That's too far.", "4w1y9w1y", True)
+            elif mobKey == None and "From Another Room" in combatSkill.ruleDict and Room.getTargetRange(galaxyList, currentRoom, self.targetList[0], combatSkill.maxRange)[0] == 0:
+                if self.num == None:
+                    console.write("You're too close!", "3w1y12w1y", True)
+            elif mobKey == "Self" and combatSkill.healCheck == False:
+                if self.num == None:
+                    console.write("You can't use it on yourself.", "7w1y20w1y", True)
             
             else:
-                drawBlankLine = self.stopActions(console, galaxyList, player)
+                message = None
+                roomDistance = 0
+                targetRoom = currentRoom
+                targetDirection = None
+                if mobKey == None and len(self.targetList) > 0:
+                    targetArea, targetRoom = Room.getAreaAndRoom(galaxyList, self.targetList[0])
+                    roomDistance, targetDirection, message = Room.getTargetRange(galaxyList, currentRoom, self.targetList[0], self.maxTargetDistance)
+                elif directionCount != None:
+                    targetDirection = Room.getTargetDirection(directionKey)
+                    targetArea, targetRoom = Room.getAreaAndRoom(galaxyList, targetRoom)
+                    targetArea, targetRoom, roomDistance, message = Room.getTargetRoomFromStartRoom(galaxyList, targetArea, targetRoom, targetDirection, directionCount, True)
                 
-                flags = self.combatSkillFunction(player, combatSkill, currentRoom, targetRoom, roomDistance, mobKey, mobCount, directionKey, True, {})
-                targetMob = flags["targetMob"]
-                selfSkill = flags["selfSkill"]
-                targetMobList = flags["targetMobList"]
-                attackList = flags["attackList"]
-
-                messageType = "Attack Check"
-                if len(targetMobList) > 0 and "From Another Room" in combatSkill.ruleDict and roomDistance == 0:
+                if message == "No Exit":
                     if self.num == None:
-                        console.write("You're too close!", "3w1y12w1y", True)
-                elif len(targetMobList) == 0 and mobKey not in ["All", None, "Self"]:
-                    console.write("You don't see them.", "7w1y10w1y", drawBlankLine)
-                elif len(targetMobList) == 0 and mobKey == "All" and selfSkill == None:
-                    if directionKey != None:
-                        console.write("You don't see anyone there.", "7w1y18w1y", drawBlankLine)
-                    else:
-                        console.write("You don't see anyone.", "7w1y12w1y", drawBlankLine)
+                        console.write("There is nothing there.", "22w1y", True)
+                elif message == "Door Is Closed":
+                    if self.num == None:
+                        console.write("The door is closed.", "18w1y", True)
+                
                 else:
-                    if self.num == None:
-                        console.write("You prepare to " + combatSkill.name["String"] + "..", "15w" + combatSkill.name["Code"] + "2y", drawBlankLine)
-                    elif currentRoom.sameRoomCheck(player) == True:
-                        stringHalf1 = self.prefix + " " + self.name["String"] + " "
-                        stringHalf2 = "prepares to attack.."
-                        codeHalf1 = str(len(self.prefix)) + "w1w" + self.name["Code"] + "1w"
-                        codeHalf2 = "18w2y"
-                        drawBlankLineCheck = drawBlankLine and (len(messageDataList) == 0 or (len(messageDataList) > 0 and messageDataList[-1]["Message Type"] != messageType))
-                        messageExistsCheck(messageDataList, messageType, stringHalf1, stringHalf2, codeHalf1, codeHalf2, drawBlankLineCheck)
-                        
-                    actionFlags = {"combatSkill":combatSkill, "targetRoom":targetRoom, "roomDistance":roomDistance, "mobKey":mobKey, "mobCount":mobCount, "directionKey":directionKey, "targetDirection":targetDirection, "attackList":attackList}
-                    self.actionList.append(Action("Combat Skill", actionFlags))
+                    drawBlankLine = self.stopActions(console, galaxyList, player)
+                    
+                    flags = self.combatSkillFunction(player, combatSkill, currentRoom, targetRoom, roomDistance, mobKey, mobCount, directionKey, True, {})
+                    targetMob = flags["targetMob"]
+                    selfSkill = flags["selfSkill"]
+                    targetMobList = flags["targetMobList"]
+                    attackList = flags["attackList"]
+
+                    messageType = "Attack Check"
+                    if len(targetMobList) > 0 and "From Another Room" in combatSkill.ruleDict and roomDistance == 0:
+                        if self.num == None:
+                            console.write("You're too close!", "3w1y12w1y", True)
+                    elif len(targetMobList) == 0 and mobKey not in ["All", None, "Self"]:
+                        console.write("You don't see them.", "7w1y10w1y", drawBlankLine)
+                    elif len(targetMobList) == 0 and mobKey == "All" and selfSkill == None:
+                        if directionKey != None:
+                            console.write("You don't see anyone there.", "7w1y18w1y", drawBlankLine)
+                        else:
+                            console.write("You don't see anyone.", "7w1y12w1y", drawBlankLine)
+                    else:
+                        if self.num == None:
+                            console.write("You prepare to " + combatSkill.name["String"] + "..", "15w" + combatSkill.name["Code"] + "2y", drawBlankLine)
+                        elif currentRoom.sameRoomCheck(player) == True:
+                            stringHalf1 = self.prefix + " " + self.name["String"] + " "
+                            stringHalf2 = "prepares to attack.."
+                            codeHalf1 = str(len(self.prefix)) + "w1w" + self.name["Code"] + "1w"
+                            codeHalf2 = "18w2y"
+                            drawBlankLineCheck = drawBlankLine and (len(messageDataList) == 0 or (len(messageDataList) > 0 and messageDataList[-1]["Message Type"] != messageType))
+                            messageExistsCheck(messageDataList, messageType, stringHalf1, stringHalf2, codeHalf1, codeHalf2, drawBlankLineCheck)
+                            
+                        actionFlags = {"combatSkill":combatSkill, "targetRoom":targetRoom, "roomDistance":roomDistance, "mobKey":mobKey, "mobCount":mobCount, "directionKey":directionKey, "targetDirection":targetDirection, "attackList":attackList}
+                        self.actionList.append(Action("Combat Skill", actionFlags))
 
         return messageDataList
 
     def combatSkillCompleteAction(self, console, galaxyList, player, flags, messageDataList):
-        combatSkill = flags["combatSkill"]
-        targetRoom = flags["targetRoom"]
-        roomDistance = flags["roomDistance"]
-        mobKey = flags["mobKey"]
-        mobCount = flags["mobCount"]
-        directionKey = flags["directionKey"]
-        targetDirection = flags["targetDirection"]
-        currentRoom = Room.exists(galaxyList, self.spaceship, self.galaxy, self.system, self.planet, self.area, self.room)
-        if currentRoom == None:
-            currentRoom = galaxyList[0].systemList[0].planetList[0].areaList[0].roomList[0]
+        if flags["combatSkill"].name["String"] in ["Dodge", "Block"]:
+            pass
 
-        if combatSkill.maxRange == 0:
-            targetRoom = currentRoom
-        elif len(self.targetList) > 0:
-            targetRoom = Room.exists(galaxyList, self.targetList[0].spaceship, self.targetList[0].galaxy, self.targetList[0].system, self.targetList[0].planet, self.targetList[0].area, self.targetList[0].room)
-            if targetRoom == None:
-                targetRoom = galaxyList[0].systemList[0].planetList[0].areaList[0].roomList[0]
-        if currentRoom != targetRoom:
-            distance, targetDirection, unused = Room.getTargetRange(galaxyList, targetRoom, currentRoom, combatSkill.maxRange)
-            if distance != -1:
-                roomDistance = distance
-                if targetDirection != None:
-                    targetDirection = Room.getOppositeDirection(targetDirection)
-        
-        flags = self.combatSkillFunction(player, combatSkill, currentRoom, targetRoom, roomDistance, mobKey, mobCount, directionKey, False, flags)
+        else:
+            combatSkill = flags["combatSkill"]
+            targetRoom = flags["targetRoom"]
+            roomDistance = flags["roomDistance"]
+            mobKey = flags["mobKey"]
+            mobCount = flags["mobCount"]
+            directionKey = flags["directionKey"]
+            targetDirection = flags["targetDirection"]
+            currentRoom = Room.exists(galaxyList, self.spaceship, self.galaxy, self.system, self.planet, self.area, self.room)
+            if currentRoom == None:
+                currentRoom = galaxyList[0].systemList[0].planetList[0].areaList[0].roomList[0]
 
-        if self.num != None:
-            self.actionList.append(Action("Buffer Action", {}, 2))
+            if combatSkill.maxRange == 0:
+                targetRoom = currentRoom
+            elif len(self.targetList) > 0:
+                targetRoom = Room.exists(galaxyList, self.targetList[0].spaceship, self.targetList[0].galaxy, self.targetList[0].system, self.targetList[0].planet, self.targetList[0].area, self.targetList[0].room)
+                if targetRoom == None:
+                    targetRoom = galaxyList[0].systemList[0].planetList[0].areaList[0].roomList[0]
+            if currentRoom != targetRoom:
+                distance, targetDirection, unused = Room.getTargetRange(galaxyList, targetRoom, currentRoom, combatSkill.maxRange)
+                if distance != -1:
+                    roomDistance = distance
+                    if targetDirection != None:
+                        targetDirection = Room.getOppositeDirection(targetDirection)
+            
+            flags = self.combatSkillFunction(player, combatSkill, currentRoom, targetRoom, roomDistance, mobKey, mobCount, directionKey, False, flags)
 
-        selfSkill = flags["selfSkill"]
-        attackDisplayList = flags["attackDisplayList"]
-        targetMob = flags["targetMob"]
-        targetMobList = flags["targetMobList"]
-
-        targetUserLine = getTargetUserString(self)
-        targetUserString = targetUserLine["String"]
-        targetUserCode = targetUserLine["Code"]
-
-        directionString = ""
-        directionCode = ""
-        directionCountString = ""
-        directionCountCode = ""
-        toTheString = ""
-        if roomDistance > 0:
-            toTheString = " to the "
-            targetDirectionString = targetDirection
-            if self.num != None and targetRoom.sameRoomCheck(player) == True:
-                targetDirectionString = Room.getOppositeDirection(targetDirection)
-                toTheString = " from the "
-            directionString = toTheString + targetDirectionString
-            directionCode = str(len(toTheString)) + "w" + str(len(targetDirectionString)) + "w"
-            directionCountString, directionCountCode = getCountString(roomDistance)
-
-        messageType = "Attack Complete"
-        drawBlankLine = True
-        if (targetMob == None and "All Only" in combatSkill.ruleDict and selfSkill == None) or \
-        (len(targetMobList) == 0):
-            if not (self.num != None and targetRoom.sameRoomCheck(player) == False):
-                stringHalf1 = targetUserString
-                stringHalf2 = combatSkill.name["String"] + directionString + " doesn't hit anyone."
-                codeHalf1 = targetUserCode
-                codeHalf2 = combatSkill.name["Code"] + directionCode + "6w1y12w1y"
-                drawBlankLineCheck = drawBlankLine and (len(messageDataList) == 0 or (len(messageDataList) > 0 and messageDataList[-1]["Message Type"] != messageType))
-                combineLinesCheck = self.num != None
-                messageExistsCheck(messageDataList, messageType, stringHalf1, stringHalf2, codeHalf1, codeHalf2, drawBlankLineCheck, combineLinesCheck)
-                drawBlankLine = False
-
-        elif selfSkill != None and targetRoom.sameRoomCheck(self):
-            targetUserStringHeal = "You "
-            targetUserCodeHeal = "4w"
-            healString = "heal yourself with "
             if self.num != None:
-                targetUserStringHeal = self.prefix + " " + self.name["String"] + " "
-                targetUserCodeHeal = str(len(self.prefix)) + "w1w" + self.name["Code"] + "1w"
-                healString = "heals themself with "
-            if not (self.num != None and targetRoom.sameRoomCheck(player) == False):
-                stringHalf1 = targetUserStringHeal
-                stringHalf2 = healString + combatSkill.name["String"] + ". " + getDamageString(attackData["Attack Damage"])["String"]
-                codeHalf1 = targetUserCodeHeal
-                codeHalf2 = str(len(healString)) + "w" + combatSkill.name["Code"] + "2y" + getDamageString(attackData["Attack Damage"])["Code"]
-                drawBlankLineCheck = drawBlankLine and (len(messageDataList) == 0 or (len(messageDataList) > 0 and messageDataList[-1]["Message Type"] != messageType))
-                combineLinesCheck = self.num != None
-                messageExistsCheck(messageDataList, messageType, stringHalf1, stringHalf2, codeHalf1, codeHalf2, drawBlankLineCheck, combineLinesCheck)
-                drawBlankLine = False
+                self.actionList.append(Action("Buffer Action", {}, 2))
 
-        if len(targetMobList) > 0:
-            for attackData in attackDisplayList:
-                if "Miss Check" in attackData:
-                    if attackData["Miss Check"] == "Out Of Ammo":
-                        gunString = attackData["Weapon Data List"][0].name["String"]
-                        gunCode = attackData["Weapon Data List"][0].name["Code"]
-                        if not (self.num != None and currentRoom.sameRoomCheck(player) == False):
-                            stringHalf1 = targetUserString
-                            stringHalf2 = gunString + " *CLICKS* due to having no ammo."
-                            codeHalf1 = targetUserCode
-                            codeHalf2 = gunCode + "2y6w1y22w1y"
-                            drawBlankLineCheck = drawBlankLine and (len(messageDataList) == 0 or (len(messageDataList) > 0 and messageDataList[-1]["Message Type"] != messageType))
-                            messageExistsCheck(messageDataList, messageType, stringHalf1, stringHalf2, codeHalf1, codeHalf2, drawBlankLineCheck, False)
-                            drawBlankLine = False
-                    elif attackData["Miss Check"] == "Miss Attack" and not (attackData["Mob Data"] == "Multiple" and attackData["Count"] > 0):
-                        countString = ""
-                        countCode = ""
-                        mobString = "the group"
-                        mobCode = "9w"
-                        if attackData["Mob Data"] != "Multiple":
-                            countString, countCode = getCountString(attackData["Miss Count"])
-                            mobString = attackData["Mob Data"].prefix + " " + attackData["Mob Data"].name["String"]
-                            mobCode = str(len(attackData["Mob Data"].prefix)) + "w1w" + attackData["Mob Data"].name["Code"]
-                            if attackData["Mob Data"].num == None and len(targetMobList) == 1:
-                                mobString = "you"
-                                mobCode = "3w"
-                        if not (self.num != None and targetRoom.sameRoomCheck(player) == False):
-                            stringHalf1 = targetUserString
-                            stringHalf2 = attackData["Attack Data"].name["String"] + directionString + directionCountString + " misses " + mobString + "." + countString
-                            codeHalf1 = targetUserCode
-                            codeHalf2 = attackData["Attack Data"].name["Code"] + directionCode + directionCountCode + "8w" + mobCode + "1y" + countCode
-                            drawBlankLineCheck = drawBlankLine and (len(messageDataList) == 0 or (len(messageDataList) > 0 and messageDataList[-1]["Message Type"] != messageType))
-                            combineLinesCheck = self.num != None
-                            messageExistsCheck(messageDataList, messageType, stringHalf1, stringHalf2, codeHalf1, codeHalf2, drawBlankLineCheck, combineLinesCheck)
-                            drawBlankLine = False
+            selfSkill = flags["selfSkill"]
+            attackDisplayList = flags["attackDisplayList"]
+            targetMob = flags["targetMob"]
+            targetMobList = flags["targetMobList"]
 
-                if attackData["Count"] > 0:
-                    hitString = " hits"
-                    hitCode = "5w"
-                    if attackData["Attack Data"].healCheck == True:
-                        hitString = " heals"
-                        hitCode = "6w"
+            targetUserLine = getTargetUserString(self)
+            targetUserString = targetUserLine["String"]
+            targetUserCode = targetUserLine["Code"]
+            targetUserNonPossLine = getTargetUserString(self, True)
+            targetUserNonPossString = targetUserNonPossLine["String"]
+            targetUserNonPossCode = targetUserNonPossLine["Code"]
 
-                    if attackData["Mob Data"] == "Multiple":
-                        if not (self.num != None and targetRoom.sameRoomCheck(player) == False):
-                            stringHalf1 = targetUserString
-                            stringHalf2 = attackData["Attack Data"].name["String"] + directionString + directionCountString + hitString + " the group! " + getDamageString(attackData["Attack Damage"])["String"]
-                            codeHalf1 = targetUserCode
-                            codeHalf2 = attackData["Attack Data"].name["Code"] + directionCode + directionCountCode + hitCode + "10w2y" + getDamageString(attackData["Attack Damage"])["Code"]
-                            drawBlankLineCheck = drawBlankLine and (len(messageDataList) == 0 or (len(messageDataList) > 0 and messageDataList[-1]["Message Type"] != messageType))
-                            combineLinesCheck = self.num != None
-                            messageExistsCheck(messageDataList, messageType, stringHalf1, stringHalf2, codeHalf1, codeHalf2, drawBlankLineCheck, combineLinesCheck)
-                    elif attackData["Mob Data"] != None:
-                        countString, countCode = getCountString(attackData["Count"])
-                        targetEnemyString = attackData["Mob Data"].prefix.lower() + " " + attackData["Mob Data"].name["String"]
-                        targetEnemyCode = str(len(attackData["Mob Data"].prefix)) + "w1w" + attackData["Mob Data"].name["Code"]
-                        if attackData["Mob Data"].num == None:
-                            targetEnemyString = "you"
-                            targetEnemyCode = "3w"
-                        if not (self.num != None and targetRoom.sameRoomCheck(player) == False):
-                            stringHalf1 = targetUserString
-                            stringHalf2 = attackData["Attack Data"].name["String"] + directionString + directionCountString + hitString + " " + targetEnemyString + "!" + countString + " " + getDamageString(attackData["Attack Damage"])["String"]
-                            codeHalf1 = targetUserCode
-                            codeHalf2 = attackData["Attack Data"].name["Code"] + directionCode + directionCountCode + hitCode + "1w" + targetEnemyCode + "1y" + countCode + "1w" + getDamageString(attackData["Attack Damage"])["Code"]
-                            drawBlankLineCheck = drawBlankLine and (len(messageDataList) == 0 or (len(messageDataList) > 0 and messageDataList[-1]["Message Type"] != messageType))
-                            combineLinesCheck = self.num != None
-                            messageExistsCheck(messageDataList, messageType, stringHalf1, stringHalf2, codeHalf1, codeHalf2, drawBlankLineCheck, combineLinesCheck)
-            
-                    if "Cut Limb" in attackData:
-                        if attackData["Cut Limb"] == "Head":
-                            stringHalf1 = targetUserString
-                            stringHalf2 = attackData["Attack Data"].name["String"] + " completely DECAPITATES " + attackData["Mob Data"].prefix.lower() + " " + attackData["Mob Data"].name["String"] + "!"
-                            codeHalf1 = targetUserCode
-                            codeHalf2 = attackData["Attack Data"].name["Code"] + "24w" + str(len(attackData["Mob Data"].prefix)) + "w1w" + attackData["Mob Data"].name["Code"] + "1y"
-                            drawBlankLineCheck = drawBlankLine and (len(messageDataList) == 0 or (len(messageDataList) > 0 and messageDataList[-1]["Message Type"] != messageType))
-                            combineLinesCheck = self.num != None
-                            messageExistsCheck(messageDataList, messageType, stringHalf1, stringHalf2, codeHalf1, codeHalf2, drawBlankLineCheck, combineLinesCheck)
-            
-                        else:
-                            targetLimb = attackData["Cut Limb"]
-                            if "Cut Limb Weapon" in attackData:
-                                stringHalf1 = attackData["Mob Data"].prefix + " " + attackData["Mob Data"].name["String"] + "'s " + attackData["Cut Limb Weapon"].name["String"] + " falls to the ground as " + targetUserString.lower()
-                                stringHalf2 = attackData["Attack Data"].name["String"] + " cuts off their " + targetLimb.lower() + "!"
-                                codeHalf1 = str(len(attackData["Mob Data"].prefix)) + "w1w" + attackData["Mob Data"].name["Code"] + "1y2w" + attackData["Cut Limb Weapon"].name["Code"] + "24w" + targetUserCode
-                                codeHalf2 = attackData["Attack Data"].name["Code"] + "16w" + str(len(targetLimb)) + "w1y"
-                            else:
-                                stringHalf1 = targetUserString
-                                stringHalf2 = attackData["Attack Data"].name["String"] + " cuts off " + attackData["Mob Data"].prefix.lower() + " " + attackData["Mob Data"].name["String"] + "'s " + targetLimb.lower() + "!"
-                                codeHalf1 = targetUserCode
-                                codeHalf2 = attackData["Attack Data"].name["Code"] + "10w" + str(len(attackData["Mob Data"].prefix)) + "w1w" + attackData["Mob Data"].name["Code"] + "1y2w" + str(len(targetLimb)) + "w1y"
-                            drawBlankLineCheck = drawBlankLine and (len(messageDataList) == 0 or (len(messageDataList) > 0 and messageDataList[-1]["Message Type"] != messageType))
-                            combineLinesCheck = self.num != None
-                            messageExistsCheck(messageDataList, messageType, stringHalf1, stringHalf2, codeHalf1, codeHalf2, drawBlankLineCheck, combineLinesCheck)
+            directionString = ""
+            directionCode = ""
+            directionCountString = ""
+            directionCountCode = ""
+            toTheString = ""
+            if roomDistance > 0:
+                toTheString = " to the "
+                targetDirectionString = targetDirection
+                if self.num != None and targetRoom.sameRoomCheck(player) == True:
+                    targetDirectionString = Room.getOppositeDirection(targetDirection)
+                    toTheString = " from the "
+                directionString = toTheString + targetDirectionString
+                directionCode = str(len(toTheString)) + "w" + str(len(targetDirectionString)) + "w"
+                directionCountString, directionCountCode = getCountString(roomDistance)
 
-            if attackDisplayList[0]["Kill Count"] > 0:
-                countString, countCode = getCountString(attackData["Kill Count"])
-                if attackData["Killed Mob Data"] == "Multiple":
-                    yourString = "your"
-                    if self.num != None:
-                        yourString = "their"
-                    if not (self.num != None and targetRoom.sameRoomCheck(player) == False):
-                        stringHalf1 = targetUserString
-                        stringHalf2 = "attack kills " + yourString + " targets!" + countString
-                        codeHalf1 = targetUserCode
-                        codeHalf2 = "13w" + str(len(yourString)) + "w8w1y" + countCode
-                        drawBlankLineCheck = drawBlankLine and (len(messageDataList) == 0 or (len(messageDataList) > 0 and messageDataList[-1]["Message Type"] != messageType))
-                        messageExistsCheck(messageDataList, messageType, stringHalf1, stringHalf2, codeHalf1, codeHalf2, drawBlankLineCheck)
-
-                else:
-                    if attackDisplayList[0]["Killed Mob Data"].num == None:
-                        stringHalf1 = "You are DEAD!"
-                        stringHalf2 = ""
-                        codeHalf1 = "12w1y"
-                        codeHalf2 = ""
-                        drawBlankLineCheck = drawBlankLine and (len(messageDataList) == 0 or (len(messageDataList) > 0 and messageDataList[-1]["Message Type"] != messageType))
-                        messageExistsCheck(messageDataList, messageType, stringHalf1, stringHalf2, codeHalf1, codeHalf2, drawBlankLineCheck)
-                    elif not (attackDisplayList[0]["Killed Mob Data"].num != None and self.num != None and currentRoom.sameRoomCheck(player) == False):
-                        stringHalf1 = attackDisplayList[0]["Killed Mob Data"].prefix + " " + attackDisplayList[0]["Killed Mob Data"].name["String"] + " is DEAD!"
-                        stringHalf2 = ""
-                        codeHalf1 = str(len(attackDisplayList[0]["Killed Mob Data"].prefix)) + "w1w" + attackDisplayList[0]["Killed Mob Data"].name["Code"] + "8w1y"
-                        codeHalf2 = ""
-                        drawBlankLineCheck = drawBlankLine and (len(messageDataList) == 0 or (len(messageDataList) > 0 and messageDataList[-1]["Message Type"] != messageType))
-                        messageExistsCheck(messageDataList, messageType, stringHalf1, stringHalf2, codeHalf1, codeHalf2, drawBlankLineCheck)
-
-            for attackData in attackDisplayList:
-                if "Return Weapon To Inventory" in attackData:
-                    stringHalf1 = attackData["Mob Data"].prefix + " " + attackData["Mob Data"].name["String"] + " drops " + attackData["Return Weapon To Inventory"].prefix.lower() + " " + attackData["Return Weapon To Inventory"].name["String"] + " on the ground."
-                    stringHalf2 = ""
-                    codeHalf1 = str(len(attackData["Mob Data"].prefix)) + "w1w" + attackData["Mob Data"].name["Code"] + "7w" + str(len(attackData["Return Weapon To Inventory"].prefix.lower())) + "w1w" + attackData["Return Weapon To Inventory"].name["Code"] + "14w1y"
-                    codeHalf2 = ""
+            messageType = "Attack Complete"
+            drawBlankLine = True
+            if (targetMob == None and "All Only" in combatSkill.ruleDict and selfSkill == None) or \
+            (len(targetMobList) == 0):
+                if not (self.num != None and targetRoom.sameRoomCheck(player) == False):
+                    stringHalf1 = targetUserString
+                    stringHalf2 = combatSkill.name["String"] + directionString + " doesn't hit anyone."
+                    codeHalf1 = targetUserCode
+                    codeHalf2 = combatSkill.name["Code"] + directionCode + "6w1y12w1y"
                     drawBlankLineCheck = drawBlankLine and (len(messageDataList) == 0 or (len(messageDataList) > 0 and messageDataList[-1]["Message Type"] != messageType))
                     combineLinesCheck = self.num != None
                     messageExistsCheck(messageDataList, messageType, stringHalf1, stringHalf2, codeHalf1, codeHalf2, drawBlankLineCheck, combineLinesCheck)
+                    drawBlankLine = False
+
+            elif selfSkill != None and targetRoom.sameRoomCheck(self):
+                targetUserStringHeal = "You "
+                targetUserCodeHeal = "4w"
+                healString = "heal yourself with "
+                if self.num != None:
+                    targetUserStringHeal = self.prefix + " " + self.name["String"] + " "
+                    targetUserCodeHeal = str(len(self.prefix)) + "w1w" + self.name["Code"] + "1w"
+                    healString = "heals themself with "
+                if not (self.num != None and targetRoom.sameRoomCheck(player) == False):
+                    stringHalf1 = targetUserStringHeal
+                    stringHalf2 = healString + combatSkill.name["String"] + ". " + getDamageString(attackData["Attack Damage"])["String"]
+                    codeHalf1 = targetUserCodeHeal
+                    codeHalf2 = str(len(healString)) + "w" + combatSkill.name["Code"] + "2y" + getDamageString(attackData["Attack Damage"])["Code"]
+                    drawBlankLineCheck = drawBlankLine and (len(messageDataList) == 0 or (len(messageDataList) > 0 and messageDataList[-1]["Message Type"] != messageType))
+                    combineLinesCheck = self.num != None
+                    messageExistsCheck(messageDataList, messageType, stringHalf1, stringHalf2, codeHalf1, codeHalf2, drawBlankLineCheck, combineLinesCheck)
+                    drawBlankLine = False
+
+            if len(targetMobList) > 0:
+                for attackData in attackDisplayList:
+                    secondaryAttackString = ""
+                    secondaryAttackCode = ""
+                    if "Second Attack" in attackData:
+                        secondaryAttackString = "secondary "
+                        secondaryAttackCode = "10w"
+
+                    if "Miss Check" in attackData:
+                        if attackData["Miss Check"] == "Out Of Ammo":
+                            gunString = attackData["Weapon Data List"][0].name["String"]
+                            gunCode = attackData["Weapon Data List"][0].name["Code"]
+                            if not (self.num != None and currentRoom.sameRoomCheck(player) == False):
+                                stringHalf1 = targetUserString
+                                stringHalf2 = gunString + " *CLICKS* due to having no ammo."
+                                codeHalf1 = targetUserCode
+                                codeHalf2 = gunCode + "2y6w1y22w1y"
+                                drawBlankLineCheck = drawBlankLine and (len(messageDataList) == 0 or (len(messageDataList) > 0 and messageDataList[-1]["Message Type"] != messageType))
+                                messageExistsCheck(messageDataList, messageType, stringHalf1, stringHalf2, codeHalf1, codeHalf2, drawBlankLineCheck, False)
+                                drawBlankLine = False
+                        elif attackData["Miss Check"] == "Miss Attack" and not (attackData["Mob Data"] == "Multiple" and attackData["Count"] > 0):
+                            countString = ""
+                            countCode = ""
+                            mobString = "the group"
+                            mobCode = "9w"
+                            if attackData["Mob Data"] != "Multiple":
+                                countString, countCode = getCountString(attackData["Miss Count"])
+                                mobString = attackData["Mob Data"].prefix + " " + attackData["Mob Data"].name["String"]
+                                mobCode = str(len(attackData["Mob Data"].prefix)) + "w1w" + attackData["Mob Data"].name["Code"]
+                                if attackData["Mob Data"].num == None and len(targetMobList) == 1:
+                                    mobString = "you"
+                                    mobCode = "3w"
+                            if not (self.num != None and targetRoom.sameRoomCheck(player) == False):
+                                if "Dodge Check" in attackData:
+                                    stumbleString = "."
+                                    stumbleCode = "1y"
+                                    if attackData["Mob Data"].num == None:
+                                        if "Stumble Check" in attackData:
+                                            stumbleString = ", throwing them off balance."
+                                            stumbleCode = "2y25w1y"
+                                        stringHalf1 = "You "
+                                        stringHalf2 = "dodge " + self.prefix.lower() + " " + self.name["String"] + "'s " + attackData["Attack Data"].name["String"] + stumbleString
+                                        codeHalf1 = "4w"
+                                        codeHalf2 = "6w" + str(len(self.prefix)) + "w1w" + self.name["Code"] + "1y2w" + attackData["Attack Data"].name["Code"] + stumbleCode
+                                    else:
+                                        if "Stumble Check" in attackData:
+                                            stumbleString = ", throwing " + targetUserNonPossString + "off balance."
+                                            stumbleCode = "2y9w" + targetUserNonPossCode + "11w1y"
+                                        stringHalf1 = attackData["Mob Data"].prefix + " " + attackData["Mob Data"].name["String"]
+                                        stringHalf2 = "dodges " + targetUserString + " " + attackData["Attack Data"].name["String"] + stumbleString
+                                        codeHalf1 = str(len(attackData["Mob Data"].prefix)) + "w1w" + attackData["Mob Data"].name["Code"]
+                                        codeHalf2 = "7w" + targetUserCode + "1w" + attackData["Attack Data"].name["Code"] + stumbleCode
+                                else:
+                                    stringHalf1 = targetUserString
+                                    stringHalf2 = secondaryAttackString + attackData["Attack Data"].name["String"] + directionString + directionCountString + " misses " + mobString + "." + countString
+                                    codeHalf1 = targetUserCode
+                                    codeHalf2 = secondaryAttackCode + attackData["Attack Data"].name["Code"] + directionCode + directionCountCode + "8w" + mobCode + "1y" + countCode
+                                drawBlankLineCheck = drawBlankLine and (len(messageDataList) == 0 or (len(messageDataList) > 0 and messageDataList[-1]["Message Type"] != messageType))
+                                combineLinesCheck = self.num != None
+                                messageExistsCheck(messageDataList, messageType, stringHalf1, stringHalf2, codeHalf1, codeHalf2, drawBlankLineCheck, combineLinesCheck)
+                                drawBlankLine = False
+
+                    if attackData["Count"] > 0:
+                        hitString = " hits"
+                        hitCode = "5w"
+                        if attackData["Attack Data"].healCheck == True:
+                            hitString = " heals"
+                            hitCode = "6w"
+
+                        if attackData["Mob Data"] == "Multiple":
+                            if not (self.num != None and targetRoom.sameRoomCheck(player) == False):
+                                stringHalf1 = targetUserString
+                                stringHalf2 = secondaryAttackString + attackData["Attack Data"].name["String"] + directionString + directionCountString + hitString + " the group! " + getDamageString(attackData["Attack Damage"])["String"]
+                                codeHalf1 = targetUserCode
+                                codeHalf2 = secondaryAttackCode + attackData["Attack Data"].name["Code"] + directionCode + directionCountCode + hitCode + "10w2y" + getDamageString(attackData["Attack Damage"])["Code"]
+                                drawBlankLineCheck = drawBlankLine and (len(messageDataList) == 0 or (len(messageDataList) > 0 and messageDataList[-1]["Message Type"] != messageType))
+                                combineLinesCheck = self.num != None
+                                messageExistsCheck(messageDataList, messageType, stringHalf1, stringHalf2, codeHalf1, codeHalf2, drawBlankLineCheck, combineLinesCheck)
+                        elif attackData["Mob Data"] != None:
+                            countString, countCode = getCountString(attackData["Count"])
+                            targetEnemyString = attackData["Mob Data"].prefix.lower() + " " + attackData["Mob Data"].name["String"]
+                            targetEnemyCode = str(len(attackData["Mob Data"].prefix)) + "w1w" + attackData["Mob Data"].name["Code"]
+                            if attackData["Mob Data"].num == None:
+                                targetEnemyString = "you"
+                                targetEnemyCode = "3w"
+                            if not (self.num != None and targetRoom.sameRoomCheck(player) == False):
+                                if "Block Check" in attackData:
+                                    blockString = " Block "
+                                    if attackData["Mob Data"].num != None:
+                                        blockString = " Blocks "
+                                    stunString = "."
+                                    stunCode = "1y"
+                                    if "Stun Check" in attackData:
+                                        stunTargetString = "them"
+                                        if attackData["Mob Data"].num != None:
+                                            stunTargetString = "you"
+                                        stunString = ", temporarily stunning " + stunTargetString + "."
+                                        stunCode = "2y21w" + str(len(stunTargetString)) + "w1y"
+                                    stringHalf1 = targetEnemyString[0].upper() + targetEnemyString[1::]
+                                    stringHalf2 = blockString + targetUserString + attackData["Attack Data"].name["String"] + stunString
+                                    codeHalf1 = targetEnemyCode
+                                    codeHalf2 = str(len(blockString)) + "w" + targetUserCode + attackData["Attack Data"].name["Code"] + stunCode
+                                else:
+                                    stunString = "!"
+                                    stunCode = "1y"
+                                    if "Stun Check" in attackData:
+                                        stunString = ", sending them reeling!"
+                                        stunCode = "2y20w1y"
+                                        if attackData["Mob Data"].num == None:
+                                            stunString = ", sending you reeling!"
+                                            stunCode = "2y19w1y"
+                                    stringHalf1 = targetUserString
+                                    stringHalf2 = secondaryAttackString + attackData["Attack Data"].name["String"] + directionString + directionCountString + hitString + " " + targetEnemyString + stunString + countString + " " + getDamageString(attackData["Attack Damage"])["String"]
+                                    codeHalf1 = targetUserCode
+                                    codeHalf2 = secondaryAttackCode + attackData["Attack Data"].name["Code"] + directionCode + directionCountCode + hitCode + "1w" + targetEnemyCode + stunCode + countCode + "1w" + getDamageString(attackData["Attack Damage"])["Code"]
+                                drawBlankLineCheck = drawBlankLine and (len(messageDataList) == 0 or (len(messageDataList) > 0 and messageDataList[-1]["Message Type"] != messageType))
+                                combineLinesCheck = self.num != None
+                                messageExistsCheck(messageDataList, messageType, stringHalf1, stringHalf2, codeHalf1, codeHalf2, drawBlankLineCheck, combineLinesCheck)
+                
+                        if "Cut Limb" in attackData:
+                            if attackData["Cut Limb"] == "Head":
+                                stringHalf1 = targetUserString
+                                stringHalf2 = secondaryAttackString + attackData["Attack Data"].name["String"] + " completely DECAPITATES " + attackData["Mob Data"].prefix.lower() + " " + attackData["Mob Data"].name["String"] + "!"
+                                codeHalf1 = targetUserCode
+                                codeHalf2 = secondaryAttackCode + attackData["Attack Data"].name["Code"] + "24w" + str(len(attackData["Mob Data"].prefix)) + "w1w" + attackData["Mob Data"].name["Code"] + "1y"
+                                drawBlankLineCheck = drawBlankLine and (len(messageDataList) == 0 or (len(messageDataList) > 0 and messageDataList[-1]["Message Type"] != messageType))
+                                combineLinesCheck = self.num != None
+                                messageExistsCheck(messageDataList, messageType, stringHalf1, stringHalf2, codeHalf1, codeHalf2, drawBlankLineCheck, combineLinesCheck)
+                
+                            else:
+                                targetLimb = attackData["Cut Limb"]
+                                if "Cut Limb Weapon" in attackData:
+                                    stringHalf1 = attackData["Mob Data"].prefix + " " + attackData["Mob Data"].name["String"] + "'s " + attackData["Cut Limb Weapon"].name["String"] + " falls to the ground as " + targetUserString.lower()
+                                    stringHalf2 = attackData["Attack Data"].name["String"] + " cuts off their " + targetLimb.lower() + "!"
+                                    codeHalf1 = str(len(attackData["Mob Data"].prefix)) + "w1w" + attackData["Mob Data"].name["Code"] + "1y2w" + attackData["Cut Limb Weapon"].name["Code"] + "24w" + targetUserCode
+                                    codeHalf2 = attackData["Attack Data"].name["Code"] + "16w" + str(len(targetLimb)) + "w1y"
+                                else:
+                                    stringHalf1 = targetUserString
+                                    stringHalf2 = secondaryAttackString + attackData["Attack Data"].name["String"] + " cuts off " + attackData["Mob Data"].prefix.lower() + " " + attackData["Mob Data"].name["String"] + "'s " + targetLimb.lower() + "!"
+                                    codeHalf1 = targetUserCode
+                                    codeHalf2 = secondaryAttackCode + attackData["Attack Data"].name["Code"] + "10w" + str(len(attackData["Mob Data"].prefix)) + "w1w" + attackData["Mob Data"].name["Code"] + "1y2w" + str(len(targetLimb)) + "w1y"
+                                drawBlankLineCheck = drawBlankLine and (len(messageDataList) == 0 or (len(messageDataList) > 0 and messageDataList[-1]["Message Type"] != messageType))
+                                combineLinesCheck = self.num != None
+                                messageExistsCheck(messageDataList, messageType, stringHalf1, stringHalf2, codeHalf1, codeHalf2, drawBlankLineCheck, combineLinesCheck)
+
+                if attackDisplayList[0]["Kill Count"] > 0:
+                    countString, countCode = getCountString(attackData["Kill Count"])
+                    if attackData["Killed Mob Data"] == "Multiple":
+                        yourString = "your"
+                        if self.num != None:
+                            yourString = "their"
+                        if not (self.num != None and targetRoom.sameRoomCheck(player) == False):
+                            stringHalf1 = targetUserString
+                            stringHalf2 = "attack kills " + yourString + " targets!" + countString
+                            codeHalf1 = targetUserCode
+                            codeHalf2 = "13w" + str(len(yourString)) + "w8w1y" + countCode
+                            drawBlankLineCheck = drawBlankLine and (len(messageDataList) == 0 or (len(messageDataList) > 0 and messageDataList[-1]["Message Type"] != messageType))
+                            messageExistsCheck(messageDataList, messageType, stringHalf1, stringHalf2, codeHalf1, codeHalf2, drawBlankLineCheck)
+
+                    else:
+                        if attackDisplayList[0]["Killed Mob Data"].num == None:
+                            stringHalf1 = "You are DEAD!"
+                            stringHalf2 = ""
+                            codeHalf1 = "12w1y"
+                            codeHalf2 = ""
+                            drawBlankLineCheck = drawBlankLine and (len(messageDataList) == 0 or (len(messageDataList) > 0 and messageDataList[-1]["Message Type"] != messageType))
+                            messageExistsCheck(messageDataList, messageType, stringHalf1, stringHalf2, codeHalf1, codeHalf2, drawBlankLineCheck)
+                        elif not (attackDisplayList[0]["Killed Mob Data"].num != None and self.num != None and currentRoom.sameRoomCheck(player) == False):
+                            stringHalf1 = attackDisplayList[0]["Killed Mob Data"].prefix + " " + attackDisplayList[0]["Killed Mob Data"].name["String"] + " is DEAD!"
+                            stringHalf2 = ""
+                            codeHalf1 = str(len(attackDisplayList[0]["Killed Mob Data"].prefix)) + "w1w" + attackDisplayList[0]["Killed Mob Data"].name["Code"] + "8w1y"
+                            codeHalf2 = ""
+                            drawBlankLineCheck = drawBlankLine and (len(messageDataList) == 0 or (len(messageDataList) > 0 and messageDataList[-1]["Message Type"] != messageType))
+                            messageExistsCheck(messageDataList, messageType, stringHalf1, stringHalf2, codeHalf1, codeHalf2, drawBlankLineCheck)
+
+                for attackData in attackDisplayList:
+                    if "Return Weapon To Inventory" in attackData:
+                        stringHalf1 = attackData["Mob Data"].prefix + " " + attackData["Mob Data"].name["String"] + " drops " + attackData["Return Weapon To Inventory"].prefix.lower() + " " + attackData["Return Weapon To Inventory"].name["String"] + " on the ground."
+                        stringHalf2 = ""
+                        codeHalf1 = str(len(attackData["Mob Data"].prefix)) + "w1w" + attackData["Mob Data"].name["Code"] + "7w" + str(len(attackData["Return Weapon To Inventory"].prefix.lower())) + "w1w" + attackData["Return Weapon To Inventory"].name["Code"] + "14w1y"
+                        codeHalf2 = ""
+                        drawBlankLineCheck = drawBlankLine and (len(messageDataList) == 0 or (len(messageDataList) > 0 and messageDataList[-1]["Message Type"] != messageType))
+                        combineLinesCheck = self.num != None
+                        messageExistsCheck(messageDataList, messageType, stringHalf1, stringHalf2, codeHalf1, codeHalf2, drawBlankLineCheck, combineLinesCheck)
 
         return messageDataList
 
@@ -2694,9 +2783,9 @@ class Player:
                                         hitCheck = False
                                         if len(attackSkill.weaponDataList) in [0, 2]:
                                             if copyCheck != False:
-                                                attackHitCheck, attackDisplayList[i] = Combat.hitCheck(attackDisplayList[i], self, attackSkill, copy.deepcopy(mob), copy.deepcopy(targetRoom))
+                                                attackHitCheck, attackDisplayList[i] = Combat.hitCheck(attackDisplayList[i], self, attackSkill, copy.deepcopy(mob), copy.deepcopy(targetRoom), i)
                                             else:
-                                                attackHitCheck, attackDisplayList[i] = Combat.hitCheck(attackDisplayList[i], self, attackSkill, mob, targetRoom)
+                                                attackHitCheck, attackDisplayList[i] = Combat.hitCheck(attackDisplayList[i], self, attackSkill, mob, targetRoom, i)
                                             if attackHitCheck == True:
                                                 hitCheck = True
                                         else:
@@ -2708,9 +2797,9 @@ class Player:
                                                 else:
                                                     if w == 0:
                                                         if copyCheck != False:
-                                                            attackHitCheck, attackDisplayList[i] = Combat.hitCheck(attackDisplayList[i], self, attackSkill, copy.deepcopy(mob), copy.deepcopy(targetRoom))
+                                                            attackHitCheck, attackDisplayList[i] = Combat.hitCheck(attackDisplayList[i], self, attackSkill, copy.deepcopy(mob), copy.deepcopy(targetRoom), i)
                                                         else:
-                                                            attackHitCheck, attackDisplayList[i] = Combat.hitCheck(attackDisplayList[i], self, attackSkill, mob, targetRoom)
+                                                            attackHitCheck, attackDisplayList[i] = Combat.hitCheck(attackDisplayList[i], self, attackSkill, mob, targetRoom, i)
                                                         if attackHitCheck == True:
                                                             hitCheck = True
 
@@ -2726,12 +2815,49 @@ class Player:
                                                 attackDisplayList[i]["Count"] += 1
                                             else:
                                                 attackDisplayList[i]["Miss Count"] += 1
+                                        if i == 1:
+                                            attackDisplayList[i]["Second Attack"] = True
 
-                                        if "Head" in mob.cutLimbList:
-                                            mob.currentHealth = 0
-                                        if mob.currentHealth <= 0 and len(attackList) > 1 and i == 0:
-                                            del attackList[1]
-                                            break
+                                        if copyCheck == False:
+
+                                            # Cut Enemy Head Check #
+                                            if "Head" in mob.cutLimbList:
+                                                mob.currentHealth = 0
+                                            if mob.currentHealth <= 0 and len(attackList) > 1 and i == 0:
+                                                del attackList[1]
+                                                break
+
+                                            if mob.getCombatAction() != None and mob.getCombatAction().name["String"] in ["Dodge", "Block"]:
+
+                                                # Enemy Dodge Check #
+                                                if mob.getCombatAction().name["String"] == "Dodge":
+                                                    if hitCheck == False:
+                                                        attackDisplayList[i]["Dodge Check"] = True
+                                                        if True: # Stumble Check On Successful Enemy Dodge
+                                                            del mob.actionList[0]
+                                                            self.actionList.append(Action("Stumble", {}, 3))
+                                                            attackDisplayList[i]["Stumble Check"] = True
+                                                        break
+
+                                                # Enemy Block Check #
+                                                elif mob.getCombatAction().name["String"] == "Block":
+                                                    if "Block Check" in attackDisplayList[i]:
+                                                        del mob.actionList[0]
+                                                        if True: # Stun Check On Successful Enemy Block
+                                                            mob.stunList.append(self)
+                                                            self.stunnedByList.append(mob)
+                                                            self.actionList.append(Action("Stun", {}, 4))
+                                                            attackDisplayList[i]["Stun Check"] = True
+                                                        break
+
+                                            # Interrupt Enemy Attack & Stun #
+                                            elif len(mob.actionList) > 0 and hitCheck == True and mob.actionList[0].actionType not in ["Buffer Action", "Stun", "Stumble"]:
+                                                if True: # Interrupt Enemy Attack & Stun Check
+                                                    self.stunList.append(mob)
+                                                    mob.stunnedByList.append(self)
+                                                    mob.actionList = []
+                                                    mob.actionList.append(Action("Stun", {}, 4))
+                                                    attackDisplayList[i]["Stun Check"] = True
 
                                     targetMobList.append(mob)
 
@@ -2809,6 +2935,32 @@ class Player:
         returnFlags["attackList"] = attackList
 
         return returnFlags
+
+    def stumbleCompleteAction(self, console, galaxyList, player, flags):
+        currentRoom = Room.exists(galaxyList, self.spaceship, self.galaxy, self.system, self.planet, self.area, self.room)
+        if currentRoom == None:
+            currentRoom = galaxyList[0].systemList[0].planetList[0].areaList[0].roomList[0]
+
+        if self.num != None and currentRoom.sameRoomCheck(player) == True:
+            console.write(self.prefix + " " + self.name["String"] + " regains balance.", str(len(self.prefix)) + "w1w" + self.name["Code"] + "16w1y", True)
+        elif self.num == None:
+            console.write("You regain balance.", "18w1y", True)
+
+    def stunCompleteAction(self, console, galaxyList, player, flags):
+        currentRoom = Room.exists(galaxyList, self.spaceship, self.galaxy, self.system, self.planet, self.area, self.room)
+        if currentRoom == None:
+            currentRoom = galaxyList[0].systemList[0].planetList[0].areaList[0].roomList[0]
+
+        if len(self.stunnedByList) > 0:
+            for mob in self.stunnedByList:
+                if self in mob.stunList:
+                    del mob.stunList[mob.stunList.index(self)]
+            self.stunnedByList = []
+
+        if self.num != None and currentRoom.sameRoomCheck(player) == True:
+            console.write(self.prefix + " " + self.name["String"] + " regains their senses.", str(len(self.prefix)) + "w1w" + self.name["Code"] + "21w1y", True)
+        elif self.num == None:
+            console.write("You regain your senses.", "22w1y", True)
 
     def displayInventory(self, console, galaxyList, player, currentRoom, targetPocketKey):
         targetPocket = None
@@ -3071,8 +3223,8 @@ class Player:
     def pushCheck(self, console, galaxyList, player, currentRoom, pushKey):
         targetButton = currentRoom.getTargetObject(pushKey, ["Mobs", "Items", "Spaceships", "Buttons"])
         if targetButton == None:
-            targetButton = self.getTargetItem(pushKey)
-
+            targetButton = self.getTargetItem(pushKey)[0]
+        
         if targetButton == None:
             console.write("You don't see it.", "7w1y8w1y", True)
         elif isinstance(targetButton, Button) == False:
@@ -3146,8 +3298,10 @@ class Player:
             console.write("You must be in a cockpit to do that.", "35w1y", True)
         elif currentRoom.spaceshipObject.password != None and self.hasKey(currentRoom.spaceshipObject.password) == False:
             console.write("You lack the key.", "16w1y", True)
+        elif currentRoom.spaceshipObject.launchLandAction == "Land":
+            console.write("You can't do that while landing.", "7w1y23w1y", True)
         elif currentRoom.spaceshipObject.landedLocation == None:
-            console.write("You have already launched.", "25w1y", True)
+            console.write("You must be landed to do that.", "29w1y", True)
 
         else:
             landedPlanet = galaxyList[currentRoom.spaceshipObject.galaxy].systemList[currentRoom.spaceshipObject.system].planetList[currentRoom.spaceshipObject.planet]
@@ -3161,7 +3315,7 @@ class Player:
             currentRoom.spaceshipObject.launchLandTick = 0
             currentRoom.spaceshipObject.launchLandPhase = 0
 
-            console.write('A computerized voice says, "Commencing launch countdown."', "25w3y27w2y", True)
+            console.write('''A computerized voice says, 'Commencing launch countdown.' ''', "25w3y27w2y", True)
     
     def radarCheck(self, console, galaxyList, player, currentRoom):
         if currentRoom.spaceshipObject == None or "Cockpit" not in currentRoom.flags:
@@ -3239,11 +3393,10 @@ class Player:
         if currentRoom.spaceshipObject == None or "Cockpit" not in currentRoom.flags:
             console.write("You must be in a cockpit to do that.", "35w1y", True)
         elif currentRoom.spaceshipObject.landedLocation != None:
-            if currentRoom.spaceshipObject.launchLandTick != -1:
-                actionString = currentRoom.spaceshipObject.launchLandAction.lower() + "ing"
-                console.write("You can't do that while " + actionString + ".", "7w1y16w" + str(len(actionString)) + "w1y", True)
-            else:
-                console.write("You can't do that while landed.", "7w1y22w1y", True)
+            console.write("You can't do that while landed.", "7w1y22w1y", True)
+        elif currentRoom.spaceshipObject.launchLandTick != -1:
+            actionString = currentRoom.spaceshipObject.launchLandAction.lower() + "ing"
+            console.write("You can't do that while " + actionString + ".", "7w1y16w" + str(len(actionString)) + "w1y", True)
         elif courseKey == "none" and (currentRoom.spaceshipObject.clearCourseCheck == True or currentRoom.spaceshipObject.course == None):
             console.write("Your heading is already clear.", "29w1y", True)
         elif courseKey == None:
@@ -3286,6 +3439,7 @@ class Player:
                         console.write("You punch in the coordinates for " + targetPlanet.name["String"] + ".", "33w" + targetPlanet.name["Code"] + "1y", True)
                     else:
                         currentRoom.spaceshipObject.course = courseKey
+                        currentRoom.spaceshipObject.targetPlanet = None
                         console.write("You punch some coordinates into the ship's computer.", "40w1y10w1y", True)
 
                     if currentRoom.spaceshipObject.planet != None:
@@ -3308,15 +3462,12 @@ class Player:
         if currentRoom.spaceshipObject == None or "Cockpit" not in currentRoom.flags:
             console.write("You must be in a cockpit to do that.", "35w1y", True)
         elif currentRoom.spaceshipObject.landedLocation != None:
-            if currentRoom.spaceshipObject.launchLandTick != -1:
-                actionString = currentRoom.spaceshipObject.launchLandAction.lower() + "ing"
-                console.write("You can't do that while " + actionString + ".", "7w1y16w" + str(len(actionString)) + "w1y", True)
-            else:
-                console.write("You can't do that while landed.", "7w1y22w1y", True)
-        elif currentRoom.spaceshipObject.planet != None:
-            console.write("There is no need to do that in orbit.", "36w1y", True)
-        elif currentRoom.spaceshipObject.speedPercent == 0 and currentRoom.spaceshipObject.course != None:
-            console.write('''A computerized voice says, 'Please choose a heading first.' ''', "25w3y29w2y", True)
+            console.write("You can't do that while landed.", "7w1y22w1y", True)
+        elif currentRoom.spaceshipObject.launchLandTick != -1:
+            actionString = currentRoom.spaceshipObject.launchLandAction.lower() + "ing"
+            console.write("You can't do that while " + actionString + ".", "7w1y16w" + str(len(actionString)) + "w1y", True)
+        elif currentRoom.spaceshipObject.planet != None or currentRoom.spaceshipObject.clearCourseCheck == True or (currentRoom.spaceshipObject.course == None and currentRoom.spaceshipObject.speedPercent == 0):
+            console.write('''A computerized voice says, 'Please choose a heading.' ''', "25w3y23w2y", True)
         
         else:
             targetSpeed = None
@@ -3375,6 +3526,8 @@ class Player:
             console.write("You must be in a cockpit to do that.", "35w1y", True)
         elif currentRoom.spaceshipObject.landedLocation != None:
             console.write("You are already landed.", "22w1y", True)
+        elif currentRoom.spaceshipObject.launchLandAction == "Launch":
+            console.write("You can't do that while launching.", "7w1y25w1y", True)
         elif currentRoom.spaceshipObject.planet == None:
             console.write("You must be in orbit to do that.", "31w1y", True)
         elif landKey != None and stringIsNumber(landKey) == False:
@@ -3383,20 +3536,24 @@ class Player:
         else:
             targetPlanet = galaxyList[currentRoom.spaceshipObject.galaxy].systemList[currentRoom.spaceshipObject.system].planetList[currentRoom.spaceshipObject.planet]
             landingRoomDataList = targetPlanet.getLandingRoomDataList()
-            targetLandingIndex = 0
-            if landKey != None:
-                targetLandingIndex = int(landKey) - 1
-                if targetLandingIndex < 0:
-                    targetLandingIndex = 0
-                elif targetLandingIndex > len(landingRoomDataList) - 1:
-                    targetLandingIndex = len(landingRoomDataList) - 1
+            if len(landingRoomDataList) == 0:
+                console.write('''A computerized voice says, 'There are no suitable landing sites.' ''', "25w3y35w2y")
             
-            currentRoom.spaceshipObject.launchLandAction = "Land"
-            currentRoom.spaceshipObject.launchLandTick = 0
-            currentRoom.spaceshipObject.launchLandPhase = 0
-            landingData = landingRoomDataList[targetLandingIndex]
-            currentRoom.spaceshipObject.flags["Target Landing Location"] = [landingData["Area"].num, landingData["Room"].room]
-            console.write('A computerized voice says, "Initiating landing sequence."', "25w3y27w2y", True)
+            else:
+                targetLandingIndex = 0
+                if landKey != None:
+                    targetLandingIndex = int(landKey) - 1
+                    if targetLandingIndex < 0:
+                        targetLandingIndex = 0
+                    elif targetLandingIndex > len(landingRoomDataList) - 1:
+                        targetLandingIndex = len(landingRoomDataList) - 1
+                
+                currentRoom.spaceshipObject.launchLandAction = "Land"
+                currentRoom.spaceshipObject.launchLandTick = 0
+                currentRoom.spaceshipObject.launchLandPhase = 0
+                landingData = landingRoomDataList[targetLandingIndex]
+                currentRoom.spaceshipObject.flags["Target Landing Location"] = [landingData["Area"].num, landingData["Room"].room]
+                console.write('A computerized voice says, "Initiating landing sequence."', "25w3y27w2y", True)
 
     def manifestCheck(self, console, currentRoom, targetType, targetNum, targetCount):
         manifestTarget = None
@@ -3457,7 +3614,7 @@ class Player:
                 if self.skillWeaponCheck(skill, targetWeapon) == True:
                     if len(skill.weaponTypeList) == 0 and "Disable Weaponless Skills" in ruleCheckFlags:
                         pass
-                    elif len(skill.weaponTypeList) > 0 and skill.weaponTypeList[0] == "Gun" and ((targetWeapon != None and targetWeapon.weaponType == "Gun" and targetWeapon.isEmpty(True) == True) and (secondWeapon == None or (secondWeapon != None and secondWeapon.weaponType == "Gun" and secondWeapon.isEmpty(True) == True))):
+                    elif len(skill.weaponTypeList) > 0 and "Gun" in skill.weaponTypeList[0] and ((targetWeapon != None and targetWeapon.weaponType == "Gun" and targetWeapon.isEmpty(True) == True) and (secondWeapon == None or (secondWeapon != None and secondWeapon.weaponType == "Gun" and secondWeapon.isEmpty(True) == True))):
                         returnMessage = "Reload"
                         skillList.append(skill)
                     else:
@@ -3482,7 +3639,7 @@ class Player:
 
         if len(combatSkill.weaponTypeList) == 0:
             return True
-        elif len(combatSkill.weaponTypeList) == 1 and combatSkill.weaponTypeList == ["Open Hand"]:
+        elif len(combatSkill.weaponTypeList) == 1 and "Open Hand" in combatSkill.weaponTypeList[0]:
             if not (self.debugDualWield == False and self.gearDict[self.dominantHand] != None and self.gearDict[self.dominantHand].twoHanded == True):
                 if targetWeapon == "Unused":
                     if self.gearDict["Left Hand"] == None or self.gearDict["Right Hand"] == None:
@@ -3491,31 +3648,36 @@ class Player:
                     return True
         elif len(combatSkill.weaponTypeList) == 1:
             if targetWeapon == "Unused":
-                if self.gearDict["Left Hand"] != None and combatSkill.weaponTypeList[0] == self.gearDict["Left Hand"].weaponType:
+                if self.gearDict["Left Hand"] != None and self.gearDict["Left Hand"].weaponType in combatSkill.weaponTypeList[0]:
                     if not ("Requires Two-Handed Weapon" in combatSkill.ruleDict and self.gearDict["Left Hand"].twoHanded == False):
                         return True
-                if self.gearDict["Right Hand"] != None and combatSkill.weaponTypeList[0] == self.gearDict["Right Hand"].weaponType:
+                if self.gearDict["Right Hand"] != None and self.gearDict["Right Hand"].weaponType in combatSkill.weaponTypeList[0]:
                     if not ("Requires Two-Handed Weapon" in combatSkill.ruleDict and self.gearDict["Right Hand"].twoHanded == False):
                         return True
-            elif (targetWeapon in ["Open Hand", None] and combatSkill.weaponTypeList[0] == "Open Hand") or (targetWeapon != None and targetWeapon.weaponType == combatSkill.weaponTypeList[0]):
+            elif (targetWeapon in ["Open Hand", None] and "Open Hand" in combatSkill.weaponTypeList[0]) or (targetWeapon != None and targetWeapon.weaponType in combatSkill.weaponTypeList[0]):
                 if not ("Requires Two-Handed Weapon" in combatSkill.ruleDict and targetWeapon not in ["Open Hand", None] and targetWeapon.twoHanded == False):
                     return True
 
         elif len(combatSkill.weaponTypeList) == 2 and targetWeapon == "Unused" and len(self.cutLimbList) == 0:
-            correctWeaponTypeList = []
-            playerHeldList = [self.gearDict["Left Hand"], self.gearDict["Right Hand"]]
-            for weaponType in combatSkill.weaponTypeList:
-                if weaponType == "Open Hand" and None in playerHeldList:
-                    correctWeaponTypeList.append("Open Hand")
-                    del playerHeldList[playerHeldList.index(None)]
-                elif weaponType in playerHeldList:
-                    correctWeaponTypeList.append(weaponType)
-                    del playerHeldList[playerHeldList.index(weaponType)]
-            if len(correctWeaponTypeList) == 2:
+            correctWeaponTypeList = [[], []]
+            playerHeldList = []
+            if self.gearDict["Left Hand"] == None : playerHeldList.append("Open Hand")
+            else : playerHeldList.append(self.gearDict["Left Hand"])
+            if self.gearDict["Right Hand"] == None : playerHeldList.append("Open Hand")
+            else : playerHeldList.append(self.gearDict["Right Hand"])
+
+            if playerHeldList[0] in combatSkill.weaponTypeList[0] and playerHeldList[1] in combatSkill.weaponTypeList[1]:
+                return True
+            elif playerHeldList[0] in combatSkill.weaponTypeList[1] and playerHeldList[1] in combatSkill.weaponTypeList[0]:
                 return True
             
         return False
     
+    def getCombatAction(self):
+        if len(self.actionList) > 0 and self.actionList[0].actionType == "Combat Skill":
+            return self.actionList[0].flags["combatSkill"]
+        return None
+
     def ammoCheck(self, ammoType, ammoKey=None, magazineCheck=False):
         returnItem = None
         returnIndex = -1
@@ -3565,6 +3727,14 @@ class Player:
             self.actionList = []
             return False
         return True
+
+    def inStunnedTargetRoom(self, galaxyList):
+        currentRoom = Room.exists(galaxyList, self.spaceship, self.galaxy, self.system, self.planet, self.area, self.room)
+        if currentRoom != None:
+            for mob in self.stunList:
+                if currentRoom.sameRoomCheck(mob):
+                    return True
+        return False
 
     def getTargetItem(self, targetItemKey, includeList=["Inventory", "Gear"]):
         if "Inventory" in includeList:
