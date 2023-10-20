@@ -3,8 +3,9 @@ from GameData.World.Room import Room
 from GameData.World.Spaceship import Spaceship
 from GameData.Item.Item import Item
 from GameData.Item.Button import Button
-from GameData.Skill import Skill
-from GameData.Action import Action
+from GameData.Player.Skill import Skill
+from GameData.Player.CombatSkill import CombatSkill
+from GameData.Player.Action import Action
 from GameData.Combat import Combat
 from Components.Utility import appendKeyList
 from Components.Utility import stringIsNumber
@@ -32,6 +33,8 @@ class Player:
         self.roomDescription = {"String":"is standing here.", "Code":"16w1y"}
         self.keyList = []
 
+        self.weaponSkillList = [Skill(501), Skill(502), Skill(503), Skill(504), Skill(505), Skill(506), Skill(507), Skill(508), Skill(509), Skill(510), Skill(511)]
+
         self.actionList = []
         self.combatSkillList = []
         self.stunList = []
@@ -45,7 +48,7 @@ class Player:
         self.recruitList = []
         self.combatList = []
 
-        self.itemDict = {"Armor":[], "Weapon":[], "Ammo":[], "Misc":[], "Food":[]}
+        self.itemDict = {"Armor":[], "Weapon":[], "Ammo":[], "Materium":[], "Key":[], "Food":[], "Organic":[]}
         self.gearDict = {"Head":None, "Face":None, "Neck":[None, None], "Body Under":None, "Body Over":None, "About Body":None, "Hands":None, "Finger":[None, None], "Legs Under":None, "Legs Over":None, "Feet":None, "Left Hand":None, "Right Hand":None}
         self.cutLimbList = []
         self.dominantHand = "Right Hand"
@@ -2341,7 +2344,7 @@ class Player:
             elif randomCombatSkill == "Reload":
                 console.write("You need to reload first.", "24w1y", True)
 
-            elif isinstance(randomCombatSkill, Skill):
+            elif isinstance(randomCombatSkill, CombatSkill):
                 self.combatSkillCheck(console, galaxyList, player, currentRoom, randomCombatSkill, 1, mobKey, directionKey, directionCount)
 
     def combatSkillCheck(self, console, galaxyList, player, currentRoom, combatSkill, mobCount, mobKey, directionKey, directionCount, messageDataList=None):
@@ -3006,13 +3009,17 @@ class Player:
             targetPocket = "Weapon"
         elif targetPocketKey in ["ammo", "amm", "am", "a"]:
             targetPocket = "Ammo"
+        elif targetPocketKey in ["materium", "materiu", "materi", "mater", "mate", "mat", "ma", "m"]:
+            targetPocket = "Materium"
+        elif targetPocketKey in ["key", "ke", "k"]:
+            targetPocket = "Key"
         elif targetPocketKey in ["food", "foo", "fo", "f"]:
             targetPocket = "Food"
-        elif targetPocketKey in ["misc.", "misc", "mis", "mi", "m"]:
-            targetPocket = "Misc"
+        elif targetPocketKey in ["organic", "organi", "organ", "orga", "org", "or", "o"]:
+            targetPocket = "Organic"
 
         if targetPocket not in self.itemDict:
-            console.write("Open which bag? (Gear, Weapon, Ammo, Food, Misc.)", "14w2y1r4w2y6w2y4w2y4w2y4w1y1r", True)
+            console.write("Open which bag? (Gear, Weapon, Ammo, Materium, Food, Key)", "14w2y1r4w2y6w2y4w2y8w2y4w2y3w1r", True)
 
         else:
             displayList = []
@@ -3087,29 +3094,50 @@ class Player:
                     console.write(itemDisplayString + weaponStatusString + countString + modString, itemDisplayCode + weaponStatusCode + countCode + modCode)
 
     def displaySkills(self, console):
-        console.write("Skill List:", "10w1y", True)
-        console.write("--=======--", "1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y")
 
-        columnWidth = 25
-        displayString = ""
-        displayCode = ""
-        displayedList = []
-        for i, skill in enumerate(self.getCombatSkillList()):
-            if skill.name["String"] not in displayedList:
-                displayString += skill.name["String"]
-                if self.skillWeaponCheck(skill):
-                    displayCode += str(len(skill.name["String"])) + "w"
-                else:
-                    displayCode += str(len(skill.name["String"])) + "dda"
-                if i % 2 == 0:
-                    for ii in range(columnWidth - len(skill.name["String"])):
-                        displayString += " "
-                        displayCode += "1w"
-                if i % 2 == 1 or i == len(self.getCombatSkillList()) - 1:
-                    console.write(displayString, displayCode)
-                    displayString = ""
-                    displayCode = ""
-                displayedList.append(skill.name["String"])
+        # Calculate Data #
+        longestString = [0, 0, 0]
+        for s, skill in enumerate(self.weaponSkillList):
+            if len(skill.name["String"]) > longestString[s % 3]:
+                longestString[s % 3] = len(skill.name["String"])
+
+        # Display To Screen #
+        console.write("  *=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=*", "3dr1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1dr", True)
+        console.write("  | Skill Proficiencies:                                |", "4ddy" + "1w5ddw1w12ddw1y32w" + "1ddy")
+        console.write("  *=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=*", "3dr1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1dr")
+
+        displayString = " "
+        displayCode = "1w"
+        for s, skill in enumerate(self.weaponSkillList):
+            blank1String = ""
+            blank2String = ""
+            endString = ""
+            endCode = ""
+            if s % 3 == 2 or s == len(self.weaponSkillList) - 1:
+                endString = " | "
+                endCode = "3ddy"
+            for i in range(longestString[s % 3] - len(skill.name["String"])):
+                blank1String += " "
+            for i in range(12 - longestString[s % 3] + (2 - len(str(skill.learnPercent)))):
+                blank2String += " "
+            displayString += " | " + blank1String + skill.name["String"] + blank2String + str(skill.learnPercent) + "%" + endString
+            displayCode += "3ddy" + str(len(blank1String)) + "w" + skill.name["Code"] + str(len(blank2String)) + "w" + str(len(str(skill.learnPercent))) + "w1y" + endCode
+
+            if s == len(self.weaponSkillList) - 1 and s % 3 != 2:
+                for i in range(2 - (s % 3)):
+                    displayString += "                | "
+                    displayCode += "16w2ddy"
+
+            if s % 3 == 2 or s == len(self.weaponSkillList) - 1:
+                console.write(displayString, displayCode)
+                displayString = " "
+                displayCode = "1w"
+
+        console.write("  *=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=*", "3dr1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1dr")
+        # console.write("  | Unarmed Skills:                                     |", "4ddy" + "1w5ddw1w12ddw1y27w" + "1ddy")
+        # console.write("  *=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=*", "3dr1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1dr")
+
+        console.write("", "")
 
     def displayGear(self, console, galaxyList, player, currentRoom, descriptionCheck=False):
         gearSlotDisplayDict = {"Body Under":{"String":"(Under) Body", "Code":"1r1w4ddw2r4w"}, "Body Over":{"String":"(Over) Body", "Code":"1r1w3ddw2r4w"}, "Legs Under":{"String":"(Under) Legs", "Code":"1r1w4ddw2r4w"}, "Legs Over":{"String":"(Over) Legs", "Code":"1r1w3ddw2r4w"}, "Left Hand":{"String":"L-Hand", "Code":"1w1y4w"}, "Right Hand":{"String":"R-Hand", "Code":"1w1y4w"}}

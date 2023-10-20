@@ -1,5 +1,5 @@
 import copy
-from GameData.Skill import Skill
+from GameData.Player.CombatSkill import CombatSkill
 from Components.Utility import appendKeyList
 from Components.Utility import getCountString
 
@@ -125,7 +125,7 @@ class Item:
                 self.name = {"String":"Shield", "Code":"1w5ddw"}
                 self.pocket = "Weapon"
                 self.weaponType = "Shield"
-                self.skillList.append(Skill(10))
+                self.skillList.append(CombatSkill(10))
             elif num == 103:
                 self.name = {"String":"Lance", "Code":"1w4ddw"}
                 self.pocket = "Weapon"
@@ -173,6 +173,35 @@ class Item:
                 self.ranged = True
                 self.shellCapacity = 5
                 self.ammoType = "12 Gauge"
+            elif num == 110:
+                self.name = {"String":"Dagger", "Code":"6w"}
+                self.pocket = "Weapon"
+                self.weaponType = "Dagger"
+            elif num == 111:
+                self.prefix = "An"
+                self.name = {"String":"Axe", "Code":"3w"}
+                self.pocket = "Weapon"
+                self.weaponType = "Axe"
+            elif num == 112:
+                self.name = {"String":"Mace", "Code":"4w"}
+                self.pocket = "Weapon"
+                self.weaponType = "Blunt"
+            elif num == 113:
+                self.name = {"String":"Spear", "Code":"5w"}
+                self.pocket = "Weapon"
+                self.weaponType = "Polearm"
+            elif num == 114:
+                self.name = {"String":"Bow", "Code":"3w"}
+                self.pocket = "Weapon"
+                self.weaponType = "Bow"
+            elif num == 115:
+                self.name = {"String":"Grenade", "Code":"7w"}
+                self.pocket = "Weapon"
+                self.weaponType = "Explosive"
+            elif num == 116:
+                self.name = {"String":"Shurikan", "Code":"8w"}
+                self.pocket = "Weapon"
+                self.weaponType = "Throwable"
 
         # Ammo & Magazines (201 - 300) #
         if self.name["String"] == "Debug Item":
@@ -220,6 +249,20 @@ class Item:
                 self.pocket = "Ammo"
                 self.ammoType = "5.56"
 
+        # Materium (301 - 500) #
+        if self.name["String"] == "Debug Item":
+            if num == 301:
+                self.name = {"String":"Fire Materium", "Code":"13w"}
+                self.pocket = "Materium"
+
+        # Keys (701 - 800) #
+        if self.name["String"] == "Debug Item":
+            if num == 701:
+                self.name = {"String":"Silver Keycard", "Code":"1ddw1dw1w1ddw1dw1w8w"}
+                self.pocket = "Key"
+                appendKeyList(self.keyList, "card")
+                self.flags["Password List"] = ["COTU Spaceport"]
+
         # Food (801 - 900) #
         if self.name["String"] == "Debug Item":
             if num == 801:
@@ -235,13 +278,9 @@ class Item:
                 self.name = {"String":"Cookie", "Code":"6w"}
                 self.pocket = "Food"
 
-        # Other (901 - 1000) #
+        # Misc. (901 - 1000) #
         if self.name["String"] == "Debug Item":
-            if num == 901:
-                self.name = {"String":"Silver Keycard", "Code":"1ddw1dw1w1ddw1dw1w8w"}
-                appendKeyList(self.keyList, "card")
-                self.flags["Password List"] = ["COTU Spaceport"]
-            elif num == 902:
+            if num == 902:
                 self.prefix = "An"
                 self.name = {"String":"Ornate Chest", "Code":"1y1dy1ddy1dddy1ddy1dy1w1ddo4dddo"}
                 self.roomDescription = {"String":"sits on the ground.", "Code":"18w1y"}
@@ -263,11 +302,12 @@ class Item:
                 self.roomDescription = {"String":"is attatched to the wall.", "Code":"24w1y"}
                 self.flags["No Get"] = True
                 self.buttonList = []
-            elif num == 906:
-                self.name = {"String":"Fast Food Menu", "Code":"14w"}
-                self.roomDescription = {"String":"is attatched to the wall.", "Code":"24w1y"}
-                self.flags["No Get"] = True
-                self.buttonList = []
+
+        # Organic (1001 - 1100) #
+        if self.name["String"] == "Debug Item":
+            if self.num == 1001:
+                self.name = {"String":"Seed", "Code":"4w"}
+                self.pocket = "Organic"
 
         # Special Items #
         if self.name["String"] == "Debug Item":

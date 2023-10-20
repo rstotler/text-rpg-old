@@ -1,4 +1,4 @@
-from GameData.Skill import Skill
+from GameData.Player.CombatSkill import CombatSkill
 from GameData.Item.Item import Item
 from Components.Utility import appendKeyList
 from Components.Utility import getTargetUserString
@@ -21,7 +21,7 @@ class Button:
 
     def push(self, console, player, targetUser, currentRoom):
         if self.type == "Spawn Mob" and "Num" in self.flags:
-            from GameData.Player import Player
+            from GameData.Player.Player import Player
             galaxyNum = currentRoom.galaxy
             systemNum = currentRoom.system
             planetNum = currentRoom.planet
@@ -36,7 +36,7 @@ class Button:
             if "Skill List" in self.flags:
                 spawnedMob.combatSkillList = []
                 for skillNum in self.flags["Skill List"]:
-                    spawnedMob.combatSkillList.append(Skill(skillNum))
+                    spawnedMob.combatSkillList.append(CombatSkill(skillNum))
 
             if "Gear Dict" in self.flags:
                 for gearSlot in self.flags["Gear Dict"]:

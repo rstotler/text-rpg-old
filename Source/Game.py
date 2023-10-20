@@ -4,8 +4,9 @@ from Screen.Console import Console
 from Screen.InputBar import InputBar
 from Screen.Map import Map
 from Components.Keyboard import Keyboard
-from GameData.Player import Player
-from GameData.Skill import Skill
+from GameData.Player.Player import Player
+from GameData.Player.Action import Action
+from GameData.Player.CombatSkill import CombatSkill
 from GameData.World.Galaxy import Galaxy
 from GameData.World.SolarSystem import SolarSystem
 from GameData.World.Planet import Planet
@@ -14,7 +15,6 @@ from GameData.World.Room import Room
 from GameData.World.Spaceship import Spaceship
 from GameData.Item.Item import Item
 from GameData.Item.Button import Button
-from GameData.Action import Action
 from Components.Utility import stringIsNumber
 
 # To Do List:
@@ -26,9 +26,14 @@ from Components.Utility import stringIsNumber
     # Move Direction '#'
     # Counter-Attack (Passive Skill)
     # Bleeding
-    # Jab(?)
+    # Jab, Kick, Sweep(?)
     # ensure mob cant use cut limbs to attack
     # add mob to player target list if mob attacks first (agro mobs)
+    # attacks with knockback
+    # mob vs mob combat
+    # gun mods
+    # somethin wrong w heal spells
+    # let player do all spells in rooms without mobs
 
 class Game:
 
@@ -313,8 +318,8 @@ class Game:
         # self.inputBar.inputList = ["n", "n", "w", "get sniper from cab", "get 5.56 from cab", "get 5.56 from cab", "get 5.56 from cab", "e", "s", "s", "wear sni", "reload"]
         # self.inputBar.inputList = ["n", "n", "w", "get key from chest", "e", "s", "s", "s", "s", "board ship", "n"]
         self.inputBar.inputList = ["s", "e", "u", "n"]
-        self.player.combatSkillList = [Skill(1), Skill(2), Skill(3), Skill(4), Skill(5), Skill(6), Skill(7), Skill(8), Skill(9), Skill(11), Skill(12), Skill(13), Skill(14), Skill(15)]
-        self.player.itemDict["Misc"].append(Item(901))
+        self.player.combatSkillList = [CombatSkill(1), CombatSkill(2), CombatSkill(3), CombatSkill(4), CombatSkill(5), CombatSkill(6), CombatSkill(7), CombatSkill(8), CombatSkill(9), CombatSkill(11), CombatSkill(12), CombatSkill(13), CombatSkill(14), CombatSkill(15)]
+        self.player.itemDict["Key"].append(Item(701))
         self.player.gearDict["Finger"][0] = Item(8)
 
     def draw(self, window):
@@ -401,7 +406,7 @@ class Game:
 
     def processInputBarCommand(self, input):
         directionStringList = ["north", "nort", "nor", "no", "n", "east", "eas", "ea", "e", "south", "sout", "sou", "so", "s", "west", "wes", "we", "w", "up", "u", "down", "dow", "do", "d"]
-        combatSkill, parsedCombatInput = Skill.parseSkillString(input.lower(), self.player.getCombatSkillList())
+        combatSkill, parsedCombatInput = CombatSkill.parseSkillString(input.lower(), self.player.getCombatSkillList())
         currentRoom = Room.exists(self.galaxyList, self.player.spaceship, self.player.galaxy, self.player.system, self.player.planet, self.player.area, self.player.room)
         if currentRoom == None:
             currentRoom = self.galaxyList[0].systemList[0].planetList[0].areaList[0].roomList[0]

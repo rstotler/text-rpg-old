@@ -1,11 +1,10 @@
 import random
+from GameData.Player.Skill import Skill
 
-class Skill:
+class CombatSkill(Skill):
 
     def __init__(self, num):
-        self.num = num
-        self.name = {"String":"Debug Skill", "Code":"11w"}
-        self.keyList = []
+        Skill.__init__(self, num)
         
         self.weaponTypeList = []
         self.weaponDataList = []
@@ -22,11 +21,11 @@ class Skill:
 
         self.ruleDict = {}
 
-        self.loadSkill(num)
+        self.loadCombatSkill(num)
 
-    def loadSkill(self, num):
+    def loadCombatSkill(self, num):
 
-        # Combat #
+        # Combat (1 - 500) #
         # "All Only" Skills Hit Everyone (Ignore Team Damage/Heal Enemies)
         if num == 1:
             self.name = {"String":"Punch", "Code":"5w"}
