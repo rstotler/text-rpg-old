@@ -10,8 +10,10 @@ class Map:
         self.surface.fill([10, 30, 70])
         self.font = pygame.font.Font("../Assets/Fonts/CodeNewRomanB.otf", 12)
 
-        self.cellSize = 32
-        self.sizeRatioList = [1.0, .72, .50, .30, .18, .12]
+        self.screenLevel = "Area"
+
+        self.cellSize = 48
+        self.sizeRatioList = [1.0, .72, .50, .30, .18]
 
         self.surfaceMapDict = None
         self.surfaceCell = None
@@ -21,6 +23,9 @@ class Map:
         
         self.zoomLevel = 0
         self.mapCellSizeList = None
+
+        self.targetSystem = None
+        self.surfaceSystemDict = None
 
         self.init()
 
@@ -46,7 +51,7 @@ class Map:
         pygame.draw.line(self.surfaceDoor["South"], [50, 50, 50], [0, self.cellSize], [self.cellSize, self.cellSize], 3)
         pygame.draw.line(self.surfaceDoor["West"], [50, 50, 50], [0, 0], [0, self.cellSize], 3)
 
-    def loadMap(self, area):
+    def loadAreaMap(self, area):
 
         # Draw Default Map #
         if True:
@@ -83,7 +88,16 @@ class Map:
                 self.surfaceMapPlayerIconDict[i] = pygame.Surface([defaultRect.width, defaultRect.height], pygame.SRCALPHA, 32)
                 playerIconLoc = [int(round(defaultRect.width / 2)), int(round(defaultRect.height / 2))]
                 pygame.draw.circle(self.surfaceMapPlayerIconDict[i], [170, 10, 10], playerIconLoc, int(round(10 * sizeRatio)))
-                
+            
+    def loadSystemMap(self, system):
+        self.targetSystem = system
+        
+    def toggle(self, keyName):
+        if self.screenLevel == "Area":
+            self.screenLevel = "System"
+        else:
+            self.screenLevel = "Area"
+
     def moveMouseWheel(self, targetDirNum, player):
         if targetDirNum > 1 : targetDirNum = 1
         elif targetDirNum < -1 : targetDirNum = -1
@@ -92,6 +106,12 @@ class Map:
             self.zoomLevel += targetDirNum
 
     def draw(self, window, galaxyList, player):
+        if self.screenLevel == "Area":
+            self.drawAreaMap(window, galaxyList, player)
+        elif self.screenLevel == "System":
+            self.drawSystemMap(window, galaxyList, player)
+        
+    def drawAreaMap(self, window, galaxyList, player):
         targetArea, targetRoom = Room.getAreaAndRoom(galaxyList, player)
         defaultRect = self.surface.get_rect()
         mapCellSize = self.mapCellSizeList[self.zoomLevel]
@@ -101,8 +121,7 @@ class Map:
         
         if self.surfaceMapDict != None:
             self.surface.fill([10, 10, 30])
-            if self.zoomLevel in self.surfaceMapDict:
-                self.surface.blit(self.surfaceMapDict[self.zoomLevel], mapDisplayLoc)
+            self.surface.blit(self.surfaceMapDict[self.zoomLevel], mapDisplayLoc)
             self.surface.blit(self.surfaceMapPlayerIconDict[self.zoomLevel], [0, 0])
                 
         targetPlanet = None
@@ -115,3 +134,27 @@ class Map:
                 
         window.blit(self.surface, [600, 0])
         
+    def drawSystemMap(self, window, galaxyList, player):
+        import math
+        self.surface.fill([10, 10, 10])
+        
+        distance = 0
+        for p, planet in enumerate(self.targetSystem.planetList):
+            orbitMod = 1
+            if planet.orbit == "Clockwise":
+                orbitMod = -1
+
+            x = distance
+            y = 0
+            if planet.minutesInYear != 0:
+                x = math.cos(math.radians((planet.currentMinutesInYear / planet.minutesInYear) * 360)) * distance
+                y = ((math.sin(math.radians((planet.currentMinutesInYear / planet.minutesInYear) * 360)) * distance) / 1.5) * orbitMod
+
+            pygame.draw.circle(self.surface, planet.getDrawColor(), [100 + x, 100 + y], planet.getDrawRadius())
+            if p < len(self.targetSystem.planetList) - 1:
+                distance += planet.getDrawRadius() + self.targetSystem.planetList[p + 1].getDrawRadius() + 2
+                if p == 0 : distance += 6
+
+        writeFast("System: " + self.targetSystem.name["String"], [200, 200, 200], [0, 0], self.font, self.surface)
+        
+        window.blit(self.surface, [600, 0])

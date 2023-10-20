@@ -4,7 +4,7 @@ from Components.Utility import appendKeyList
 
 class Planet:
 
-    def __init__(self, galaxy, system, planet, name, type, distanceFromSun, minutesInDay, minutesInYear, axialTilt):
+    def __init__(self, galaxy, system, planet, name, type, distanceFromSun, minutesInDay, minutesInYear, axialTilt, diameter):
         self.galaxy = galaxy
         self.system = system
         self.planet = planet
@@ -19,6 +19,7 @@ class Planet:
         self.distanceFromSun = distanceFromSun
         self.orbit = "Counter Clockwise"
         self.axialTilt = axialTilt
+        self.diameter = diameter
 
         self.minutesInDay = minutesInDay
         self.minutesInYear = minutesInYear
@@ -131,3 +132,23 @@ class Planet:
                 if "Landing Site" in room.flags:
                     landingRoomDataList.append({"Area":area, "Room":room})
         return landingRoomDataList
+
+    def getDrawColor(self):
+        if self.type == "Star":
+            return [200, 150, 0]
+        elif self.diameter > 10000:
+            return [150, 0, 150]
+        elif self.diameter > 3500:
+            return [0, 0, 150]
+        else:
+            return [150, 0, 0]
+
+    def getDrawRadius(self):
+        if self.type == "Star":
+            return 12
+        elif self.diameter >= 10000:
+            return 9
+        elif self.diameter >= 3500:
+            return 6
+        else:
+            return 4

@@ -39,7 +39,7 @@ class InputBar:
                     self.input = ""            
 
         elif keyName == "return":
-            if len(self.input) > 0 and len(self.inputList) == 0 and not (game.player.getCombatAction() in ["Dodge", "Block"] or (len(game.player.actionList) > 0 and game.player.actionList[0].actionType in ["Stun", "Stumble"])):
+            if len(self.input) > 0 and len(self.inputList) == 0 and not (len(game.player.actionList) > 0 and game.player.actionList[0].actionType in ["Stun", "Stumble"]):
                 self.input = self.input.strip()
                 if len(self.input) > 0:
                     try:
@@ -55,6 +55,9 @@ class InputBar:
                     
                 self.input = ""
                 self.previousInputIndex = -1
+
+        elif keyName in ['[', ']']:
+            game.map.toggle(keyName)
 
         elif keyName in game.keyboard.keys:
             targetKey = game.keyboard.keys[keyName]
@@ -83,10 +86,12 @@ class InputBar:
         self.surface.fill([10, 30, 70])
         
         carrotColor = "y"
-        if (player.getCombatAction() != None and player.getCombatAction().name["String"] in ["Block", "Dodge"]) or (len(player.actionList) > 0 and player.actionList[0].actopmType in ["Stun", "Stumble"]):
+        if player.getCombatAction() != None and player.getCombatAction().name["String"] in ["Block", "Dodge"]:
+            carrotColor = "g"
+        elif len(player.actionList) > 0 and player.actionList[0].actionType in ["Stun", "Stumble"]:
             carrotColor = "r"
         elif player.inStunnedTargetRoom(galaxyList) == True:
-            carrotColor = "g"
+            carrotColor = "m"
         displayInput = self.input
         if len(displayInput) >= 57:
             displayInput = displayInput[-56:]

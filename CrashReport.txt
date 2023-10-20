@@ -1,18 +1,16 @@
 Traceback (most recent call last):
   File "D:\Codes\Python\Universe\Source\Screen\InputBar.py", line 50, in processInput
     game.processInputBarCommand(self.input)
-  File "D:\Codes\Python\Universe\Source\Game.py", line 1018, in processInputBarCommand
-    self.player.combatSkillCheck(self.console, self.galaxyList, self.player, currentRoom, combatSkill, mobCount, mobKey, None, None)
-  File "D:\Codes\Python\Universe\Source\GameData\Player.py", line 2399, in combatSkillCheck
-    flags = self.combatSkillFunction(player, combatSkill, currentRoom, targetRoom, roomDistance, mobKey, mobCount, directionKey, True, {})
-  File "D:\Codes\Python\Universe\Source\GameData\Player.py", line 2785, in combatSkillFunction
-    if mob.dodgeBlockCheck() == "Dodge":
-AttributeError: 'Player' object has no attribute 'dodgeBlockCheck'
+  File "D:\Codes\Python\Universe\Source\Game.py", line 1045, in processInputBarCommand
+    self.player.combatSkillCheck(self.console, self.galaxyList, self.player, currentRoom, combatSkill, None, None, None, None)
+  File "D:\Codes\Python\Universe\Source\GameData\Player.py", line 2426, in combatSkillCheck
+    self.console.write(messageData["String"], messageData["Code"], messageData["Draw Blank Line"])
+AttributeError: 'Player' object has no attribute 'console'
 
-Input: pun man
-Player Loc: [0, 0, 1, 0, 8]
+Input: pun
+Player Loc: [0, 0, 3, 0, 8]
 Player Spaceship: None
-Player Targets: 0
+Player Targets: 1
 Player Group: 0
 Player Inventory: 1
 Player Gear: 1

@@ -18,6 +18,8 @@ class Skill:
         self.cutLimbPercent = None
         self.onTarget = False
 
+        self.canBeStunned = False
+
         self.ruleDict = {}
 
         self.loadSkill(num)
@@ -29,11 +31,13 @@ class Skill:
         if num == 1:
             self.name = {"String":"Punch", "Code":"5w"}
             self.weaponTypeList = [["Open Hand"]]
+            self.canBeStunned = True
         elif num == 2:
             self.name = {"String":"Spin Fist", "Code":"9w"}
             self.weaponTypeList = [["Open Hand"], ["Open Hand"]]
             self.maxTargets = "All"
             self.offHandAttacks = False
+            self.canBeStunned = True
         elif num == 3:
             self.name = {"String":"Fireball", "Code":"8w"}
             self.maxRange = 2
@@ -65,16 +69,19 @@ class Skill:
             self.name = {"String":"Slash", "Code":"5w"}
             self.weaponTypeList = [["Sword", "Dagger", "Axe"]]
             self.cutLimbPercent = 10
+            self.canBeStunned = True
         elif num == 9:
             self.name = {"String":"Slash All", "Code":"9w"}
             self.weaponTypeList = [["Sword", "Axe"]]
             self.ruleDict["All Only"] = True
             self.offHandAttacks = False
             self.cutLimbPercent = 5
+            self.canBeStunned = True
             # self.maxTargets = "All" # Is Automatically Set Below
         elif num == 10:
             self.name = {"String":"Bash", "Code":"4w"}
             self.ruleDict["Gear Num List"] = [102]
+            self.canBeStunned = True
         elif num == 11:
             self.name = {"String":"Pray", "Code":"4w"}
             self.maxTargets = 1
@@ -96,8 +103,6 @@ class Skill:
             self.name = {"String":"Block", "Code":"5w"}
         elif num == 15:
             self.name = {"String":"Dodge", "Code":"5w"}
-        elif num == 16:
-            self.name = {"String":"Grapple", "Code":"7w"}
 
         if "All Only" in self.ruleDict:
             self.maxTargets = "All"
