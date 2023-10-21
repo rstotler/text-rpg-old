@@ -47,7 +47,7 @@ class Console:
             self.displayLine = len(self.lineList) - 32
 
     def write(self, displayString, displayCode, blankCheck=False):
-        if blankCheck == True:
+        if blankCheck == True and not (len(self.lineList) > 0 and "Blank" in self.lineList[0]):
             self.lineList.insert(0, {"Blank": True})
 
         if len(displayString) <= self.characterWidth:

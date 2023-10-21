@@ -3,7 +3,9 @@ from pygame import *
 from Screen.Console import Console
 from Screen.InputBar import InputBar
 from Screen.Map import Map
+from Screen.RoomScreen import RoomScreen
 from Components.Keyboard import Keyboard
+from GameData.Config import Config
 from GameData.Player.Player import Player
 from GameData.Player.Action import Action
 from GameData.Player.CombatSkill import CombatSkill
@@ -18,6 +20,7 @@ from GameData.Item.Button import Button
 from Components.Utility import stringIsNumber
 
 # To Do List:
+    # tropes - elemental planet energy, computer/hacking/simulation
     # Make Player Lose Sight Of Mobs On Darkness
     # Enemy groups
     # Auto-Loot
@@ -27,13 +30,18 @@ from Components.Utility import stringIsNumber
     # Counter-Attack (Passive Skill)
     # Bleeding
     # Jab, Kick, Sweep(?)
+    # skill trees?
+    # item polymorphism
     # ensure mob cant use cut limbs to attack
     # add mob to player target list if mob attacks first (agro mobs)
     # attacks with knockback
+    # attacks that knock mobs/player down
     # mob vs mob combat
-    # gun mods
+    # gun mods, scopes
     # somethin wrong w heal spells
-    # let player do all spells in rooms without mobs
+    # let player do 'all' spells in rooms without mobs
+    # add item skills to skill list
+    # moons
 
 class Game:
 
@@ -42,9 +50,11 @@ class Game:
         self.console = Console()
         self.inputBar = InputBar()
         self.map = Map()
+        self.roomScreen = RoomScreen()
 
         self.player = Player(0, 0, 3, 0, 1, None, None)
         self.galaxyList = []
+        self.config = Config()
 
         self.frameTick = 0
         
@@ -314,11 +324,17 @@ class Game:
         self.map.loadSystemMap(self.galaxyList[self.player.galaxy].systemList[self.player.system])
 
         # Test Variables #
-        # self.inputBar.inputList = ["n", "n", "w", "loot cab", "wear pis", "wear pis", "e", "s", "s", "reload"]
+        self.inputBar.inputList = ["n", "n", "w", "get pis from cab", "get pis from cab", "get 4 mag from cab", "drop 2 mag", "get 3 round from cab", "wear pis", "wear pis", "e", "s", "s", "reload"]
         # self.inputBar.inputList = ["n", "n", "w", "get sniper from cab", "get 5.56 from cab", "get 5.56 from cab", "get 5.56 from cab", "e", "s", "s", "wear sni", "reload"]
-        # self.inputBar.inputList = ["n", "n", "w", "get key from chest", "e", "s", "s", "s", "s", "board ship", "n"]
-        self.inputBar.inputList = ["s", "e", "u", "n"]
-        self.player.combatSkillList = [CombatSkill(1), CombatSkill(2), CombatSkill(3), CombatSkill(4), CombatSkill(5), CombatSkill(6), CombatSkill(7), CombatSkill(8), CombatSkill(9), CombatSkill(11), CombatSkill(12), CombatSkill(13), CombatSkill(14), CombatSkill(15)]
+        # self.inputBar.inputList = ["s", "s", "board ship", "n"]
+        # self.inputBar.inputList = ["s", "e", "u", "n"]
+        self.player.combatSkillDict["Unarmed"] = [CombatSkill(1), CombatSkill(2)]
+        self.player.combatSkillDict["Offensive Magic"] = [CombatSkill(3), CombatSkill(4), CombatSkill(5)]
+        self.player.combatSkillDict["Rifle"] = [CombatSkill(6), CombatSkill(7)]
+        self.player.combatSkillDict["Sword"] = [CombatSkill(8), CombatSkill(9)]
+        self.player.combatSkillDict["Healing Magic"] = [CombatSkill(11), CombatSkill(12)]
+        self.player.combatSkillDict["Pistol"] = [CombatSkill(13)]
+        self.player.combatSkillDict["Basic"] = [CombatSkill(14), CombatSkill(15)]
         self.player.itemDict["Key"].append(Item(701))
         self.player.gearDict["Finger"][0] = Item(8)
 
@@ -328,11 +344,12 @@ class Game:
         self.console.draw(window)
         self.inputBar.draw(window, self.galaxyList, self.player)
         self.map.draw(window, self.galaxyList, self.player)
+        self.roomScreen.draw(window, self.galaxyList, self.player)
 
     def update(self, window):
         self.processInput()
         self.inputBar.update(self)
-
+        
         if self.frameTick == 0:
             self.galaxyList[self.player.galaxy].systemList[self.player.system].update(self.galaxyList, self.player, self.console)
             playerArea, playerRoom = Room.getAreaAndRoom(self.galaxyList, self.player)
@@ -345,10 +362,10 @@ class Game:
             
             messageDataList = []
             playerArea.update(self.console)
-            messageDataList = self.player.update(self.console, self.map, self.galaxyList, self.player, playerRoom, messageDataList)
+            messageDataList = self.player.update(self.config, self.console, self.map, self.galaxyList, self.player, playerRoom, messageDataList)
             for room in updateRoomList:
                 for mob in room.mobList:
-                    messageDataList = mob.update(self.console, self.map, self.galaxyList, self.player, room, messageDataList)
+                    messageDataList = mob.update(self.config, self.console, self.map, self.galaxyList, self.player, room, messageDataList)
             for messageData in messageDataList:
                 self.console.write(messageData["String"], messageData["Code"], messageData["Draw Blank Line"])
                 
@@ -921,11 +938,11 @@ class Game:
             # Attack Mob #
             if len(input.split()) > 1:
                 mobKey = ' '.join(input.lower().split()[1::])
-                self.player.attackCheck(self.console, self.galaxyList, self.player, currentRoom, mobKey)
+                self.player.attackCheck(self.config, self.console, self.galaxyList, self.player, currentRoom, mobKey)
 
             # Attack #
             else:
-                self.player.attackCheck(self.console, self.galaxyList, self.player, currentRoom, None)
+                self.player.attackCheck(self.config, self.console, self.galaxyList, self.player, currentRoom, None)
 
         # Combat Skill #
         elif combatSkill != None:
@@ -937,7 +954,7 @@ class Game:
                 mobKey = ' '.join(parsedCombatInput[1:-2])
                 directionKey = parsedCombatInput[-2]
                 directionCount = int(parsedCombatInput[-1])
-                self.player.combatSkillCheck(self.console, self.galaxyList, self.player, currentRoom, combatSkill, mobCount, mobKey, directionKey, directionCount)
+                self.player.combatSkillCheck(self.config, self.console, self.galaxyList, self.player, currentRoom, combatSkill, mobCount, mobKey, directionKey, directionCount)
 
             # Skill All/Group Mob Direction '#' #
             elif len(parsedCombatInput) > 3 and parsedCombatInput[0] in ["all", "group"] and parsedCombatInput[-2] in directionStringList and stringIsNumber(parsedCombatInput[-1]) and int(parsedCombatInput[-1]) > 0:
@@ -946,7 +963,7 @@ class Game:
                 mobKey = ' '.join(parsedCombatInput[1:-2])
                 directionKey = parsedCombatInput[-2]
                 directionCount = int(parsedCombatInput[-1])
-                self.player.combatSkillCheck(self.console, self.galaxyList, self.player, currentRoom, combatSkill, mobCount, mobKey, directionKey, directionCount)
+                self.player.combatSkillCheck(self.config, self.console, self.galaxyList, self.player, currentRoom, combatSkill, mobCount, mobKey, directionKey, directionCount)
 
             # Skill All/Group Direction '#' #
             elif len(parsedCombatInput) == 3 and parsedCombatInput[0] in ["all", "group"] and parsedCombatInput[1] in directionStringList and stringIsNumber(parsedCombatInput[2]) and int(parsedCombatInput[2]) > 0:
@@ -955,7 +972,7 @@ class Game:
                 mobKey = "All"
                 directionKey = parsedCombatInput[-2]
                 directionCount = int(parsedCombatInput[-1])
-                self.player.combatSkillCheck(self.console, self.galaxyList, self.player, currentRoom, combatSkill, mobCount, mobKey, directionKey, directionCount)
+                self.player.combatSkillCheck(self.config, self.console, self.galaxyList, self.player, currentRoom, combatSkill, mobCount, mobKey, directionKey, directionCount)
 
             # Skill Mob Direction '#' #
             elif len(parsedCombatInput) > 2 and parsedCombatInput[-2] in directionStringList and stringIsNumber(parsedCombatInput[-1]) and int(parsedCombatInput[-1]) > 0:
@@ -963,7 +980,7 @@ class Game:
                 mobKey = ' '.join(parsedCombatInput[0:-2])
                 directionKey = parsedCombatInput[-2]
                 directionCount = int(parsedCombatInput[-1])
-                self.player.combatSkillCheck(self.console, self.galaxyList, self.player, currentRoom, combatSkill, mobCount, mobKey, directionKey, directionCount)
+                self.player.combatSkillCheck(self.config, self.console, self.galaxyList, self.player, currentRoom, combatSkill, mobCount, mobKey, directionKey, directionCount)
 
             # Skill '#' Mob Direction #
             elif len(parsedCombatInput) > 2 and stringIsNumber(parsedCombatInput[0]) and int(parsedCombatInput[0]) > 0 and parsedCombatInput[-1] in directionStringList:
@@ -971,7 +988,7 @@ class Game:
                 mobKey = ' '.join(parsedCombatInput[1:-1])
                 directionKey = parsedCombatInput[-1]
                 directionCount = 1
-                self.player.combatSkillCheck(self.console, self.galaxyList, self.player, currentRoom, combatSkill, mobCount, mobKey, directionKey, directionCount)
+                self.player.combatSkillCheck(self.config, self.console, self.galaxyList, self.player, currentRoom, combatSkill, mobCount, mobKey, directionKey, directionCount)
 
             # Skill All/Group Mob Direction #
             elif len(parsedCombatInput) > 2 and parsedCombatInput[0] in ["all", "group"] and parsedCombatInput[-1] in directionStringList:
@@ -980,7 +997,7 @@ class Game:
                 mobKey = ' '.join(parsedCombatInput[1:-1])
                 directionKey = parsedCombatInput[-1]
                 directionCount = 1
-                self.player.combatSkillCheck(self.console, self.galaxyList, self.player, currentRoom, combatSkill, mobCount, mobKey, directionKey, directionCount)
+                self.player.combatSkillCheck(self.config, self.console, self.galaxyList, self.player, currentRoom, combatSkill, mobCount, mobKey, directionKey, directionCount)
 
             # Skill All/Group Direction #
             elif len(parsedCombatInput) == 2 and parsedCombatInput[0] in ["all", "group"] and parsedCombatInput[1] in directionStringList:
@@ -989,7 +1006,7 @@ class Game:
                 mobKey = "All"
                 directionKey = parsedCombatInput[-1]
                 directionCount = 1
-                self.player.combatSkillCheck(self.console, self.galaxyList, self.player, currentRoom, combatSkill, mobCount, mobKey, directionKey, directionCount)
+                self.player.combatSkillCheck(self.config, self.console, self.galaxyList, self.player, currentRoom, combatSkill, mobCount, mobKey, directionKey, directionCount)
 
             # Skill Mob Direction #
             elif len(parsedCombatInput) > 1 and parsedCombatInput[-1] in directionStringList:
@@ -997,7 +1014,7 @@ class Game:
                 mobKey = ' '.join(parsedCombatInput[0:-1])
                 directionKey = parsedCombatInput[-1]
                 directionCount = 1
-                self.player.combatSkillCheck(self.console, self.galaxyList, self.player, currentRoom, combatSkill, mobCount, mobKey, directionKey, directionCount)
+                self.player.combatSkillCheck(self.config, self.console, self.galaxyList, self.player, currentRoom, combatSkill, mobCount, mobKey, directionKey, directionCount)
 
             # Skill Direction '#' #
             elif len(parsedCombatInput) == 2 and parsedCombatInput[0] in directionStringList and stringIsNumber(parsedCombatInput[1]) and int(parsedCombatInput[1]) > 0:
@@ -1005,27 +1022,27 @@ class Game:
                 mobKey = "All"
                 directionKey = parsedCombatInput[0]
                 directionCount = int(parsedCombatInput[1])
-                self.player.combatSkillCheck(self.console, self.galaxyList, self.player, currentRoom, combatSkill, mobCount, mobKey, directionKey, directionCount)
+                self.player.combatSkillCheck(self.config, self.console, self.galaxyList, self.player, currentRoom, combatSkill, mobCount, mobKey, directionKey, directionCount)
 
             # Skill '#' Mob #
             elif len(parsedCombatInput) > 1 and stringIsNumber(parsedCombatInput[0]) and int(parsedCombatInput[0]) > 0:
                 mobCount = int(parsedCombatInput[0])
                 mobKey = ' '.join(parsedCombatInput[1::])
-                self.player.combatSkillCheck(self.console, self.galaxyList, self.player, currentRoom, combatSkill, mobCount, mobKey, None, None)
+                self.player.combatSkillCheck(self.config, self.console, self.galaxyList, self.player, currentRoom, combatSkill, mobCount, mobKey, None, None)
 
             # Skill All/Group Mob #
             elif len(parsedCombatInput) > 1 and parsedCombatInput[0] in ["all", "group"]:
                 if parsedCombatInput[0] == "all" : mobCount = "All"
                 else : mobCount = "Group"
                 mobKey = ' '.join(parsedCombatInput[1::])
-                self.player.combatSkillCheck(self.console, self.galaxyList, self.player, currentRoom, combatSkill, mobCount, mobKey, None, None)
+                self.player.combatSkillCheck(self.config, self.console, self.galaxyList, self.player, currentRoom, combatSkill, mobCount, mobKey, None, None)
             
             # Skill All/Group #
             elif len(parsedCombatInput) == 1 and parsedCombatInput[0] in ["all", "group"]:
                 if parsedCombatInput[0] == "all" : mobCount = "All"
                 else : mobCount = "Group"
                 mobKey = "All"
-                self.player.combatSkillCheck(self.console, self.galaxyList, self.player, currentRoom, combatSkill, mobCount, mobKey, None, None)
+                self.player.combatSkillCheck(self.config, self.console, self.galaxyList, self.player, currentRoom, combatSkill, mobCount, mobKey, None, None)
 
             # Skill Direction #
             elif len(parsedCombatInput) == 1 and parsedCombatInput[0] in directionStringList:
@@ -1033,18 +1050,18 @@ class Game:
                 mobKey = "All"
                 directionKey = parsedCombatInput[0]
                 directionCount = 1
-                self.player.combatSkillCheck(self.console, self.galaxyList, self.player, currentRoom, combatSkill, mobCount, mobKey, directionKey, directionCount)
+                self.player.combatSkillCheck(self.config, self.console, self.galaxyList, self.player, currentRoom, combatSkill, mobCount, mobKey, directionKey, directionCount)
 
             # Skill Mob/Self #
             elif len(parsedCombatInput) > 0:
                 mobCount = 1
                 mobKey = ' '.join(parsedCombatInput)
                 if mobKey == "self" : mobKey = "Self"
-                self.player.combatSkillCheck(self.console, self.galaxyList, self.player, currentRoom, combatSkill, mobCount, mobKey, None, None)
+                self.player.combatSkillCheck(self.config, self.console, self.galaxyList, self.player, currentRoom, combatSkill, mobCount, mobKey, None, None)
 
             # Skill #
             elif parsedCombatInput == []:
-                self.player.combatSkillCheck(self.console, self.galaxyList, self.player, currentRoom, combatSkill, None, None, None, None)
+                self.player.combatSkillCheck(self.config, self.console, self.galaxyList, self.player, currentRoom, combatSkill, None, None, None, None)
             
         # Cast #
 
@@ -1219,12 +1236,17 @@ class Game:
             self.player.displayGear(self.console, self.galaxyList, self.player, currentRoom)
 
         # Skills #
-        elif len(input.split()) == 1 and input.lower() in ["skills", "skill", "skil", "ski", "sk"]:
-            self.player.displaySkills(self.console)
+        elif input.lower().split()[0] in ["skills", "skill", "skil", "ski", "sk"]:
+            if len(input.split()) > 1:
+                skillGroupKey = ' '.join(input.lower().split()[1::])
+                self.player.displaySkills(self.console, skillGroupKey)
+
+            else:
+                self.player.displaySkills(self.console, None)
 
         # Character/Status #
         elif len(input.split()) == 1 and input.lower() in ["status", "statu", "stat", "sta", "st"]:
-            self.player.displayStatus(self.console)
+            self.player.displayStatus(self.console, self.config)
 
         # Time #
         elif len(input.split()) == 1 and input.lower() in ["time", "tim", "ti"]:
@@ -1359,27 +1381,27 @@ class Game:
         ## Config/Setting Commands ##
         # Auto Loot #
         elif input.lower().split()[0] == "autoloot" or (len(input.split()) == 2 and input.lower().split()[0] == "auto" and input.lower().split()[1] == "loot"):
-            self.player.autoLoot = not self.player.autoLoot
+            self.config.autoLoot = not self.config.autoLoot
             self.console.write("Setting changed.", "15w1y", True)
 
         # Auto Reload #
         elif input.lower().split()[0] == "autoreload" or (len(input.split()) == 2 and input.lower().split()[0] == "auto" and input.lower().split()[1] == "reload"):
-            self.player.autoReload = not self.player.autoReload
+            self.config.autoReload = not self.config.autoReload
             self.console.write("Setting changed.", "15w1y", True)
 
         # Auto Combat #
         elif input.lower().split()[0] == "autocombat" or (len(input.split()) == 2 and input.lower().split()[0] == "auto" and input.lower().split()[1] == "combat"):
-            self.player.autoCombat = not self.player.autoCombat
+            self.config.autoCombat = not self.config.autoCombat
             self.console.write("Setting changed.", "15w1y", True)
 
         # Team Damage #
         elif input.lower().split()[0] == "teamdamage" or (len(input.split()) == 2 and input.lower().split()[0] == "team" and input.lower().split()[1] == "damage"):
-            self.player.teamDamage = not self.player.teamDamage
+            self.config.teamDamage = not self.config.teamDamage
             self.console.write("Setting changed.", "15w1y", True)
 
         # Heal Enemies #
         elif input.lower().split()[0] == "healenemies" or (len(input.split()) == 2 and input.lower().split()[0] == "heal" and input.lower().split()[1] == "enemies"):
-            self.player.healEnemies = not self.player.healEnemies
+            self.config.healEnemies = not self.config.healEnemies
             self.console.write("Setting changed.", "15w1y", True)
 
         ## God Commands ##

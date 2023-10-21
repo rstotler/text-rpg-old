@@ -48,24 +48,19 @@ class Planet:
 
                 if dayPercent >= self.dawnPercent and self.dawnMessage == False:
                     self.dawnMessage = True
-                    console.lineList.insert(0, {"Blank": True})
-                    console.lineList.insert(0, {"String":"The sky begins to lighten.", "Code":"4w1dc2ddc11w1dw6ddw1y"})
+                    console.write("The sky begins to lighten.", "4w1dc2ddc11w1dw6ddw1y", True)
                 elif dayPercent >= self.sunrisePercent and self.sunriseMessage == False:
                     self.sunriseMessage = True
-                    console.lineList.insert(0, {"Blank": True})
-                    console.lineList.insert(0, {"String":"The sun rises over the horizon.", "Code":"4w1dy2ddy16w1dw6ddw1y"})
+                    console.write("The sun rises over the horizon.", "4w1dy2ddy16w1dw6ddw1y", True)
                 elif dayPercent >= self.noonPercent and self.noonMessage == False:
                     self.noonMessage = True
-                    console.lineList.insert(0, {"Blank": True})
-                    console.lineList.insert(0, {"String":"It's noon.", "Code":"2w1y6w1y"})
+                    console.write("It's noon.", "2w1y6w1y", True)
                 elif dayPercent >= self.duskPercent and self.duskMessage == False:
                     self.duskMessage = True
-                    console.lineList.insert(0, {"Blank": True})
-                    console.lineList.insert(0, {"String":"The sun begins to set.", "Code":"4w1dy2ddy11w1dw2ddw1y"})
+                    console.write("The sun begins to set.", "4w1dy2ddy11w1dw2ddw1y", True)
                 elif dayPercent >= self.sunsetPercent and self.sunsetMessage == False:
                     self.sunsetMessage = True
-                    console.lineList.insert(0, {"Blank": True})
-                    console.lineList.insert(0, {"String":"The sun sinks beyond the horizon.", "Code":"4w1dy2ddy18w1dw6ddw1y"})
+                    console.write("The sun sinks beyond the horizon.", "4w1dy2ddy18w1dw6ddw1y", True)
 
         self.updatePosition()
         if self.currentMinutesInDay >= self.minutesInDay:

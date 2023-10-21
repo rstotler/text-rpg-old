@@ -33,10 +33,10 @@ class Player:
         self.roomDescription = {"String":"is standing here.", "Code":"16w1y"}
         self.keyList = []
 
-        self.weaponSkillList = [Skill(501), Skill(502), Skill(503), Skill(504), Skill(505), Skill(506), Skill(507), Skill(508), Skill(509), Skill(510), Skill(511)]
+        self.weaponSkillList = [Skill(1001), Skill(1002), Skill(1003), Skill(1004), Skill(1005), Skill(1006), Skill(1007), Skill(1008), Skill(1009), Skill(1010), Skill(1011)]
+        self.combatSkillDict = {"Basic":[], "Sword":[], "Dagger":[], "Axe":[], "Blunt":[], "Polearm":[], "Unarmed":[], "Bow":[], "Pistol":[], "Rifle":[], "Offensive Magic":[], "Defensive Magic":[]}
 
         self.actionList = []
-        self.combatSkillList = []
         self.stunList = []
         self.stunnedByList = []
 
@@ -55,12 +55,6 @@ class Player:
 
         self.emoteList = ["hmm", "hm", "nod", "nodnod", "tap", "boggle", "ahah", "jump", "gasp", "haha", "lol", "cheer", "smile", "swear", "sigh", "grin", "snicker", "whistle"]
 
-        self.autoLoot = False
-        self.autoReload = False
-        self.autoCombat = False
-        self.teamDamage = True
-        self.healEnemies = True
-
         self.debugDualWield = False
 
         # Mob-Specific Variables #
@@ -72,8 +66,8 @@ class Player:
         if num != None:
             self.loadMob(num)
 
-    def update(self, console, map, galaxyList, player, currentRoom, messageDataList):
-        messageDataList = self.updateAction(console, galaxyList, player, currentRoom, messageDataList)
+    def update(self, config, console, map, galaxyList, player, currentRoom, messageDataList):
+        messageDataList = self.updateAction(config, console, galaxyList, player, currentRoom, messageDataList)
         
         # Mob Update #
         if self.num != None:
@@ -107,7 +101,7 @@ class Player:
                             if directionToPlayer != None:
                                 directionKey = directionToPlayer
                                 directionCount = distanceToPlayer
-                            messageDataList = self.combatSkillCheck(console, galaxyList, player, currentRoom, targetSkill, 1, "Player", directionKey, directionCount, messageDataList)
+                            messageDataList = self.combatSkillCheck(config, console, galaxyList, player, currentRoom, targetSkill, 1, "Player", directionKey, directionCount, messageDataList)
 
             else:
 
@@ -124,10 +118,10 @@ class Player:
 
         return messageDataList
 
-    def updateAction(self, console, galaxyList, player, currentRoom, messageDataList):
+    def updateAction(self, config, console, galaxyList, player, currentRoom, messageDataList):
         if len(self.actionList) > 0:
             targetAction = self.actionList[0]
-            messageDataList = targetAction.update(console, galaxyList, player, self, currentRoom, messageDataList)
+            messageDataList = targetAction.update(config, console, galaxyList, player, self, currentRoom, messageDataList)
             if len(self.actionList) > 0 and targetAction.currentTick >= targetAction.maxTick:
                 del self.actionList[0]
 
@@ -160,8 +154,12 @@ class Player:
                     if currentRoom == None:
                         currentRoom = galaxyList[0].systemList[0].planetList[0].areaList[0].roomList[0]
                 elif currentRoom.exit[lookDir] == "Spaceship Exit":
-                    currentRoom = galaxyList[currentRoom.spaceshipObject.galaxy].systemList[currentRoom.spaceshipObject.system].planetList[currentRoom.spaceshipObject.planet].areaList[currentRoom.spaceshipObject.landedLocation[0]].roomList[currentRoom.spaceshipObject.landedLocation[1]]
-                    peerThroughDoorCheck = True
+                    if currentRoom.spaceshipObject.landedLocation != None:
+                        currentRoom = galaxyList[currentRoom.spaceshipObject.galaxy].systemList[currentRoom.spaceshipObject.system].planetList[currentRoom.spaceshipObject.planet].areaList[currentRoom.spaceshipObject.landedLocation[0]].roomList[currentRoom.spaceshipObject.landedLocation[1]]
+                        peerThroughDoorCheck = True
+                    else:
+                        messageType = "Outside Ship Door"
+                        break
 
         countString = ""
         countCode = ""
@@ -186,6 +184,12 @@ class Player:
                 console.write("You can't see any farther to the " + lookDir + "." + countString, "7w1y25w" + str(len(lookDir)) + "w1y" + countCode, drawBlankLine)
             elif messageType == "View Obstructed":
                 console.write("Your view to the " + lookDir + " is obstructed by a door." + countString, "17w" + str(len(lookDir)) + "w24w1y" + countCode, drawBlankLine)
+            elif messageType == "Outside Ship Door":
+                if currentRoom.spaceshipObject.launchLandTick == -1:
+                    console.write("You look outside and see an endless sea of stars.", "48w1y", True)
+                else:
+                    console.write("You don't see anything special.", "7w1y22w1y", True)
+                lookCheck = False
         if lookCheck:
             currentRoom.display(console, galaxyList, self)
     
@@ -2321,7 +2325,7 @@ class Player:
         else:
             self.stopActions(console, galaxyList, player)
     
-    def attackCheck(self, console, galaxyList, player, currentRoom, mobKey):
+    def attackCheck(self, config, console, galaxyList, player, currentRoom, mobKey):
         if mobKey == None and len(self.targetList) == 0:
             console.write("Attack who?", "10w1y", True)
         
@@ -2345,9 +2349,9 @@ class Player:
                 console.write("You need to reload first.", "24w1y", True)
 
             elif isinstance(randomCombatSkill, CombatSkill):
-                self.combatSkillCheck(console, galaxyList, player, currentRoom, randomCombatSkill, 1, mobKey, directionKey, directionCount)
+                self.combatSkillCheck(config, console, galaxyList, player, currentRoom, randomCombatSkill, 1, mobKey, directionKey, directionCount)
 
-    def combatSkillCheck(self, console, galaxyList, player, currentRoom, combatSkill, mobCount, mobKey, directionKey, directionCount, messageDataList=None):
+    def combatSkillCheck(self, config, console, galaxyList, player, currentRoom, combatSkill, mobCount, mobKey, directionKey, directionCount, messageDataList=None):
         if len(self.actionList) > 0 and self.actionList[0].actionType == "Combat Skill" and self.actionList[0].flags["combatSkill"].name["String"] in ["Dodge", "Block"]:
             self.actionList = []
             self.actionList.append(Action("Stumble", {}, 3))
@@ -2405,7 +2409,7 @@ class Player:
                 else:
                     drawBlankLine = self.stopActions(console, galaxyList, player)
                     
-                    flags = self.combatSkillFunction(player, combatSkill, currentRoom, targetRoom, roomDistance, mobKey, mobCount, directionKey, True, {})
+                    flags = self.combatSkillFunction(config, player, combatSkill, currentRoom, targetRoom, roomDistance, mobKey, mobCount, directionKey, True, {})
                     targetMob = flags["targetMob"]
                     selfSkill = flags["selfSkill"]
                     targetMobList = flags["targetMobList"]
@@ -2425,7 +2429,7 @@ class Player:
                     else:
                         actionFlags = {"combatSkill":combatSkill, "targetRoom":targetRoom, "roomDistance":roomDistance, "mobKey":mobKey, "mobCount":mobCount, "directionKey":directionKey, "targetDirection":targetDirection, "attackList":attackList}
                         if self.inStunnedTargetRoom(galaxyList) == True and combatSkill.maxTargets == 1 and combatSkill.healCheck == False:
-                            messageDataList = self.combatSkillCompleteAction(console, galaxyList, player, actionFlags, [])
+                            messageDataList = self.combatSkillCompleteAction(config, console, galaxyList, player, actionFlags, [])
                             for messageData in messageDataList:
                                 console.write(messageData["String"], messageData["Code"], messageData["Draw Blank Line"])
                         else:
@@ -2443,7 +2447,7 @@ class Player:
 
         return messageDataList
 
-    def combatSkillCompleteAction(self, console, galaxyList, player, flags, messageDataList):
+    def combatSkillCompleteAction(self, config, console, galaxyList, player, flags, messageDataList):
         if flags["combatSkill"].name["String"] in ["Dodge", "Block"]:
             pass
 
@@ -2472,7 +2476,7 @@ class Player:
                     if targetDirection != None:
                         targetDirection = Room.getOppositeDirection(targetDirection)
             
-            flags = self.combatSkillFunction(player, combatSkill, currentRoom, targetRoom, roomDistance, mobKey, mobCount, directionKey, False, flags)
+            flags = self.combatSkillFunction(config, player, combatSkill, currentRoom, targetRoom, roomDistance, mobKey, mobCount, directionKey, False, flags)
 
             if self.num != None:
                 self.actionList.append(Action("Buffer Action", {}, 2))
@@ -2728,7 +2732,7 @@ class Player:
 
         return messageDataList
 
-    def combatSkillFunction(self, player, combatSkill, currentRoom, targetRoom, roomDistance, mobKey, mobCount, directionKey, copyCheck, flags):
+    def combatSkillFunction(self, config, player, combatSkill, currentRoom, targetRoom, roomDistance, mobKey, mobCount, directionKey, copyCheck, flags):
         attackDisplayList = []                
 
         attackList = []
@@ -2773,14 +2777,14 @@ class Player:
         (allOnlyCheck == True \
         or \
         ((mobKey == "Self" or \
-        (mobKey == None and mobCount == None and (len(self.targetList) == 0 or self.healEnemies == False)) or \
+        (mobKey == None and mobCount == None and (len(self.targetList) == 0 or config.healEnemies == False)) or \
         (mobKey == "All" and directionKey == None)))):
             selfSkill = True
 
         targetMobList = []
         targetMob = None
         mobKillList = []
-        if not (combatSkill.healCheck == True and mobKey == None and mobCount == None and len(self.targetList) > 0 and self.healEnemies == False and allOnlyCheck == False):
+        if not (combatSkill.healCheck == True and mobKey == None and mobCount == None and len(self.targetList) > 0 and config.healEnemies == False and allOnlyCheck == False):
             if maxTargets > 0 and not (combatSkill.healCheck == True and mobKey == "Self" and allOnlyCheck == False):
                 if (targetRoom.sameRoomCheck(player) == True):
                     targetList = [player] + targetRoom.mobList
@@ -2793,8 +2797,8 @@ class Player:
                         (mobKey == None and mob in self.targetList) or \
                         (self.num != None and mobKey == "Player" and mob.num == None):
                             if allOnlyCheck == True or \
-                            (not (self.healEnemies == False and combatSkill.healCheck == True and mob not in self.recruitList) and \
-                            not (self.teamDamage == False and combatSkill.healCheck == False and mob in self.recruitList)):
+                            (not (config.healEnemies == False and combatSkill.healCheck == True and mob not in self.recruitList) and \
+                            not (config.teamDamage == False and combatSkill.healCheck == False and mob in self.recruitList)):
                                 if allOnlyCheck == True or not (mobCount == "Group" and mob not in self.recruitList):
                                     for i, attackSkill in enumerate(attackList):
                                         hitCheck = False
@@ -3093,51 +3097,92 @@ class Player:
                     weaponStatusString, weaponStatusCode = item.getWeaponStatusString()
                     console.write(itemDisplayString + weaponStatusString + countString + modString, itemDisplayCode + weaponStatusCode + countCode + modCode)
 
-    def displaySkills(self, console):
+    def displaySkills(self, console, targetGroupKey):
+        def displaySkillGroup(skillGroupLabel, skillList):
+            blankString = ""
+            for i in range(25 - len(skillGroupLabel["String"])):
+                blankString += " "
+            console.write("  *=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=*", "3dr1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1dr", True)
+            console.write("  | " + skillGroupLabel["String"] + ":" + blankString + "                          |", "4ddy" + skillGroupLabel["Code"] + "1y" + str(len(blankString)) + "w26w" + "1ddy")
+            if len(skillList) > 0:
+                console.write("  *=-=-=-=-=-=-=-=-=o=-=-=-=-=-=-=-=-=o=-=-=-=-=-=-=-=-=*", "3dr1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1dr")
+            else:
+                console.write("  *=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=*", "3dr1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1dr")
 
-        # Calculate Data #
-        longestString = [0, 0, 0]
-        for s, skill in enumerate(self.weaponSkillList):
-            if len(skill.name["String"]) > longestString[s % 3]:
-                longestString[s % 3] = len(skill.name["String"])
+            longestString = [0, 0, 0]
+            for s, skill in enumerate(skillList):
+                if len(skill.name["String"]) > longestString[s % 3]:
+                    longestString[s % 3] = len(skill.name["String"])
 
-        # Display To Screen #
-        console.write("  *=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=*", "3dr1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1dr", True)
-        console.write("  | Skill Proficiencies:                                |", "4ddy" + "1w5ddw1w12ddw1y32w" + "1ddy")
-        console.write("  *=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=*", "3dr1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1dr")
+            displayString = " "
+            displayCode = "1w"
+            for s, skill in enumerate(skillList):
+                blank1String = ""
+                blank2String = ""
+                endString = ""
+                endCode = ""
+                if s % 3 == 2 or s == len(skillList) - 1:
+                    endString = " | "
+                    endCode = "3ddy"
+                for i in range(longestString[s % 3] - len(skill.name["String"])):
+                    blank1String += " "
+                for i in range(12 - longestString[s % 3] + (2 - len(str(skill.learnPercent)))):
+                    blank2String += " "
+                displayString += " | " + blank1String + skill.name["String"] + blank2String + str(skill.learnPercent) + "%" + endString
+                displayCode += "3ddy" + str(len(blank1String)) + "w" + skill.name["Code"] + str(len(blank2String)) + "w" + str(len(str(skill.learnPercent))) + "w1y" + endCode
 
-        displayString = " "
-        displayCode = "1w"
-        for s, skill in enumerate(self.weaponSkillList):
-            blank1String = ""
-            blank2String = ""
-            endString = ""
-            endCode = ""
-            if s % 3 == 2 or s == len(self.weaponSkillList) - 1:
-                endString = " | "
-                endCode = "3ddy"
-            for i in range(longestString[s % 3] - len(skill.name["String"])):
-                blank1String += " "
-            for i in range(12 - longestString[s % 3] + (2 - len(str(skill.learnPercent)))):
-                blank2String += " "
-            displayString += " | " + blank1String + skill.name["String"] + blank2String + str(skill.learnPercent) + "%" + endString
-            displayCode += "3ddy" + str(len(blank1String)) + "w" + skill.name["Code"] + str(len(blank2String)) + "w" + str(len(str(skill.learnPercent))) + "w1y" + endCode
+                if s == len(skillList) - 1 and s % 3 != 2:
+                    for i in range(2 - (s % 3)):
+                        displayString += "                | "
+                        displayCode += "16w2ddy"
 
-            if s == len(self.weaponSkillList) - 1 and s % 3 != 2:
-                for i in range(2 - (s % 3)):
-                    displayString += "                | "
-                    displayCode += "16w2ddy"
+                if s % 3 == 2 or s == len(skillList) - 1:
+                    console.write(displayString, displayCode)
+                    displayString = " "
+                    displayCode = "1w"
 
-            if s % 3 == 2 or s == len(self.weaponSkillList) - 1:
-                console.write(displayString, displayCode)
-                displayString = " "
-                displayCode = "1w"
+            if len(skillList) == 0:
+                console.write("  | -None                                               |", "4ddy1y1w3ddw47w1ddy")
 
-        console.write("  *=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=*", "3dr1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1dr")
-        # console.write("  | Unarmed Skills:                                     |", "4ddy" + "1w5ddw1w12ddw1y27w" + "1ddy")
-        # console.write("  *=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=*", "3dr1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1dr")
+            if len(skillList) > 0:
+                console.write("  *=-=-=-=-=-=-=-=-=o=-=-=-=-=-=-=-=-=o=-=-=-=-=-=-=-=-=*", "3dr1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1dr")
+            else:
+                console.write("  *=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=*", "3dr1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1ddy1y1dr")
 
-        console.write("", "")
+        targetGroup = None
+        if targetGroupKey != None:
+            if targetGroupKey == "all" : targetGroup = None
+            elif targetGroupKey[0] in ["w", "p"] : targetGroup = "Weapon"
+            else:
+                for skillGroup in self.combatSkillDict:
+                    if targetGroupKey[0] == skillGroup[0].lower():
+                        targetGroup = skillGroup
+                        break
+
+        if targetGroup in [None, "Weapon"]:
+            skillGroupLabel = {"String":"Weapon Proficiencies", "Code":"1w6ddw1w12ddw"}
+            displaySkillGroup(skillGroupLabel, self.weaponSkillList)
+
+        for skillGroup in self.combatSkillDict:
+            if targetGroup in [None, skillGroup]:
+                lineBreak = False
+                drawEndLine = False
+                if skillGroup == "Basic":
+                    drawEndLine = True
+                elif skillGroup == "Sword":
+                    lineBreak = True
+                skillGroupString = skillGroup + " Skills"
+                skillGroupCode = ""
+                for n, name in enumerate(skillGroup.split()):
+                    spaceCode = ""
+                    if n != len(skillGroup.split()) - 1:
+                        spaceCode = "1w"
+                    skillGroupCode += "1w" + str(len(name) - 1) + "ddw" + spaceCode
+                skillGroupCode += "2w5ddw"
+                skillGroupLabel = {"String":skillGroupString, "Code":skillGroupCode}
+                displaySkillGroup(skillGroupLabel, self.combatSkillDict[skillGroup])
+            
+        console.lineList.insert(0, {"Blank": True})
 
     def displayGear(self, console, galaxyList, player, currentRoom, descriptionCheck=False):
         gearSlotDisplayDict = {"Body Under":{"String":"(Under) Body", "Code":"1r1w4ddw2r4w"}, "Body Over":{"String":"(Over) Body", "Code":"1r1w3ddw2r4w"}, "Legs Under":{"String":"(Under) Legs", "Code":"1r1w4ddw2r4w"}, "Legs Over":{"String":"(Over) Legs", "Code":"1r1w3ddw2r4w"}, "Left Hand":{"String":"L-Hand", "Code":"1w1y4w"}, "Right Hand":{"String":"R-Hand", "Code":"1w1y4w"}}
@@ -3209,32 +3254,32 @@ class Player:
         upperArmorCode = "12w2y" + defenseRatingCode
         console.write(upperArmorString, upperArmorCode, True)
 
-    def displayStatus(self, console):
+    def displayStatus(self, console, config):
         console.write("Player Status", "1w9ddw1w5ddw", True)
         console.write("--=========--", "1y1dy1y1dy1y1dy1y1dy1y1ddy1y1ddy1y")
 
         autoLootString  = "[ ]"
-        if self.autoLoot == True:
+        if config.autoLoot == True:
             autoLootString = "[X]"
         console.write(autoLootString + " - Auto Loot", "1y1dr1y3y9w")
 
         autoReloadString  = "[ ]"
-        if self.autoReload == True:
+        if config.autoReload == True:
             autoReloadString = "[X]"
         console.write(autoReloadString + " - Auto Reload", "1y1dr1y3y11w")
         
         autoCombatString  = "[ ]"
-        if self.autoCombat == True:
+        if config.autoCombat == True:
             autoCombatString = "[X]"
         console.write(autoCombatString + " - Auto Combat", "1y1dr1y3y11w")
         
         teamDamageString  = "[ ]"
-        if self.teamDamage == True:
+        if config.teamDamage == True:
             teamDamageString = "[X]"
         console.write(teamDamageString + " - Team Damage", "1y1dr1y3y11w")
         
         healEnemiesString  = "[ ]"
-        if self.healEnemies == True:
+        if config.healEnemies == True:
             healEnemiesString = "[X]"
         console.write(healEnemiesString + " - Heal Enemies", "1y1dr1y3y12w")
         
@@ -3256,11 +3301,9 @@ class Player:
             if currentPlanet.currentMinutesInDay >= currentPlanet.minutesInDay / 2:
                 amPmString = " P.M"
             amPmCode = "2w1y1w"
-            console.lineList.insert(0, {"Blank": True})
-            console.lineList.insert(0, {"String":"The time is " + str(hoursString) + ":" + str(minutesString) + amPmString + ".", "Code":"12w" + str(len(hoursString)) +"w1y" + str(len(minutesString)) + "w" + amPmCode + "1y"})
+            console.write("The time is " + str(hoursString) + ":" + str(minutesString) + amPmString + ".", "12w" + str(len(hoursString)) +"w1y" + str(len(minutesString)) + "w" + amPmCode + "1y", True)
         else:
-            console.lineList.insert(0, {"Blank": True})
-            console.lineList.insert(0, {"String":"The time is " + str(hoursString) + ":" + str(minutesString) + ".", "Code":"12w" + str(len(hoursString)) +"w1y" + str(len(minutesString)) + "w1y"})
+            console.write("The time is " + str(hoursString) + ":" + str(minutesString) + ".", "12w" + str(len(hoursString)) +"w1y" + str(len(minutesString)) + "w1y", True)
        
     def searchCheck(self, console, galaxyList, player, currentRoom, searchKey):
         searchData = None
@@ -3654,8 +3697,9 @@ class Player:
         # Gets An Entire List Of Skills (No Rules) #
 
         skillList = []
-        for skill in self.combatSkillList:
-            skillList.append(skill)
+        for skillGroup in self.combatSkillDict:
+            for skill in self.combatSkillDict[skillGroup]:
+                skillList.append(skill)
         for gearSlot in self.gearDict:
             if isinstance(self.gearDict[gearSlot], list):
                 gearList = self.gearDict[gearSlot]

@@ -11,26 +11,26 @@ class Skill:
 
     def loadSkill(self, num):
 
-        # Weapon Skill (501 - ???) #
-        if num == 501:
+        # Weapon Skill (1001 - ???) #
+        if num == 1001:
             self.name = {"String":"Swords", "Code":"1w5ddw"}
-        elif num == 502:
+        elif num == 1002:
             self.name = {"String":"Daggers", "Code":"1w6ddw"}
-        elif num == 503:
+        elif num == 1003:
             self.name = {"String":"Axes", "Code":"1w3ddw"}
-        elif num == 504:
+        elif num == 1004:
             self.name = {"String":"Blunt", "Code":"1w4ddw"}
-        elif num == 505:
+        elif num == 1005:
             self.name = {"String":"Polearms", "Code":"1w7ddw"}
-        elif num == 506:
+        elif num == 1006:
             self.name = {"String":"Unarmed", "Code":"1w6ddw"}
-        elif num == 507:
+        elif num == 1007:
             self.name = {"String":"Bows", "Code":"1w3ddw"}
-        elif num == 508:
+        elif num == 1008:
             self.name = {"String":"Pistols", "Code":"1w6ddw"}
-        elif num == 509:
+        elif num == 1009:
             self.name = {"String":"Rifles", "Code":"1w5ddw"}
-        elif num == 510:
+        elif num == 1010:
             self.name = {"String":"Explosives", "Code":"1w9ddw"}
-        elif num == 511:
+        elif num == 1011:
             self.name = {"String":"Throwing", "Code":"1w7ddw"}

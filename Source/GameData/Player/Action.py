@@ -10,7 +10,7 @@ class Action:
         self.currentTick = 0
         self.maxTick = maxTick
 
-    def update(self, console, galaxyList, player, target, targetRoom, messageDataList):
+    def update(self, config, console, galaxyList, player, target, targetRoom, messageDataList):
         self.currentTick += 1
         if self.currentTick >= self.maxTick:
             if self.actionType == "Reload":
@@ -18,7 +18,7 @@ class Action:
             elif self.actionType == "Unload":
                 target.unloadCompleteAction(console, self.flags)
             elif self.actionType == "Combat Skill":
-                messageDataList = target.combatSkillCompleteAction(console, galaxyList, player, self.flags, messageDataList)
+                messageDataList = target.combatSkillCompleteAction(config, console, galaxyList, player, self.flags, messageDataList)
             elif self.actionType == "Stumble":
                 target.stumbleCompleteAction(console, galaxyList, player, self.flags)
             elif self.actionType == "Stun":

@@ -229,6 +229,29 @@ def writeCrashReport(errorString, input, player):
         f.write("Player Loc: [" + str(player.galaxy) + ", " + str(player.system) + ", " + str(player.planet) + ", " + str(player.area) + ", " + str(player.room) + "]" + "\n")
         f.write("Player Spaceship: " + str(player.spaceship) + "\n")
         f.write("Player Targets: " + str(len(player.targetList)) + "\n")
-        f.write("Player Group: " + str(len(player.recruitList)) + "\n")
+        f.write("Player Group: " + str(len(player.recruitList)) + "\n\n")
+
         f.write("Player Inventory: " + str(len(player.getAllItemList(["Inventory"]))) + "\n")
+        for item in player.getAllItemList(["Inventory"]):
+            quantityString = ""
+            if item.quantity != None:
+                quantityString = " (" + str(item.quantity) + ")"
+            f.write(str(item.num) + " - " + str(item.name["String"] + quantityString) + "\n")
+        f.write("\n")
+
         f.write("Player Gear: " + str(len(player.getAllItemList(["Gear"]))) + "\n")
+        for gearSlot in player.gearDict:
+            slotRange = 1
+            if isinstance(player.gearDict[gearSlot], list):
+                slotRange = 2
+            for i in range(slotRange):
+                indexString = ""
+                if slotRange == 2:
+                    indexString = " (" + str(i) + ")" 
+                targetSlot = player.gearDict[gearSlot]
+                if isinstance(player.gearDict[gearSlot], list):
+                    targetSlot = player.gearDict[gearSlot][i]
+                slotString = "None"
+                if targetSlot != None:
+                    slotString = str(targetSlot.num) + " - " + targetSlot.name["String"]
+                f.write(gearSlot + indexString + " - " + slotString + "\n")

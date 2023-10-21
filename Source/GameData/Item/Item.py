@@ -209,12 +209,12 @@ class Item:
                 self.name = {"String":".45 8-Round Magazine", "Code":"1y4w1y14w"}
                 self.pocket = "Ammo"
                 self.ammoType = ".45"
-                self.shellCapacity = 8
+                self.shellCapacity = 2
             if num == 202:
                 self.name = {"String":".45 12-Round Magazine", "Code":"1y5w1y14w"}
                 self.pocket = "Ammo"
                 self.ammoType = ".45"
-                self.shellCapacity = 12
+                self.shellCapacity = 2
             if num == 203:
                 self.name = {"String":".45 Standard Round", "Code":"1y17w"}
                 self.pocket = "Ammo"
