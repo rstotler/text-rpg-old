@@ -12,7 +12,7 @@ from Components.Utility import stringIsNumber
 from Components.Utility import getCountString
 from Components.Utility import getDamageString
 from Components.Utility import getTargetUserString
-from Components.Utility import messageExistsCheck
+from Components.Utility import stackDisplayMessage
 from Components.Utility import insertCommasInNumber
 from Components.Utility import createUnderlineString
 
@@ -1679,9 +1679,10 @@ class Player:
         else:
             console.write("You switch your dominant hand to your " + self.dominantHand.lower() + ".", "38w" + str(len(self.dominantHand)) + "w1y", True)
 
-    def reloadCheck(self, console, galaxyList, player, currentRoom, reloadKey, reloadSlotKey, ammoKey):
+    def reloadCheck(self, console, galaxyList, player, currentRoom, reloadKey, reloadSlotKey, ammoKey, autoReload=False, messageDataList=[]):
         if currentRoom.isLit(galaxyList, player, self) == False:
-            console.write("It's too dark to see.", "2w1y17w1y", True)
+            if autoReload == False:
+                console.write("It's too dark to see.", "2w1y17w1y", True)
 
         else:
             reloadSlot = None
@@ -1768,7 +1769,9 @@ class Player:
                 console.write("You aren't holding anything.", "8w1y18w1y", True)
 
             else:
-                drawBlankLine = self.stopActions(console, galaxyList, player)
+                drawBlankLine = False
+                if autoReload == False:
+                    drawBlankLine = self.stopActions(console, galaxyList, player)
 
                 flags = self.reloadFunction(copy.deepcopy(self), copy.deepcopy(reloadList), reloadTargetShiftCheck, reloadKey, ammoKey)
                 requireWeapon = flags["requireWeapon"]
@@ -1777,21 +1780,21 @@ class Player:
                 targetAmmo = flags["targetAmmo"]
                 reloadWeapon = flags["reloadWeapon"]
 
-                if requireWeapon != None and magazineCheck == False and reloadCount == 0 and not (requireWeapon.shellCapacity == None and requireWeapon.magazine != None):
+                if autoReload == False and requireWeapon != None and magazineCheck == False and reloadCount == 0 and not (requireWeapon.shellCapacity == None and requireWeapon.magazine != None):
                     displayString = "It requires a " + requireWeapon.ammoType + "."
                     displayCode = "14w" + str(len(requireWeapon.ammoType)) + "w1y"
                     if requireWeapon.shellCapacity == None:
                         displayString = "You don't have a " + requireWeapon.ammoType + " magazine."
                         displayCode = "7w1y9w" + str(len(requireWeapon.ammoType)) + "w9w1y"
                     console.write(displayString, displayCode, drawBlankLine)
-                elif reloadCount == 0 and reloadKey != "All":
+                elif autoReload == False and reloadCount == 0 and reloadKey != "All":
                     if ammoKey != None and targetAmmo == None:
                         console.write("You don't have that ammo.", "7w1y16w1y", drawBlankLine)
                     elif ammoKey == None and targetAmmo == None:
                         console.write("You don't have any ammo.", "7w1y15w1y", drawBlankLine)
                     else:
                         console.write("It's already loaded.", "2w1y16w1y", drawBlankLine)
-                elif reloadCount == 0 and reloadKey == "All":
+                elif autoReload == False and reloadCount == 0 and reloadKey == "All":
                     if ammoKey != None and targetAmmo == None:
                         console.write("You don't have that ammo.", "7w1y16w1y", drawBlankLine)
                     elif ammoKey == None and targetAmmo == None:
@@ -1800,16 +1803,28 @@ class Player:
                         console.write("It's already loaded.", "2w1y16w1y", drawBlankLine)
                     else:
                         console.write("Your weapons are already loaded.", "31w1y", drawBlankLine)
-                elif reloadCount == 0 and ammoCheck == False:
+                elif autoReload == False and reloadCount == 0 and ammoCheck == False:
                     thatString = "any"
                     if ammoKey != None:
                         thatString = "that"
                     console.write("You don't have " + thatString + " ammo.", "7w1y7w" + str(len(thatString)) + "w5w1y", drawBlankLine)
+                
                 elif reloadWeapon == "Multiple":
                     actionFlags = {"Reload List":reloadList, "Reload Target Shift Check":reloadTargetShiftCheck, "Reload Key":reloadKey, "Ammo Key":ammoKey}
                     self.actionList.append(Action("Reload", actionFlags))
                     
-                    console.write("You start reloading some weapons..", "32w2y", drawBlankLine)
+                    if autoReload == True:
+                        stringHalf1 = "You start reloading some weapons.."
+                        stringHalf2 = ""
+                        codeHalf1 = "32w2y"
+                        codeHalf2 = ""
+                        drawBlankLineCheck = drawBlankLine and (len(messageDataList) == 0 or (len(messageDataList) > 0 and messageDataList[-1]["Message Type"] != "Reload Check"))
+                        combineLinesCheck = self.num != None
+                        stackDisplayMessage(messageDataList, "Reload Check", stringHalf1, stringHalf2, codeHalf1, codeHalf2, drawBlankLineCheck, combineLinesCheck)
+                    else:
+                        console.write("You start reloading some weapons..", "32w2y", drawBlankLine)
+                    drawBlankLine = False
+
                 elif reloadWeapon != None:
                     actionFlags = {"Reload List":reloadList, "Reload Target Shift Check":reloadTargetShiftCheck, "Reload Key":reloadKey, "Ammo Key":ammoKey}
                     self.actionList.append(Action("Reload", actionFlags))
@@ -1819,7 +1834,20 @@ class Player:
                     if reloadWeapon != "Multiple" and reloadCount > 1:
                         countString = " (" + str(reloadCount) + ")"
                         countCode = "2r" + str(len(str(reloadCount))) + "w1r"
-                    console.write("You start reloading " + reloadWeapon.prefix.lower() + " " + reloadWeapon.name["String"] + ".." + countString, "20w" + str(len(reloadWeapon.prefix)) + "w1w" + reloadWeapon.name["Code"] + "2y" + countCode, drawBlankLine)
+
+                    if autoReload == True:
+                        stringHalf1 = "You start reloading " + reloadWeapon.prefix.lower() + " " + reloadWeapon.name["String"] + ".." + countString
+                        stringHalf2 = ""
+                        codeHalf1 = "20w" + str(len(reloadWeapon.prefix)) + "w1w" + reloadWeapon.name["Code"] + "2y" + countCode
+                        codeHalf2 = ""
+                        drawBlankLineCheck = drawBlankLine and (len(messageDataList) == 0 or (len(messageDataList) > 0 and messageDataList[-1]["Message Type"] != "Reload Check"))
+                        combineLinesCheck = self.num != None
+                        stackDisplayMessage(messageDataList, "Reload Check", stringHalf1, stringHalf2, codeHalf1, codeHalf2, drawBlankLineCheck, combineLinesCheck)
+                    else:
+                        console.write("You start reloading " + reloadWeapon.prefix.lower() + " " + reloadWeapon.name["String"] + ".." + countString, "20w" + str(len(reloadWeapon.prefix)) + "w1w" + reloadWeapon.name["Code"] + "2y" + countCode, drawBlankLine)
+                    drawBlankLine = False
+
+        return messageDataList
 
     def reloadCompleteAction(self, console, flags):
         reloadList = flags["Reload List"]
@@ -1844,7 +1872,7 @@ class Player:
             displayString = "You finish reloading."
             displayCode = "20w1y"
             console.write(displayString, displayCode, True)
-        
+
     def reloadFunction(self, targetPlayer, reloadList, reloadTargetShiftCheck, reloadKey, ammoKey):
         magazineCheck = False
         reloadCount = 0
@@ -1974,6 +2002,32 @@ class Player:
         returnFlags["targetAmmo"] = targetAmmo
         returnFlags["reloadWeapon"] = reloadWeapon
         return returnFlags
+
+    def autoReload(self, config, console, galaxyList, player, currentRoom, shootGunDataList, messageDataList):
+        autoReloadCheck = False
+        if len(shootGunDataList) == 2 and shootGunDataList[0]["Weapon Data"].isEmpty(True) and shootGunDataList[1]["Weapon Data"].isEmpty(True):
+            if self.ammoCheck(shootGunDataList[0]["Weapon Data"].ammoType, shootGunDataList[0]["Last Used Ammo Name"]) == True:
+                messageDataList = self.reloadCheck(console, galaxyList, player, currentRoom, "All", None, shootGunDataList[0]["Last Used Ammo Name"], True, messageDataList)
+                autoReloadCheck = True
+            elif self.ammoCheck(shootGunDataList[1]["Weapon Data"].ammoType, shootGunDataList[1]["Last Used Ammo Name"]) == True:
+                messageDataList = self.reloadCheck(console, galaxyList, player, currentRoom, "All", None, shootGunDataList[1]["Last Used Ammo Name"], True, messageDataList)
+                autoReloadCheck = True
+            elif self.ammoCheck(shootGunDataList[0]["Weapon Data"].ammoType) == True or self.ammoCheck(shootGunDataList[1]["Weapon Data"].ammoType) == True:
+                messageDataList = self.reloadCheck(console, galaxyList, player, currentRoom, "All", None, None, True)
+                autoReloadCheck = True
+        else:
+            for shootGunData in shootGunDataList:
+                if shootGunData["Weapon Data"].isEmpty(True) == True:
+                    if self.ammoCheck(shootGunData["Weapon Data"].ammoType, shootGunData["Last Used Ammo Name"])[0] != None:
+                        messageDataList = self.reloadCheck(console, galaxyList, player, currentRoom, shootGunData["Weapon Data"].name["String"].lower(), None, shootGunData["Last Used Ammo Name"], True, messageDataList)
+                        autoReloadCheck = True
+                        break
+                    elif self.ammoCheck(shootGunData["Weapon Data"].ammoType)[0] != None:
+                        messageDataList = self.reloadCheck(console, galaxyList, player, currentRoom, shootGunData["Weapon Data"].name["String"].lower(), None, None, True, messageDataList)
+                        autoReloadCheck = True
+                        break
+
+        return messageDataList, autoReloadCheck
 
     def unloadCheck(self, console, galaxyList, player, currentRoom, unloadKey, unloadSlotKey, ammoKey):
         if currentRoom.isLit(galaxyList, player, self) == False:
@@ -2428,7 +2482,7 @@ class Player:
                             console.write("You don't see anyone.", "7w1y12w1y", drawBlankLine)
                     else:
                         actionFlags = {"combatSkill":combatSkill, "targetRoom":targetRoom, "roomDistance":roomDistance, "mobKey":mobKey, "mobCount":mobCount, "directionKey":directionKey, "targetDirection":targetDirection, "attackList":attackList}
-                        if self.inStunnedTargetRoom(galaxyList) == True and combatSkill.maxTargets == 1 and combatSkill.healCheck == False:
+                        if self.inStunnedTargetRoom(galaxyList) == True and combatSkill.maxTargets == 1 and targetMob in self.stunList and combatSkill.healCheck == False:
                             messageDataList = self.combatSkillCompleteAction(config, console, galaxyList, player, actionFlags, [])
                             for messageData in messageDataList:
                                 console.write(messageData["String"], messageData["Code"], messageData["Draw Blank Line"])
@@ -2441,7 +2495,7 @@ class Player:
                                 codeHalf1 = str(len(self.prefix)) + "w1w" + self.name["Code"] + "1w"
                                 codeHalf2 = "18w2y"
                                 drawBlankLineCheck = drawBlankLine and (len(messageDataList) == 0 or (len(messageDataList) > 0 and messageDataList[-1]["Message Type"] != messageType))
-                                messageExistsCheck(messageDataList, messageType, stringHalf1, stringHalf2, codeHalf1, codeHalf2, drawBlankLineCheck)
+                                stackDisplayMessage(messageDataList, messageType, stringHalf1, stringHalf2, codeHalf1, codeHalf2, drawBlankLineCheck)
                                 
                             self.actionList.append(Action("Combat Skill", actionFlags))
 
@@ -2485,6 +2539,7 @@ class Player:
             attackDisplayList = flags["attackDisplayList"]
             targetMob = flags["targetMob"]
             targetMobList = flags["targetMobList"]
+            shootGunDataList = flags["shootGunDataList"]
 
             targetUserLine = getTargetUserString(self)
             targetUserString = targetUserLine["String"]
@@ -2519,7 +2574,7 @@ class Player:
                     codeHalf2 = combatSkill.name["Code"] + directionCode + "6w1y12w1y"
                     drawBlankLineCheck = drawBlankLine and (len(messageDataList) == 0 or (len(messageDataList) > 0 and messageDataList[-1]["Message Type"] != messageType))
                     combineLinesCheck = self.num != None
-                    messageExistsCheck(messageDataList, messageType, stringHalf1, stringHalf2, codeHalf1, codeHalf2, drawBlankLineCheck, combineLinesCheck)
+                    stackDisplayMessage(messageDataList, messageType, stringHalf1, stringHalf2, codeHalf1, codeHalf2, drawBlankLineCheck, combineLinesCheck)
                     drawBlankLine = False
 
             elif selfSkill != None and targetRoom.sameRoomCheck(self):
@@ -2537,7 +2592,7 @@ class Player:
                     codeHalf2 = str(len(healString)) + "w" + combatSkill.name["Code"] + "2y" + getDamageString(attackData["Attack Damage"])["Code"]
                     drawBlankLineCheck = drawBlankLine and (len(messageDataList) == 0 or (len(messageDataList) > 0 and messageDataList[-1]["Message Type"] != messageType))
                     combineLinesCheck = self.num != None
-                    messageExistsCheck(messageDataList, messageType, stringHalf1, stringHalf2, codeHalf1, codeHalf2, drawBlankLineCheck, combineLinesCheck)
+                    stackDisplayMessage(messageDataList, messageType, stringHalf1, stringHalf2, codeHalf1, codeHalf2, drawBlankLineCheck, combineLinesCheck)
                     drawBlankLine = False
 
             if len(targetMobList) > 0:
@@ -2558,7 +2613,7 @@ class Player:
                                 codeHalf1 = targetUserCode
                                 codeHalf2 = gunCode + "2y6w1y22w1y"
                                 drawBlankLineCheck = drawBlankLine and (len(messageDataList) == 0 or (len(messageDataList) > 0 and messageDataList[-1]["Message Type"] != messageType))
-                                messageExistsCheck(messageDataList, messageType, stringHalf1, stringHalf2, codeHalf1, codeHalf2, drawBlankLineCheck, False)
+                                stackDisplayMessage(messageDataList, messageType, stringHalf1, stringHalf2, codeHalf1, codeHalf2, drawBlankLineCheck, False)
                                 drawBlankLine = False
                         
                         elif attackData["Miss Check"] == "Miss Attack" and not (attackData["Mob Data"] == "Multiple" and attackData["Count"] > 0):
@@ -2600,7 +2655,7 @@ class Player:
                                     codeHalf2 = secondaryAttackCode + attackData["Attack Data"].name["Code"] + directionCode + directionCountCode + "8w" + mobCode + "1y" + countCode
                                 drawBlankLineCheck = drawBlankLine and (len(messageDataList) == 0 or (len(messageDataList) > 0 and messageDataList[-1]["Message Type"] != messageType))
                                 combineLinesCheck = self.num != None
-                                messageExistsCheck(messageDataList, messageType, stringHalf1, stringHalf2, codeHalf1, codeHalf2, drawBlankLineCheck, combineLinesCheck)
+                                stackDisplayMessage(messageDataList, messageType, stringHalf1, stringHalf2, codeHalf1, codeHalf2, drawBlankLineCheck, combineLinesCheck)
                                 drawBlankLine = False
 
                     if attackData["Count"] > 0:
@@ -2618,7 +2673,7 @@ class Player:
                                 codeHalf2 = secondaryAttackCode + attackData["Attack Data"].name["Code"] + directionCode + directionCountCode + hitCode + "10w2y" + getDamageString(attackData["Attack Damage"])["Code"]
                                 drawBlankLineCheck = drawBlankLine and (len(messageDataList) == 0 or (len(messageDataList) > 0 and messageDataList[-1]["Message Type"] != messageType))
                                 combineLinesCheck = self.num != None
-                                messageExistsCheck(messageDataList, messageType, stringHalf1, stringHalf2, codeHalf1, codeHalf2, drawBlankLineCheck, combineLinesCheck)
+                                stackDisplayMessage(messageDataList, messageType, stringHalf1, stringHalf2, codeHalf1, codeHalf2, drawBlankLineCheck, combineLinesCheck)
                         
                         elif attackData["Mob Data"] != None:
                             countString, countCode = getCountString(attackData["Count"])
@@ -2662,7 +2717,7 @@ class Player:
                                     codeHalf2 = secondaryAttackCode + attackData["Attack Data"].name["Code"] + directionCode + directionCountCode + hitCode + "1w" + targetEnemyCode + stunCode + countCode + "1w" + attackDamageLine["Code"]
                                 drawBlankLineCheck = drawBlankLine and (len(messageDataList) == 0 or (len(messageDataList) > 0 and messageDataList[-1]["Message Type"] != messageType))
                                 combineLinesCheck = self.num != None
-                                messageExistsCheck(messageDataList, messageType, stringHalf1, stringHalf2, codeHalf1, codeHalf2, drawBlankLineCheck, combineLinesCheck)
+                                stackDisplayMessage(messageDataList, messageType, stringHalf1, stringHalf2, codeHalf1, codeHalf2, drawBlankLineCheck, combineLinesCheck)
                 
                         if "Cut Limb" in attackData:
                             if attackData["Cut Limb"] == "Head":
@@ -2672,7 +2727,7 @@ class Player:
                                 codeHalf2 = secondaryAttackCode + attackData["Attack Data"].name["Code"] + "24w" + str(len(attackData["Mob Data"].prefix)) + "w1w" + attackData["Mob Data"].name["Code"] + "1y"
                                 drawBlankLineCheck = drawBlankLine and (len(messageDataList) == 0 or (len(messageDataList) > 0 and messageDataList[-1]["Message Type"] != messageType))
                                 combineLinesCheck = self.num != None
-                                messageExistsCheck(messageDataList, messageType, stringHalf1, stringHalf2, codeHalf1, codeHalf2, drawBlankLineCheck, combineLinesCheck)
+                                stackDisplayMessage(messageDataList, messageType, stringHalf1, stringHalf2, codeHalf1, codeHalf2, drawBlankLineCheck, combineLinesCheck)
                 
                             else:
                                 targetLimb = attackData["Cut Limb"]
@@ -2688,7 +2743,7 @@ class Player:
                                     codeHalf2 = secondaryAttackCode + attackData["Attack Data"].name["Code"] + "10w" + str(len(attackData["Mob Data"].prefix)) + "w1w" + attackData["Mob Data"].name["Code"] + "1y2w" + str(len(targetLimb)) + "w1y"
                                 drawBlankLineCheck = drawBlankLine and (len(messageDataList) == 0 or (len(messageDataList) > 0 and messageDataList[-1]["Message Type"] != messageType))
                                 combineLinesCheck = self.num != None
-                                messageExistsCheck(messageDataList, messageType, stringHalf1, stringHalf2, codeHalf1, codeHalf2, drawBlankLineCheck, combineLinesCheck)
+                                stackDisplayMessage(messageDataList, messageType, stringHalf1, stringHalf2, codeHalf1, codeHalf2, drawBlankLineCheck, combineLinesCheck)
 
                 if attackDisplayList[0]["Kill Count"] > 0:
                     countString, countCode = getCountString(attackData["Kill Count"])
@@ -2702,7 +2757,7 @@ class Player:
                             codeHalf1 = targetUserCode
                             codeHalf2 = "13w" + str(len(yourString)) + "w8w1y" + countCode
                             drawBlankLineCheck = drawBlankLine and (len(messageDataList) == 0 or (len(messageDataList) > 0 and messageDataList[-1]["Message Type"] != messageType))
-                            messageExistsCheck(messageDataList, messageType, stringHalf1, stringHalf2, codeHalf1, codeHalf2, drawBlankLineCheck)
+                            stackDisplayMessage(messageDataList, messageType, stringHalf1, stringHalf2, codeHalf1, codeHalf2, drawBlankLineCheck)
 
                     else:
                         if attackDisplayList[0]["Killed Mob Data"].num == None:
@@ -2711,14 +2766,14 @@ class Player:
                             codeHalf1 = "12w1y"
                             codeHalf2 = ""
                             drawBlankLineCheck = drawBlankLine and (len(messageDataList) == 0 or (len(messageDataList) > 0 and messageDataList[-1]["Message Type"] != messageType))
-                            messageExistsCheck(messageDataList, messageType, stringHalf1, stringHalf2, codeHalf1, codeHalf2, drawBlankLineCheck)
+                            stackDisplayMessage(messageDataList, messageType, stringHalf1, stringHalf2, codeHalf1, codeHalf2, drawBlankLineCheck)
                         elif not (attackDisplayList[0]["Killed Mob Data"].num != None and self.num != None and currentRoom.sameRoomCheck(player) == False):
                             stringHalf1 = attackDisplayList[0]["Killed Mob Data"].prefix + " " + attackDisplayList[0]["Killed Mob Data"].name["String"] + " is DEAD!"
                             stringHalf2 = ""
                             codeHalf1 = str(len(attackDisplayList[0]["Killed Mob Data"].prefix)) + "w1w" + attackDisplayList[0]["Killed Mob Data"].name["Code"] + "8w1y"
                             codeHalf2 = ""
                             drawBlankLineCheck = drawBlankLine and (len(messageDataList) == 0 or (len(messageDataList) > 0 and messageDataList[-1]["Message Type"] != messageType))
-                            messageExistsCheck(messageDataList, messageType, stringHalf1, stringHalf2, codeHalf1, codeHalf2, drawBlankLineCheck)
+                            stackDisplayMessage(messageDataList, messageType, stringHalf1, stringHalf2, codeHalf1, codeHalf2, drawBlankLineCheck)
 
                 for attackData in attackDisplayList:
                     if "Return Weapon To Inventory" in attackData:
@@ -2728,7 +2783,15 @@ class Player:
                         codeHalf2 = ""
                         drawBlankLineCheck = drawBlankLine and (len(messageDataList) == 0 or (len(messageDataList) > 0 and messageDataList[-1]["Message Type"] != messageType))
                         combineLinesCheck = self.num != None
-                        messageExistsCheck(messageDataList, messageType, stringHalf1, stringHalf2, codeHalf1, codeHalf2, drawBlankLineCheck, combineLinesCheck)
+                        stackDisplayMessage(messageDataList, messageType, stringHalf1, stringHalf2, codeHalf1, codeHalf2, drawBlankLineCheck, combineLinesCheck)
+
+            # Auto-Reload Check #
+            if len(shootGunDataList) > 0:
+                if (self.num == None and config.autoReload == True) or self.num != None:
+                    messageDataList, autoReloadCheck = self.autoReload(config, console, galaxyList, player, currentRoom, shootGunDataList, messageDataList)
+                    if self.num == None and autoReloadCheck == False and (shootGunDataList[0]["Weapon Data"].isEmpty(True) or (len(shootGunDataList) > 1 and shootGunDataList[1]["Weapon Data"].isEmpty(True))):
+                        drawBlankLineCheck = drawBlankLine and (len(messageDataList) == 0 or (len(messageDataList) > 0 and messageDataList[-1]["Message Type"] != "Reload Check"))
+                        stackDisplayMessage(messageDataList, "Reload Check", "You're out of ammo!", "", "3w1y14w1y", "", False)
 
         return messageDataList
 
@@ -2784,6 +2847,7 @@ class Player:
         targetMobList = []
         targetMob = None
         mobKillList = []
+        shootGunDataList = []
         if not (combatSkill.healCheck == True and mobKey == None and mobCount == None and len(self.targetList) > 0 and config.healEnemies == False and allOnlyCheck == False):
             if maxTargets > 0 and not (combatSkill.healCheck == True and mobKey == "Self" and allOnlyCheck == False):
                 if (targetRoom.sameRoomCheck(player) == True):
@@ -2802,6 +2866,7 @@ class Player:
                                 if allOnlyCheck == True or not (mobCount == "Group" and mob not in self.recruitList):
                                     for i, attackSkill in enumerate(attackList):
                                         hitCheck = False
+                                        
                                         if len(attackSkill.weaponDataList) in [0, 2]:
                                             if copyCheck == True:
                                                 attackHitCheck, attackDisplayList[i] = Combat.hitCheck(attackDisplayList[i], copy.deepcopy(self), attackSkill, copy.deepcopy(mob), copy.deepcopy(targetRoom), i)
@@ -2809,10 +2874,13 @@ class Player:
                                                 attackHitCheck, attackDisplayList[i] = Combat.hitCheck(attackDisplayList[i], self, attackSkill, mob, targetRoom, i)
                                             if attackHitCheck == True:
                                                 hitCheck = True
+                                            
+                                            # Shoot Gun/Auto-Reload Check Not Implemented Here Yet #
+
                                         else:
                                             for w, weapon in enumerate(attackSkill.weaponDataList):
                                                 if weapon != "Open Hand" and weapon.weaponType == "Gun" and weapon.isLoaded(1) == False:
-                                                    # Is This Needed Above, For Two Weapon Attacks? #
+                                                    # Is This Needed Above, For Two Weapon Attacks? (Probably) #
                                                     attackDisplayList[i]["Miss Check"] = "Out Of Ammo"
                                                     attackDisplayList[i]["Weapon Data List"] = [attackSkill.weaponDataList[0]]
                                                 else:
@@ -2825,6 +2893,7 @@ class Player:
                                                             hitCheck = True
 
                                                     if copyCheck == False and weapon != "Open Hand" and weapon.weaponType == "Gun" and weapon.isLoaded(1) == True:
+                                                        shootGunDataList.append({"Weapon Data":weapon, "Last Used Ammo Name":weapon.getLoadedAmmo().name["String"].lower()})
                                                         weapon.shoot()
 
                                         if mob.num != None or self.num != None:
@@ -2976,6 +3045,7 @@ class Player:
         returnFlags["attackDisplayList"] = attackDisplayList
         returnFlags["currentRoom"] = currentRoom
         returnFlags["attackList"] = attackList
+        returnFlags["shootGunDataList"] = shootGunDataList
 
         return returnFlags
 

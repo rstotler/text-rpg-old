@@ -118,101 +118,102 @@ class CombatSkill(Skill):
         elif num == 15:
             self.name = {"String":"Dodge", "Code":"5w"}
 
-        # Basic Skills (1 - 100) #
-        elif num == 1:
-            self.name = {"String":"Dodge", "Code":"5w"}
-        elif num == 2:
-            self.name = {"String":"Block", "Code":"5w"}
+        # Future Use #
+            # Basic Skills (1 - 100) #
+            # elif num == 1:
+            #     self.name = {"String":"Dodge", "Code":"5w"}
+            # elif num == 2:
+            #     self.name = {"String":"Block", "Code":"5w"}
 
-        # Sword (101 - 150) #
-        elif num == 101:
-            self.name = {"String":"Slash", "Code":"5w"}
-            self.skillGroup = "Sword"
-            self.weaponTypeList = [["Sword"]]
-            self.cutLimbPercent = 10
-            self.canBeStunned = True
+            # # Sword (101 - 150) #
+            # elif num == 101:
+            #     self.name = {"String":"Slash", "Code":"5w"}
+            #     self.skillGroup = "Sword"
+            #     self.weaponTypeList = [["Sword"]]
+            #     self.cutLimbPercent = 10
+            #     self.canBeStunned = True
 
-        elif num == 102:
-            self.name = {"String":"Slash All", "Code":"9w"}
-            self.skillGroup = "Sword"
-            self.weaponTypeList = [["Sword"]]
-            self.ruleDict["All Only"] = True
-            self.offHandAttacks = False
-            self.cutLimbPercent = 5
-            self.canBeStunned = True
-            # self.maxTargets = "All" # Is Automatically Set Below
+            # elif num == 102:
+            #     self.name = {"String":"Slash All", "Code":"9w"}
+            #     self.skillGroup = "Sword"
+            #     self.weaponTypeList = [["Sword"]]
+            #     self.ruleDict["All Only"] = True
+            #     self.offHandAttacks = False
+            #     self.cutLimbPercent = 5
+            #     self.canBeStunned = True
+            #     # self.maxTargets = "All" # Is Automatically Set Below
 
-        # Dagger (151 - 200) #
-        elif num == 151:
-            self.name = {"String":"Slash", "Code":"5w"}
-            self.skillGroup = "Dagger"
-            self.weaponTypeList = [["Dagger"]]
-            self.cutLimbPercent = 10
-            self.canBeStunned = True
+            # # Dagger (151 - 200) #
+            # elif num == 151:
+            #     self.name = {"String":"Slash", "Code":"5w"}
+            #     self.skillGroup = "Dagger"
+            #     self.weaponTypeList = [["Dagger"]]
+            #     self.cutLimbPercent = 10
+            #     self.canBeStunned = True
 
-        # Axes (201 - 250) #
-        elif num == 201:
-            self.name = {"String":"Slash", "Code":"5w"}
-            self.skillGroup = "Axe"
-            self.weaponTypeList = [["Axe"]]
-            self.cutLimbPercent = 10
-            self.canBeStunned = True
+            # # Axes (201 - 250) #
+            # elif num == 201:
+            #     self.name = {"String":"Slash", "Code":"5w"}
+            #     self.skillGroup = "Axe"
+            #     self.weaponTypeList = [["Axe"]]
+            #     self.cutLimbPercent = 10
+            #     self.canBeStunned = True
 
-        elif num == 202:
-            self.name = {"String":"Slash All", "Code":"9w"}
-            self.skillGroup = "Axe"
-            self.weaponTypeList = [["Axe"]]
-            self.ruleDict["All Only"] = True
-            self.offHandAttacks = False
-            self.cutLimbPercent = 5
-            self.canBeStunned = True
-            # self.maxTargets = "All" # Is Automatically Set Below
+            # elif num == 202:
+            #     self.name = {"String":"Slash All", "Code":"9w"}
+            #     self.skillGroup = "Axe"
+            #     self.weaponTypeList = [["Axe"]]
+            #     self.ruleDict["All Only"] = True
+            #     self.offHandAttacks = False
+            #     self.cutLimbPercent = 5
+            #     self.canBeStunned = True
+            #     # self.maxTargets = "All" # Is Automatically Set Below
 
-        # Blunt (251 - 300) #
+            # # Blunt (251 - 300) #
 
-        # Polearm (301 350) #
+            # # Polearm (301 350) #
 
-        # Unarmed (351 - 400) #
-        elif num == 351:
-            self.name = {"String":"Punch", "Code":"5w"}
-            self.skillGroup = "Unarmed"
-            self.weaponTypeList = [["Open Hand"]]
-            self.canBeStunned = True
+            # # Unarmed (351 - 400) #
+            # elif num == 351:
+            #     self.name = {"String":"Punch", "Code":"5w"}
+            #     self.skillGroup = "Unarmed"
+            #     self.weaponTypeList = [["Open Hand"]]
+            #     self.canBeStunned = True
 
-        elif num == 352:
-            self.name = {"String":"Spin Fist", "Code":"9w"}
-            self.skillGroup = "Unarmed"
-            self.weaponTypeList = [["Open Hand"], ["Open Hand"]]
-            self.maxTargets = "All"
-            self.offHandAttacks = False
-            self.canBeStunned = True
+            # elif num == 352:
+            #     self.name = {"String":"Spin Fist", "Code":"9w"}
+            #     self.skillGroup = "Unarmed"
+            #     self.weaponTypeList = [["Open Hand"], ["Open Hand"]]
+            #     self.maxTargets = "All"
+            #     self.offHandAttacks = False
+            #     self.canBeStunned = True
 
-        # Bow (401 - 450) #
+            # # Bow (401 - 450) #
 
-        # Pistol (451 - 500) #
-        elif num == 451:
-            self.name = {"String":"Shoot", "Code":"5w"}
-            self.skillGroup = "Pistol"
-            self.weaponTypeList = [["Gun"]]
-            self.maxRange = 2
+            # # Pistol (451 - 500) #
+            # elif num == 451:
+            #     self.name = {"String":"Shoot", "Code":"5w"}
+            #     self.skillGroup = "Pistol"
+            #     self.weaponTypeList = [["Gun"]]
+            #     self.maxRange = 2
 
-        elif num == 452:
-            self.name = {"String":"Bullet Storm", "Code":"12w"}
-            self.skillGroup = "Pistol"
-            self.weaponTypeList = [["Gun"]]
-            self.ruleDict["All Only"] = True
-            self.maxRange = 1
-            self.offHandAttacks = False
-            # self.maxTargets = "All" # Is Automatically Set Below
+            # elif num == 452:
+            #     self.name = {"String":"Bullet Storm", "Code":"12w"}
+            #     self.skillGroup = "Pistol"
+            #     self.weaponTypeList = [["Gun"]]
+            #     self.ruleDict["All Only"] = True
+            #     self.maxRange = 1
+            #     self.offHandAttacks = False
+            #     # self.maxTargets = "All" # Is Automatically Set Below
 
-        # Rifle (501 - 550) #
-        elif num == 501:
-            self.name = {"String":"Shoot", "Code":"5w"}
-            self.skillGroup = "Rifle"
-            self.weaponTypeList = [["Gun"]]
-            self.maxRange = 2
+            # # Rifle (501 - 550) #
+            # elif num == 501:
+            #     self.name = {"String":"Shoot", "Code":"5w"}
+            #     self.skillGroup = "Rifle"
+            #     self.weaponTypeList = [["Gun"]]
+            #     self.maxRange = 2
 
-        elif num == 502:
+            # elif num == 502:
             self.name = {"String":"Snipe", "Code":"5w"}
             self.skillGroup = "Rifle"
             self.ruleDict["From Another Room"] = True

@@ -1,8 +1,8 @@
 class Config:
 
     def __init__(self):
-        self.autoLoot = False
-        self.autoReload = False
-        self.autoCombat = False
+        self.autoLoot = True
+        self.autoReload = True
+        self.autoCombat = True
         self.teamDamage = True
         self.healEnemies = True

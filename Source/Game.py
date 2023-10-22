@@ -24,7 +24,6 @@ from Components.Utility import stringIsNumber
     # Make Player Lose Sight Of Mobs On Darkness
     # Enemy groups
     # Auto-Loot
-    # Auto-Reload
     # Auto-Combat
     # Move Direction '#'
     # Counter-Attack (Passive Skill)
@@ -32,7 +31,7 @@ from Components.Utility import stringIsNumber
     # Jab, Kick, Sweep(?)
     # skill trees?
     # item polymorphism
-    # ensure mob cant use cut limbs to attack
+    # test mob cant use cut limbs to attack
     # add mob to player target list if mob attacks first (agro mobs)
     # attacks with knockback
     # attacks that knock mobs/player down
@@ -42,6 +41,8 @@ from Components.Utility import stringIsNumber
     # let player do 'all' spells in rooms without mobs
     # add item skills to skill list
     # moons
+    # reload messages for mobs
+    # reload while walking?
 
 class Game:
 
@@ -324,7 +325,7 @@ class Game:
         self.map.loadSystemMap(self.galaxyList[self.player.galaxy].systemList[self.player.system])
 
         # Test Variables #
-        self.inputBar.inputList = ["n", "n", "w", "get pis from cab", "get pis from cab", "get 4 mag from cab", "drop 2 mag", "get 3 round from cab", "wear pis", "wear pis", "e", "s", "s", "reload"]
+        self.inputBar.inputList = ["n", "n", "w", "get pis from cab", "get pis from cab", "get 4 mag from cab", "drop 2 mag", "get 3 round from cab", "wear pis", "wear pis", "get sta from cab", "e", "s", "s"]
         # self.inputBar.inputList = ["n", "n", "w", "get sniper from cab", "get 5.56 from cab", "get 5.56 from cab", "get 5.56 from cab", "e", "s", "s", "wear sni", "reload"]
         # self.inputBar.inputList = ["s", "s", "board ship", "n"]
         # self.inputBar.inputList = ["s", "e", "u", "n"]
@@ -368,7 +369,7 @@ class Game:
                     messageDataList = mob.update(self.config, self.console, self.map, self.galaxyList, self.player, room, messageDataList)
             for messageData in messageDataList:
                 self.console.write(messageData["String"], messageData["Code"], messageData["Draw Blank Line"])
-                
+
         self.frameTick += 1
         if self.frameTick >= 60:
             self.frameTick = 0

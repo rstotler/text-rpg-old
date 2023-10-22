@@ -163,7 +163,7 @@ def getTargetUserString(target, posessive=True):
         targetUserCode = str(len(target.prefix)) + "w1w" + target.name["Code"] + sCode
     return {"String":targetUserString, "Code":targetUserCode}
 
-def messageExistsCheck(messageDataList, messageType, stringHalf1, stringHalf2, codeHalf1, codeHalf2, drawBlankLine, combineCheck=True):
+def stackDisplayMessage(messageDataList, messageType, stringHalf1, stringHalf2, codeHalf1, codeHalf2, drawBlankLine, combineCheck=True):
     if combineCheck == True:
         for messageData in messageDataList:
             if stringHalf1 + stringHalf2 == messageData["Original String"]:

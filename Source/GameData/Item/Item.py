@@ -498,12 +498,25 @@ class Item:
                     return True
         return False
 
+    def getLoadedAmmo(self):
+        if self.weaponType == "Gun":
+            if self.shellCapacity != None:
+                if self.magazine != None:
+                    return self.magazine
+            else:
+                if self.magazine != None and "Ammo" in self.magazine.flags and self.magazine.flags["Ammo"] != None:
+                    return self.magazine.flags["Ammo"]
+        return None
+
     def isEmpty(self, magazineCheck=False):
+
+        # Empty Container Check #
         if self.containerList != None:
             if len(self.containerList) == 0:
                 return True
             return False
 
+        # Empty Gun Check #
         elif self.pocket == "Weapon":
             if self.shellCapacity != None:
                 if self.magazine == None:
@@ -513,6 +526,7 @@ class Item:
                     return True
                 elif magazineCheck == True and self.magazine.flags["Ammo"] == None:
                     return True
+
         return False
 
     def getWeaponStatusString(self):
