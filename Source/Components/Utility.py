@@ -234,7 +234,7 @@ def writeCrashReport(errorString, input, player):
         f.write("Player Inventory: " + str(len(player.getAllItemList(["Inventory"]))) + "\n")
         for item in player.getAllItemList(["Inventory"]):
             quantityString = ""
-            if item.quantity != None:
+            if hasattr(item, "quantity") == True:
                 quantityString = " (" + str(item.quantity) + ")"
             f.write(str(item.num) + " - " + str(item.name["String"] + quantityString) + "\n")
         f.write("\n")
@@ -255,3 +255,21 @@ def writeCrashReport(errorString, input, player):
                 if targetSlot != None:
                     slotString = str(targetSlot.num) + " - " + targetSlot.name["String"]
                 f.write(gearSlot + indexString + " - " + slotString + "\n")
+
+def createItem(num, quantity=None, targetRoom=None):
+    if num in range(1, 101):
+        from GameData.Item.Armor import Armor
+        createdItem = Armor(num)
+    elif num in range(101, 201):
+        from GameData.Item.Weapon import Weapon
+        createdItem = Weapon(num)
+    elif num in range(201, 301):
+        from GameData.Item.Ammo import Ammo
+        createdItem = Ammo(num, quantity)
+    else:
+        from GameData.Item.Item import Item
+        createdItem = Item(num)
+
+    if targetRoom != None:
+        targetRoom.itemList.append(createdItem)
+    return createdItem

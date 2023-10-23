@@ -46,7 +46,7 @@ class Combat:
                 if target.num != None and attackSkill.cutLimbPercent != None and attackSkill.cutLimbPercent > 0:
                     if len(target.cutLimbList) == 0 and random.randrange(100) + 1 <= attackSkill.cutLimbPercent:
                         limbList = ["Left Arm", "Left Arm", "Right Arm", "Right Arm", "Head"]
-                        if attackDisplayList["Target Block Check"] == True:
+                        if "Target Block Check" in attackDisplayList and attackDisplayList["Target Block Check"] == True:
                             limbList = ["Left Arm", "Left Arm", "Right Arm", "Right Arm"]
                         targetLimb = random.choice(limbList)
                         target.cutLimbList.append(targetLimb)

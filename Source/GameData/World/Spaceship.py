@@ -1,6 +1,6 @@
 from GameData.World.Area import Area
 from GameData.World.Room import Room
-from Components.Utility import appendKeyList
+from Components.Utility import *
 
 class Spaceship:
     numCount = 0

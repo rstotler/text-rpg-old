@@ -1,7 +1,6 @@
 import pygame
 from pygame import *
-from Components.Utility import writeColor
-from Components.Utility import wordWrap
+from Components.Utility import *
 
 # Console Size - [59, 32] #
 # Character Size - [10, 18] #

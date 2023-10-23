@@ -1,7 +1,7 @@
 import pygame
 from pygame import *
 from GameData.World.Room import Room
-from Components.Utility import writeFast
+from Components.Utility import *
 
 class Map:
 
@@ -102,8 +102,10 @@ class Map:
         if targetDirNum > 1 : targetDirNum = 1
         elif targetDirNum < -1 : targetDirNum = -1
         drawCheck = False
-        if self.zoomLevel + targetDirNum >= 0 and self.zoomLevel + targetDirNum < len(self.sizeRatioList):
-            self.zoomLevel += targetDirNum
+        
+        if self.screenLevel == "Area":
+            if self.zoomLevel + targetDirNum >= 0 and self.zoomLevel + targetDirNum < len(self.sizeRatioList):
+                self.zoomLevel += targetDirNum
 
     def draw(self, window, galaxyList, player):
         if self.screenLevel == "Area":

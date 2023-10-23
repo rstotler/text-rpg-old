@@ -1,7 +1,6 @@
 import pygame, traceback
 from pygame import *
-from Components.Utility import writeColor
-from Components.Utility import writeCrashReport
+from Components.Utility import *
 
 # Input Bar Width (Characters) - 56 #
 # Character Size - [10, 18] #

@@ -1,17 +1,25 @@
 Traceback (most recent call last):
-  File "D:\Codes\Python\Universe\Source\Screen\InputBar.py", line 46, in processInput
-    1/0
-ZeroDivisionError: division by zero
+  File "D:\Codes\Python\Universe\Source\Screen\InputBar.py", line 49, in processInput
+    game.processInputBarCommand(self.input)
+  File "D:\Codes\Python\Universe\Source\Game.py", line 1065, in processInputBarCommand
+    self.player.combatSkillCheck(self.config, self.console, self.galaxyList, self.player, currentRoom, combatSkill, None, None, None, None)
+  File "D:\Codes\Python\Universe\Source\GameData\Player\Player.py", line 2462, in combatSkillCheck
+    flags = self.combatSkillFunction(config, player, combatSkill, currentRoom, targetRoom, roomDistance, mobKey, mobCount, directionKey, True, {})
+  File "D:\Codes\Python\Universe\Source\GameData\Player\Player.py", line 2885, in combatSkillFunction
+    attackHitCheck, attackDisplayList[i] = Combat.hitCheck(attackDisplayList[i], copy.deepcopy(self), attackSkill, copy.deepcopy(mob), copy.deepcopy(targetRoom), i)
+  File "D:\Codes\Python\Universe\Source\GameData\Combat.py", line 49, in hitCheck
+    if attackDisplayList["Target Block Check"] == True:
+KeyError: 'Target Block Check'
 
-Input: l
-Player Loc: [0, 0, 3, 0, 1]
+Input: slash
+Player Loc: [0, 0, 3, 0, 4]
 Player Spaceship: None
-Player Targets: 0
+Player Targets: 1
 Player Group: 0
-Player Inventory: 1
-701 - Silver Keycard
 
-Player Gear: 3
+Player Inventory: 0
+
+Player Gear: 2
 Head - None
 Face - None
 Neck (0) - None
@@ -20,10 +28,10 @@ Body Under - None
 Body Over - None
 About Body - None
 Hands - None
-Finger (0) - Ruby Ring
+Finger (0) - None
 Finger (1) - None
 Legs Under - None
 Legs Over - None
 Feet - None
-Left Hand - Ivory Pistol
-Right Hand - Ebony Pistol
+Left Hand - 103 - Lance
+Right Hand - 101 - Sword

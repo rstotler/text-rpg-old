@@ -1,7 +1,6 @@
 from GameData.Player.CombatSkill import CombatSkill
 from GameData.Item.Item import Item
-from Components.Utility import appendKeyList
-from Components.Utility import getTargetUserString
+from Components.Utility import *
 
 class Button:
 

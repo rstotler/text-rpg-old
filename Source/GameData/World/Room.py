@@ -1,8 +1,6 @@
 import copy
 from GameData.Item.Item import Item
-from Components.Utility import getCountString
-from Components.Utility import createUnderlineString
-from Components.Utility import createDefaultString
+from Components.Utility import *
 
 class Room:
 
@@ -188,7 +186,7 @@ class Room:
                             break
                 if displayData == None:
                     itemCount = 1
-                    if item.quantity != None:
+                    if hasattr(item, "quantity") == True:
                         itemCount = item.quantity
                     displayList.append({"Num":item.num, "Count":itemCount, "ItemData":item})
                     totalItemCount += itemCount

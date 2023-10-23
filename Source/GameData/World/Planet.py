@@ -1,6 +1,6 @@
 import math, random
 from GameData.World.Room import Room
-from Components.Utility import appendKeyList
+from Components.Utility import *
 
 class Planet:
 

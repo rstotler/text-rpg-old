@@ -1,20 +1,13 @@
 import copy, random
 from GameData.World.Room import Room
 from GameData.World.Spaceship import Spaceship
-from GameData.Item.Item import Item
-from GameData.Item.Button import Button
+from GameData.Player.Action import Action
 from GameData.Player.Skill import Skill
 from GameData.Player.CombatSkill import CombatSkill
-from GameData.Player.Action import Action
 from GameData.Combat import Combat
-from Components.Utility import appendKeyList
-from Components.Utility import stringIsNumber
-from Components.Utility import getCountString
-from Components.Utility import getDamageString
-from Components.Utility import getTargetUserString
-from Components.Utility import stackDisplayMessage
-from Components.Utility import insertCommasInNumber
-from Components.Utility import createUnderlineString
+from GameData.Item.Item import Item
+from GameData.Item.Components.Button import Button
+from Components.Utility import *
 
 class Player:
 
@@ -42,13 +35,13 @@ class Player:
 
         self.currentHealth = 10
 
-        self.maxLookDistance = 2
-        self.maxTargetDistance = 1
+        self.maxLookDistance = 5
+        self.maxTargetDistance = 3
         self.targetList = []
         self.recruitList = []
         self.combatList = []
 
-        self.itemDict = {"Armor":[], "Weapon":[], "Ammo":[], "Materium":[], "Key":[], "Food":[], "Organic":[]}
+        self.itemDict = {"Armor":[], "Weapon":[], "Ammo":[], "Materium":[], "Key":[], "Food":[], "Organic":[], "Misc":[]}
         self.gearDict = {"Head":None, "Face":None, "Neck":[None, None], "Body Under":None, "Body Over":None, "About Body":None, "Hands":None, "Finger":[None, None], "Legs Under":None, "Legs Over":None, "Feet":None, "Left Hand":None, "Right Hand":None}
         self.cutLimbList = []
         self.dominantHand = "Right Hand"
@@ -969,7 +962,7 @@ class Player:
                                     (targetContainerKey == None or (playerItemLocation == None and tempContainerLocation == "Room")):
                                         tooMuchWeightCheck = True
                                     else:
-                                        if item.quantity != None:
+                                        if hasattr(item, "quantity") == True:
                                             if quantityCount != "All" : getQuantity = quantityCount
                                             else : getQuantity = item.quantity
                                             if getQuantity > item.quantity:
@@ -984,7 +977,8 @@ class Player:
 
                                             inventoryQuantityItem, unused = self.getTargetItem(item.num, ["Inventory"])
                                             if inventoryQuantityItem != None:
-                                                inventoryQuantityItem.quantity += getQuantity
+                                                if hasattr(inventoryQuantityItem, "quantity") == True:
+                                                    inventoryQuantityItem.quantity += getQuantity
                                             else:
                                                 if item.pocket in self.itemDict:
                                                     splitItem = copy.deepcopy(item)
@@ -1122,7 +1116,7 @@ class Player:
                         for i, item in enumerate(self.itemDict[pocket]):
                             if targetContainer.getContainerWeight() + item.getWeight(False) <= targetContainer.containerMaxLimit:
                                 if item != targetContainer and (targetItemKey == "All" or targetItemKey in item.keyList):
-                                    if item.quantity != None:
+                                    if hasattr(item, "quantity") == True:
                                         if quantityCount != "All" : putQuantity = quantityCount
                                         else : putQuantity = item.quantity
                                         if putQuantity > item.quantity:
@@ -1132,7 +1126,8 @@ class Player:
                                             
                                         containerQuantityItem = targetContainer.getContainerItem(item.num)
                                         if containerQuantityItem != None:
-                                            containerQuantityItem.quantity += putQuantity
+                                            if hasattr(containerQuantityItem, "quantity") == True:
+                                                containerQuantityItem.quantity += putQuantity
                                         else:
                                             splitItem = copy.deepcopy(item)
                                             splitItem.quantity = putQuantity
@@ -1218,14 +1213,15 @@ class Player:
                 delDict[pocket] = []
                 for i, item in enumerate(self.itemDict[pocket]):
                     if (targetItemKey == "All" or targetItemKey in item.keyList) and not (pocketKey != None and pocket != pocketKey):
-                        if item.quantity != None:
+                        if hasattr(item, "quantity") == True:
                             if quantityCount != "All" : dropQuantity = quantityCount
                             else : dropQuantity = item.quantity
                             if dropQuantity > item.quantity:
                                 dropQuantity = item.quantity
                             roomQuantityItem = currentRoom.getTargetObject(item.num, ["Items"])
                             if roomQuantityItem != None:
-                                roomQuantityItem.quantity += dropQuantity
+                                if hasattr(roomQuantityItem, "quantity") == True:
+                                    roomQuantityItem.quantity += dropQuantity
                             else:
                                 splitItem = copy.deepcopy(item)
                                 splitItem.quantity = dropQuantity
@@ -1750,7 +1746,7 @@ class Player:
                         alreadyReloadedCheck = False
                         break 
             
-            if reloadKey not in ["All", None] and len(reloadList) == 0 and targetItem != None and targetItem.ranged == False:
+            if reloadKey not in ["All", None] and len(reloadList) == 0 and targetItem != None and (targetItem.pocket != "Weapon" or targetItem.ranged == False):
                 console.write("You can't reload that.", "7w1y13w1y", True)
             elif alreadyReloadedCheck == True:
                 displayString = "It's already loaded."
@@ -2006,14 +2002,14 @@ class Player:
     def autoReload(self, config, console, galaxyList, player, currentRoom, shootGunDataList, messageDataList):
         autoReloadCheck = False
         if len(shootGunDataList) == 2 and shootGunDataList[0]["Weapon Data"].isEmpty(True) and shootGunDataList[1]["Weapon Data"].isEmpty(True):
-            if self.ammoCheck(shootGunDataList[0]["Weapon Data"].ammoType, shootGunDataList[0]["Last Used Ammo Name"]) == True:
+            if self.ammoCheck(shootGunDataList[0]["Weapon Data"].ammoType, shootGunDataList[0]["Last Used Ammo Name"])[0] != None:
                 messageDataList = self.reloadCheck(console, galaxyList, player, currentRoom, "All", None, shootGunDataList[0]["Last Used Ammo Name"], True, messageDataList)
                 autoReloadCheck = True
-            elif self.ammoCheck(shootGunDataList[1]["Weapon Data"].ammoType, shootGunDataList[1]["Last Used Ammo Name"]) == True:
+            elif self.ammoCheck(shootGunDataList[1]["Weapon Data"].ammoType, shootGunDataList[1]["Last Used Ammo Name"])[0] != None:
                 messageDataList = self.reloadCheck(console, galaxyList, player, currentRoom, "All", None, shootGunDataList[1]["Last Used Ammo Name"], True, messageDataList)
                 autoReloadCheck = True
-            elif self.ammoCheck(shootGunDataList[0]["Weapon Data"].ammoType) == True or self.ammoCheck(shootGunDataList[1]["Weapon Data"].ammoType) == True:
-                messageDataList = self.reloadCheck(console, galaxyList, player, currentRoom, "All", None, None, True)
+            elif self.ammoCheck(shootGunDataList[0]["Weapon Data"].ammoType)[0] != None or self.ammoCheck(shootGunDataList[1]["Weapon Data"].ammoType)[0] != None:
+                messageDataList = self.reloadCheck(console, galaxyList, player, currentRoom, "All", None, None, True, messageDataList)
                 autoReloadCheck = True
         else:
             for shootGunData in shootGunDataList:
@@ -2104,7 +2100,7 @@ class Player:
                         alreadyUnloadedCheck = False
                         break
 
-            if unloadKey not in ["All", None] and len(unloadList) == 0 and targetItem != None and targetItem.ranged == False:
+            if unloadKey not in ["All", None] and len(unloadList) == 0 and targetItem != None and (targetItem.pocket != "Weapon" or targetItem.ranged == False):
                 console.write("You can't unload that.", "7w1y13w1y", True)
             elif alreadyUnloadedCheck == True:
                 displayString = "It's already unloaded."
@@ -3077,11 +3073,11 @@ class Player:
 
     def displayInventory(self, console, galaxyList, player, currentRoom, targetPocketKey):
         targetPocket = None
-        if targetPocketKey in ["gear", "gea", "ge", "g"]:
+        if targetPocketKey in ["gear", "gea", "ge", "g", "armor", "armo", "arm", "ar", "a"]:
             targetPocket = "Armor"
         elif targetPocketKey in ["weapons", "weapon", "weapo", "weap", "wea", "we", "w"]:
             targetPocket = "Weapon"
-        elif targetPocketKey in ["ammo", "amm", "am", "a"]:
+        elif targetPocketKey in ["ammo", "amm", "am"]:
             targetPocket = "Ammo"
         elif targetPocketKey in ["materium", "materiu", "materi", "mater", "mate", "mat", "ma", "m"]:
             targetPocket = "Materium"
@@ -3098,7 +3094,7 @@ class Player:
         else:
             displayList = []
             for item in self.itemDict[targetPocket]:
-                if item.ranged == True:
+                if item.pocket == "Weapon" and item.ranged == True:
                     displayList.append({"ItemData":item})
                 else:
                     displayData = None
@@ -3109,7 +3105,7 @@ class Player:
                                 break
                     if displayData == None:
                         itemCount = 1
-                        if item.quantity != None:
+                        if hasattr(item, "quantity") == True:
                             itemCount = item.quantity
                         displayList.append({"Num":item.num, "Count":itemCount, "ItemData":item})
                     else:
@@ -3164,7 +3160,10 @@ class Player:
                     countString, countCode = getCountString(countNum)
                     itemDisplayString = item.prefix + " " + item.name["String"]
                     itemDisplayCode = str(len(item.prefix)) + "w1w" + item.name["Code"]
-                    weaponStatusString, weaponStatusCode = item.getWeaponStatusString()
+                    weaponStatusString = ""
+                    weaponStatusCode = ""
+                    if item.pocket == "Weapon":
+                        weaponStatusString, weaponStatusCode = item.getWeaponStatusString()
                     console.write(itemDisplayString + weaponStatusString + countString + modString, itemDisplayCode + weaponStatusCode + countCode + modCode)
 
     def displaySkills(self, console, targetGroupKey):
@@ -3314,7 +3313,8 @@ class Player:
                         gearCode = str(len(gearString)) + "w"
                         if "Code" in targetSlot.name:
                             gearCode = targetSlot.name["Code"]
-                    weaponStatusString, weaponStatusCode = targetSlot.getWeaponStatusString()
+                    if targetSlot.pocket == "Weapon":
+                        weaponStatusString, weaponStatusCode = targetSlot.getWeaponStatusString()
                 console.write(gearSlotString + ": " + gearString + weaponStatusString + modString, gearSlotCode + "2y" + gearCode + weaponStatusCode + modCode)
 
         defenseRatingData = self.getArmorRating()

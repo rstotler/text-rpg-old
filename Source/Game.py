@@ -16,33 +16,37 @@ from GameData.World.Area import Area
 from GameData.World.Room import Room
 from GameData.World.Spaceship import Spaceship
 from GameData.Item.Item import Item
-from GameData.Item.Button import Button
-from Components.Utility import stringIsNumber
+from GameData.Item.Components.Button import Button
+from Components.Utility import *
 
 # To Do List:
-    # tropes - elemental planet energy, computer/hacking/simulation
-    # Make Player Lose Sight Of Mobs On Darkness
-    # Enemy groups
-    # Auto-Loot
-    # Auto-Combat
-    # Move Direction '#'
-    # Counter-Attack (Passive Skill)
-    # Bleeding
-    # Jab, Kick, Sweep(?)
-    # skill trees?
-    # item polymorphism
-    # test mob cant use cut limbs to attack
-    # add mob to player target list if mob attacks first (agro mobs)
-    # attacks with knockback
-    # attacks that knock mobs/player down
-    # mob vs mob combat
-    # gun mods, scopes
-    # somethin wrong w heal spells
-    # let player do 'all' spells in rooms without mobs
-    # add item skills to skill list
-    # moons
-    # reload messages for mobs
-    # reload while walking?
+    # Tropes:
+        # Elemental Planetary Energy
+        # Computer/Hacking/Simulation/Breaking The Third Wall
+        # Love Story
+    # Near Term:
+        # Separate Gun WeaponType Into Pistols & Rifles (why do we need item.ranged?)
+        # Auto-Loot
+        # Auto-Combat
+        # Counter-Attack (Passive Skill)
+        # Attacks With Knockback
+        # Attacks That Knock Mobs/Player Down
+        # Gun Mods, Scopes Modify Accuracy
+        # Classes(?)
+        # Reload while walking?
+        # Make Player Lose Sight Of Mobs On Darkness
+        # Add Item Skills To Skill List
+        # Test Mob Can't Use Cut Limbs To Attack
+        # Let Player Do 'All' Combat Skills In Rooms Without Mobs
+    # Far Term:
+        # Enemy groups
+        # Move Direction '#'
+        # Bleeding
+        # Add Mob To Player Target List If Mob Attacks First (Agro Mobs)
+        # Mob Vs. Mob Combat
+        # Fix Heal Spells
+        # Moons
+        # Reload Messages For Mobs
 
 class Game:
 
@@ -163,36 +167,37 @@ class Game:
             areaCOTU.roomList.append(roomCOTU04)
             roomCOTU04.exit["East"] = [0, 0, 3, 0, 3]
             roomCOTU04.inside = True
-            roomCOTU04.itemList.append(Item(904))
-            ornateChest = Item(902)
-            roomCOTU04.itemList.append(ornateChest)
-            ornateChest.containerList.append(Item(901))
+
+            createItem(904, roomCOTU04)
+            ornateChest = createItem(902)
             for i in range(1, 14):
-                ornateChest.containerList.append(Item(i))
-            ornateChest.containerList.append(Item(14))
-            weaponsCabinet = Item(903)
-            roomCOTU04.itemList.append(weaponsCabinet)
+                ornateChest.containerList.append(createItem(i))
+            ornateChest.containerList.append(createItem(14))
+            roomCOTU04.itemList.append(ornateChest)
+
+            weaponsCabinet = createItem(903)
             for i in range(101, 105):
-                weaponsCabinet.containerList.append(Item(i))
-                weaponsCabinet.containerList.append(Item(i))
-            weaponsCabinet.containerList.append(Item(105))
-            weaponsCabinet.containerList.append(Item(106))
-            weaponsCabinet.containerList.append(Item(107))
-            weaponsCabinet.containerList.append(Item(108))
-            weaponsCabinet.containerList.append(Item(108))
-            weaponsCabinet.containerList.append(Item(109))
-            weaponsCabinet.containerList.append(Item(201))
-            weaponsCabinet.containerList.append(Item(202))
-            weaponsCabinet.containerList.append(Item(201))
-            weaponsCabinet.containerList.append(Item(202))
-            weaponsCabinet.containerList.append(Item(203, 50))
-            weaponsCabinet.containerList.append(Item(204, 50))
-            weaponsCabinet.containerList.append(Item(208, 25))
-            weaponsCabinet.containerList.append(Item(205, 25))
-            weaponsCabinet.containerList.append(Item(207, 10))
-            weaponsCabinet.containerList.append(Item(206, 40))
-            weaponsCabinet.containerList.append(Item(209))
-            weaponsCabinet.containerList.append(Item(210, 25))
+                weaponsCabinet.containerList.append(createItem(i))
+                weaponsCabinet.containerList.append(createItem(i))
+            weaponsCabinet.containerList.append(createItem(105))
+            weaponsCabinet.containerList.append(createItem(106))
+            weaponsCabinet.containerList.append(createItem(107))
+            weaponsCabinet.containerList.append(createItem(108))
+            weaponsCabinet.containerList.append(createItem(108))
+            weaponsCabinet.containerList.append(createItem(109))
+            weaponsCabinet.containerList.append(createItem(201))
+            weaponsCabinet.containerList.append(createItem(202))
+            weaponsCabinet.containerList.append(createItem(201))
+            weaponsCabinet.containerList.append(createItem(202))
+            weaponsCabinet.containerList.append(createItem(203, 50, None))
+            weaponsCabinet.containerList.append(createItem(204, 50, None))
+            weaponsCabinet.containerList.append(createItem(208, 25, None))
+            weaponsCabinet.containerList.append(createItem(205, 25, None))
+            weaponsCabinet.containerList.append(createItem(207, 10, None))
+            weaponsCabinet.containerList.append(createItem(206, 40, None))
+            weaponsCabinet.containerList.append(createItem(209))
+            weaponsCabinet.containerList.append(createItem(210, 25, None))
+            roomCOTU04.itemList.append(weaponsCabinet)
 
             roomCOTU05Name = {"String":"COTU Landing Pad", "Code":"16w"}
             roomCOTU05 = Room(0, 0, 3, 0, 5, roomCOTU05Name)
@@ -216,7 +221,7 @@ class Game:
             roomCOTU08 = Room(0, 0, 3, 0, 8, roomCOTU08Name)
             areaCOTU.roomList.append(roomCOTU08)
             roomCOTU08.exit["South"] = [0, 0, 3, 0, 7]
-            unarmedUnskilledControlPanel = Item(905)
+            unarmedUnskilledControlPanel = createItem(905)
             unarmedUnskilledFlagList = {"Num":2, "Label":{"String":"[1] - Unarmed, Unskilled Mob", "Code":"1r1w1r3y7w2y13w"}, "Key List":["1"], "Skill List":[1], "Gear Dict":{}}
             unarmedUnskilledControlPanel.buttonList.append(Button("Spawn Mob", unarmedUnskilledFlagList))
             roomCOTU08.itemList.append(unarmedUnskilledControlPanel)
@@ -325,7 +330,7 @@ class Game:
         self.map.loadSystemMap(self.galaxyList[self.player.galaxy].systemList[self.player.system])
 
         # Test Variables #
-        self.inputBar.inputList = ["n", "n", "w", "get pis from cab", "get pis from cab", "get 4 mag from cab", "drop 2 mag", "get 3 round from cab", "wear pis", "wear pis", "get sta from cab", "e", "s", "s"]
+        # self.inputBar.inputList = ["n", "n", "w", "get pis from cab", "get pis from cab", "get 4 mag from cab", "drop 2 mag", "get 3 round from cab", "wear pis", "wear pis", "get sta from cab", "e", "s", "s"]
         # self.inputBar.inputList = ["n", "n", "w", "get sniper from cab", "get 5.56 from cab", "get 5.56 from cab", "get 5.56 from cab", "e", "s", "s", "wear sni", "reload"]
         # self.inputBar.inputList = ["s", "s", "board ship", "n"]
         # self.inputBar.inputList = ["s", "e", "u", "n"]
@@ -336,8 +341,8 @@ class Game:
         self.player.combatSkillDict["Healing Magic"] = [CombatSkill(11), CombatSkill(12)]
         self.player.combatSkillDict["Pistol"] = [CombatSkill(13)]
         self.player.combatSkillDict["Basic"] = [CombatSkill(14), CombatSkill(15)]
-        self.player.itemDict["Key"].append(Item(701))
-        self.player.gearDict["Finger"][0] = Item(8)
+        self.player.itemDict["Key"].append(createItem(701))
+        self.player.gearDict["Finger"][0] = createItem(8)
 
     def draw(self, window):
         window.fill([0, 0, 0])
@@ -359,7 +364,7 @@ class Game:
         if self.frameTick in [0, 30]:
             if self.frameTick == 30:
                 playerArea, playerRoom = Room.getAreaAndRoom(self.galaxyList, self.player)
-            updateAreaList, updateRoomList = Room.getSurroundingRoomData(self.galaxyList, playerArea, playerRoom, 4)
+            updateAreaList, updateRoomList = Room.getSurroundingRoomData(self.galaxyList, playerArea, playerRoom, 5)
             
             messageDataList = []
             playerArea.update(self.console)
