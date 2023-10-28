@@ -21,6 +21,7 @@ class Weapon(Item):
         self.loadWeapon(num)
 
     def loadWeapon(self, num):
+        # Polearms Recieve A Natural Damage Boost When Single-Wielding #
         # Rifles are ALWAYS 2-Handed (Not Including Dual-Wield) #
 
         if num == 101:

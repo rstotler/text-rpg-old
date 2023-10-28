@@ -16,7 +16,7 @@ class Map:
         self.sizeRatioList = [1.0, .72, .50, .30, .18]
 
         self.surfaceMapDict = None
-        self.surfaceCell = None
+        self.surfaceCellDict = {}
         self.surfaceCellWall = {}
         self.surfaceDoor = {}
         self.surfaceMapPlayerIconDict = None
@@ -30,8 +30,15 @@ class Map:
         self.init()
 
     def init(self):
-        self.surfaceCell = pygame.Surface([self.cellSize, self.cellSize])
-        self.surfaceCell.fill([140, 140, 140])
+        for terrainType in ["Default", "Water", "Beach", "Grass", "Desert", "Mountain"]:
+            terrainCell = pygame.Surface([self.cellSize, self.cellSize])
+            if terrainType == "Default" : terrainCell.fill([130, 130, 130])
+            elif terrainType == "Water" : terrainCell.fill([30, 65, 200])
+            elif terrainType == "Beach" : terrainCell.fill([200, 200, 120])
+            elif terrainType == "Grass" : terrainCell.fill([30, 140, 45])
+            elif terrainType == "Desert" : terrainCell.fill([200, 200, 120])
+            elif terrainType == "Mountain" : terrainCell.fill([85, 60, 10])
+            self.surfaceCellDict[terrainType] = terrainCell
         
         self.surfaceCellWall["North"] = pygame.Surface([self.cellSize, self.cellSize], pygame.SRCALPHA, 32)
         self.surfaceCellWall["East"] = pygame.Surface([self.cellSize, self.cellSize], pygame.SRCALPHA, 32)
@@ -61,13 +68,15 @@ class Map:
             for currentRoom in area.roomList:
                 if currentRoom.mapCoordinates != [None, None]:
                     cellBlitLoc = [(currentRoom.mapCoordinates[0] * self.cellSize), (currentRoom.mapCoordinates[1] * self.cellSize)]
-                    surfaceMap.blit(self.surfaceCell, cellBlitLoc)
+                    terrainCell = self.surfaceCellDict[currentRoom.terrainType]
+                    surfaceMap.blit(terrainCell, cellBlitLoc)
                     for exitDir in ["North", "East", "South", "West"]:
                         if currentRoom.exit[exitDir] == None:
                             surfaceMap.blit(self.surfaceCellWall[exitDir], cellBlitLoc)
                         if exitDir in ["North", "East"] and currentRoom.door[exitDir] != None:
                             surfaceMap.blit(self.surfaceDoor[exitDir], cellBlitLoc)
-                    writeFast(str(currentRoom.room), [50, 50, 50], [cellBlitLoc[0] + 4, cellBlitLoc[1] + 4], self.font, surfaceMap)
+                    if area.name["String"].split()[0] != "Continent":
+                        writeFast(str(currentRoom.room), [50, 50, 50], [cellBlitLoc[0] + 4, cellBlitLoc[1] + 4], self.font, surfaceMap)
                     
         # Resize Default Map For Zoom #
         if True:

@@ -1,3 +1,13 @@
+def circleCircleCollide(loc1, radius1, loc2, radius2):
+    import math
+    dx = loc1[0] - loc2[0]
+    dy = loc1[1] - loc2[1]
+    dr = math.sqrt((dx ** 2) + (dy ** 2))
+
+    if dr <= radius1 + radius2:
+        return True
+    return False
+
 def writeFast(label, color, location, font, surface):
 	labelRender = font.render(label, True, color)
 	surface.blit(labelRender, location)
@@ -53,7 +63,6 @@ colorDict = {"lr":[255, 80,  80],  "r":[255, 0,   0],   "dr":[145, 0,   0],   "d
               "x":[0, 0, 0]}
 
 def stringIsNumber(string):
-
 	try:
 		int(string)
 		return True

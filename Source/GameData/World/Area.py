@@ -7,6 +7,7 @@ class Area:
         self.num = num
         self.roomList = []
         self.size = [0, 0]
+        self.roomNumMap = None
         
         self.name = name
 
@@ -20,13 +21,15 @@ class Area:
             console.write("You hear some squeaking sounds.", "30w1y", True)
 
     def zeroCoordinates(self, galaxyList):
+        # Reminder: Must Be Called AFTER Adding Area To Planet.areaList! #
+
         def examineRoomData(currentLoc, targetRoom, examinedRoomNumList):
-            self.roomList[targetRoom.room].mapCoordinates = copy.deepcopy(currentLoc)
+            targetRoom.mapCoordinates = copy.deepcopy(currentLoc)
             examinedRoomNumList.append(targetRoom.room)
             firstRoom = copy.deepcopy(targetRoom)
             for targetExitDir in ["North", "East", "South", "West"]:
                 if targetExitDir != "North":
-                    currentLoc = firstRoom.mapCoordinates
+                    currentLoc = copy.deepcopy(firstRoom.mapCoordinates)
                     
                 if targetExitDir in targetRoom.exit and targetRoom.exit[targetExitDir] != None:
                     tempArea, tempRoom, unusedDistance, unusedMessage = Room.getTargetRoomFromStartRoom(galaxyList, self, targetRoom, targetExitDir, 1, True)
@@ -37,17 +40,13 @@ class Area:
                         elif targetExitDir == "West" : currentLoc[0] -= 1
                         
                         examinedRoomNumList = examineRoomData(currentLoc, tempRoom, examinedRoomNumList)
-                        currentLoc = copy.deepcopy(self.roomList[firstRoom.room].mapCoordinates)
-                        firstRoom.mapCoordinates = copy.deepcopy(self.roomList[firstRoom.room].mapCoordinates)
+                        currentLoc = copy.deepcopy(firstRoom.mapCoordinates)
+                        firstRoom.mapCoordinates = copy.deepcopy(firstRoom.mapCoordinates)
                         
             return examinedRoomNumList
 
         # Get Map Dimensions #
-        examinedRoomNumList = []
-        for room in self.roomList:
-            if room.room not in examinedRoomNumList:
-                currentLoc = [0, 0]
-                examinedRoomNumList = examineRoomData(currentLoc, room, examinedRoomNumList)
+        examinedRoomNumList = examineRoomData([0, 0], self.roomList[0], [])
     
         # Zero Map Dimensions From Bottom-Right Corner To Top-Left Corner #
         if len(examinedRoomNumList) > 0:
@@ -80,6 +79,15 @@ class Area:
                     currentStartIndex = tempIndex + 1
                     maxTopLeftPoint = [0, 0]
                     maxBottomRightPoint = [0, 0]
-                    
             self.size[0] += 1
             self.size[1] += 1
+
+        # Create RoomNumMap #
+        self.roomNumMap = []
+        for x in range(self.size[0]):
+            self.roomNumMap.append([])
+            for y in range(self.size[1]):
+                self.roomNumMap[-1].append(None)
+        for roomNum in examinedRoomNumList:
+            room = self.roomList[roomNum]
+            self.roomNumMap[room.mapCoordinates[0]][room.mapCoordinates[1]] = roomNum

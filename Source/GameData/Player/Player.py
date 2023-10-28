@@ -3690,7 +3690,7 @@ class Player:
 
             landingRoomDataList = targetPlanet.getLandingRoomDataList()
             if len(landingRoomDataList) == 0:
-                console.write("There are no suitable landing locations.", "39w1y", True)
+                console.write("-No suitable landing locations.", "1y29w1y")
 
             else:
                 for i, landingData in enumerate(landingRoomDataList):
@@ -3714,7 +3714,7 @@ class Player:
             targetPlanet = galaxyList[currentRoom.spaceshipObject.galaxy].systemList[currentRoom.spaceshipObject.system].planetList[currentRoom.spaceshipObject.planet]
             landingRoomDataList = targetPlanet.getLandingRoomDataList()
             if len(landingRoomDataList) == 0:
-                console.write('''A computerized voice says, 'There are no suitable landing sites.' ''', "25w3y35w2y")
+                console.write('''A computerized voice says, 'There are no suitable landing sites.' ''', "25w3y35w2y", True)
             
             else:
                 targetLandingIndex = 0

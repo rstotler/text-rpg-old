@@ -27,6 +27,7 @@ class Room:
         self.spaceshipList = []
 
         self.inside = False
+        self.terrainType = "Default"
 
     def display(self, console, galaxyList, player):
         roomIsLit = self.isLit(galaxyList, player, player)
@@ -407,7 +408,7 @@ class Room:
                     messageType = "Door Is Closed"
                     if ignoreDoors == False:
                         break
-                    
+                
                 # Spaceship Exit #
                 if targetExit == "Spaceship Exit" and currentRoom.spaceshipObject != None:
                     if currentRoom.spaceshipObject.landedLocation != None:

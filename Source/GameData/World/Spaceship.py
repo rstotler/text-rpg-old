@@ -5,7 +5,7 @@ from Components.Utility import *
 class Spaceship:
     numCount = 0
 
-    def __init__(self, galaxyList, name, password, landedLocation, hatchLocation=[0, 0], exitLocation=[0, 0], cockpitLocation=[0, 0]):
+    def __init__(self, galaxyList, name, password, landedLocation, hatchLocation=[0, 0], cockpitLocation=[0, 0]):
         self.galaxy = landedLocation[0]
         self.system = landedLocation[1]
         self.planet = landedLocation[2]
@@ -15,7 +15,6 @@ class Spaceship:
         self.name = name
         self.keyList = []
         self.areaList = []
-        self.exitLocation = exitLocation
 
         self.password = password
         self.hatchLocation = hatchLocation
@@ -224,8 +223,8 @@ class Spaceship:
                 if room.area == self.cockpitLocation[0] and room.room == self.cockpitLocation[1]:
                     room.flags["Cockpit"] = True
         for exitDir in ["West", "South", "North", "East"]:
-            if self.areaList[self.exitLocation[0]].roomList[self.exitLocation[1]].exit[exitDir] == None:
-                targetExitRoom = self.areaList[self.exitLocation[0]].roomList[self.exitLocation[1]]
+            if self.areaList[self.hatchLocation[0]].roomList[self.hatchLocation[1]].exit[exitDir] == None:
+                targetExitRoom = self.areaList[self.hatchLocation[0]].roomList[self.hatchLocation[1]]
                 targetExitRoom.exit[exitDir] = "Spaceship Exit"
                 targetExitRoom.installDoor(galaxyList, exitDir, "Automatic", None, "Closed", True)
                 break
