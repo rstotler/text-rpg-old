@@ -42,31 +42,31 @@ class Weapon(Item):
         elif num == 105:
             self.prefix = "An"
             self.name = {"String":"Ebony Pistol", "Code":"1w5ddw1w5ddw"}
-            self.weaponType = "Gun"
+            self.weaponType = "Pistol"
             self.ranged = True
             self.ammoType = ".45"
         elif num == 106:
             self.prefix = "An"
             self.name = {"String":"Ivory Pistol", "Code":"1w5ddw1w5ddw"}
-            self.weaponType = "Gun"
+            self.weaponType = "Pistol"
             self.ranged = True
             self.ammoType = ".45"
         elif num == 107:
             self.name = {"String":"Sniper Rifle", "Code":"1w6ddw1w4ddw"}
-            self.weaponType = "Gun"
+            self.weaponType = "Rifle"
             self.twoHanded = True
             self.ranged = True
             self.ammoType = "5.56"
         elif num == 108:
             self.name = {"String":"Rocket Launcher", "Code":"15w"}
-            self.weaponType = "Gun"
+            self.weaponType = "Rifle"
             self.twoHanded = True
             self.ranged = True
             self.shellCapacity = 1
             self.ammoType = "Missile"
         elif num == 109:
             self.name = {"String":"Shotgun", "Code":"7w"}
-            self.weaponType = "Gun"
+            self.weaponType = "Rifle"
             self.twoHanded = True
             self.ranged = True
             self.shellCapacity = 5
@@ -118,7 +118,7 @@ class Weapon(Item):
                     if item.shellCapacity > maxInventoryMagCapacity:
                         maxInventoryMagCapacity = item.shellCapacity
 
-        if self.weaponType == "Gun":
+        if self.weaponType in ["Pistol", "Rifle"]:
             if self.shellCapacity != None and self.magazine != None:
                 maxCapacity = self.shellCapacity
                 if isinstance(ammoList, int) : maxCapacity = ammoList
@@ -145,7 +145,7 @@ class Weapon(Item):
         return False
 
     def getLoadedAmmo(self):
-        if self.weaponType == "Gun":
+        if self.weaponType in ["Pistol", "Rifle"]:
             if self.shellCapacity != None:
                 if self.magazine != None:
                     return self.magazine

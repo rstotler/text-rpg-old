@@ -6,7 +6,7 @@ class CombatSkill(Skill):
     def __init__(self, num):
         Skill.__init__(self, num)
         
-        self.skillGroup = "Basic"
+        self.skillGroup = "Basic" # Used As A Key For Player.combatSkillDict
         
         self.weaponTypeList = []
         self.weaponDataList = []
@@ -65,13 +65,13 @@ class CombatSkill(Skill):
             self.skillGroup = "Rifle"
             self.ruleDict["From Another Room"] = True
             self.ruleDict["Requires Two-Handed Weapon"] = True
-            self.weaponTypeList = [["Gun"]]
+            self.weaponTypeList = [["Rifle"]]
             self.maxRange = 3
             self.offHandAttacks = False
         elif num == 7:
             self.name = {"String":"Shoot", "Code":"5w"}
             self.skillGroup = "Rifle"
-            self.weaponTypeList = [["Gun"]]
+            self.weaponTypeList = [["Pistol", "Rifle"]]
             self.maxRange = 2
         elif num == 8:
             self.name = {"String":"Slash", "Code":"5w"}
@@ -96,6 +96,7 @@ class CombatSkill(Skill):
         elif num == 11:
             self.name = {"String":"Pray", "Code":"4w"}
             self.skillGroup = "Healing Magic"
+            self.maxRange = 1
             self.maxTargets = 1
             self.healCheck = True
         elif num == 12:
@@ -108,7 +109,7 @@ class CombatSkill(Skill):
         elif num == 13:
             self.name = {"String":"Bullet Storm", "Code":"12w"}
             self.skillGroup = "Pistol"
-            self.weaponTypeList = [["Gun"]]
+            self.weaponTypeList = [["Pistol"]]
             self.ruleDict["All Only"] = True
             self.maxRange = 1
             self.offHandAttacks = False
@@ -194,13 +195,13 @@ class CombatSkill(Skill):
             # elif num == 451:
             #     self.name = {"String":"Shoot", "Code":"5w"}
             #     self.skillGroup = "Pistol"
-            #     self.weaponTypeList = [["Gun"]]
+            #     self.weaponTypeList = [["Pistol"]]
             #     self.maxRange = 2
 
             # elif num == 452:
             #     self.name = {"String":"Bullet Storm", "Code":"12w"}
             #     self.skillGroup = "Pistol"
-            #     self.weaponTypeList = [["Gun"]]
+            #     self.weaponTypeList = [["Pistol"]]
             #     self.ruleDict["All Only"] = True
             #     self.maxRange = 1
             #     self.offHandAttacks = False
@@ -210,17 +211,17 @@ class CombatSkill(Skill):
             # elif num == 501:
             #     self.name = {"String":"Shoot", "Code":"5w"}
             #     self.skillGroup = "Rifle"
-            #     self.weaponTypeList = [["Gun"]]
+            #     self.weaponTypeList = [["Rifle"]]
             #     self.maxRange = 2
 
             # elif num == 502:
-            self.name = {"String":"Snipe", "Code":"5w"}
-            self.skillGroup = "Rifle"
-            self.ruleDict["From Another Room"] = True
-            self.ruleDict["Requires Two-Handed Weapon"] = True
-            self.weaponTypeList = [["Gun"]]
-            self.maxRange = 3
-            self.offHandAttacks = False
+                # self.name = {"String":"Snipe", "Code":"5w"}
+                # self.skillGroup = "Rifle"
+                # self.ruleDict["From Another Room"] = True
+                # self.ruleDict["Requires Two-Handed Weapon"] = True
+                # self.weaponTypeList = [["Rifle"]]
+                # self.maxRange = 3
+                # self.offHandAttacks = False
 
         if "All Only" in self.ruleDict:
             self.maxTargets = "All"

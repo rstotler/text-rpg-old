@@ -94,7 +94,7 @@ class RoomScreen:
                                 drawFloor = False
 
                         # Inside Walls #
-                        elif playerRoom.inside == True and ((targetRoom != None and targetRoom.inside == False) or targetRoom == None):
+                        elif (playerRoom.inside == True and ((targetRoom != None and targetRoom.inside == False) or targetRoom == None)):
                             self.surface.blit(self.imageDict["Wall"][row][targetSide], [0, 0])
                             drawFloor = False
                             

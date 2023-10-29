@@ -150,8 +150,8 @@ def getCountString(targetCount, blankSpace=True):
             displayCode = "1" + displayCode[1::]
     return displayString, displayCode
 
-def getDamageString(targetDamage):
-    stringWithCommas = insertCommasInNumber(str(targetDamage), "dr")
+def getDamageString(targetDamage, color="dr"):
+    stringWithCommas = insertCommasInNumber(str(targetDamage), color)
     displayString = "(" + stringWithCommas["String"] + ")"
     displayCode = "1y" + stringWithCommas["Code"] + "1y"
     return {"String":displayString, "Code":displayCode}
@@ -245,7 +245,7 @@ def writeCrashReport(errorString, input, player):
             quantityString = ""
             if hasattr(item, "quantity") == True:
                 quantityString = " (" + str(item.quantity) + ")"
-            f.write(str(item.num) + " - " + str(item.name["String"] + quantityString) + "\n")
+            f.write(str(item.num) + " - [" + item.pocket + "] " + str(item.name["String"] + quantityString) + "\n")
         f.write("\n")
 
         f.write("Player Gear: " + str(len(player.getAllItemList(["Gear"]))) + "\n")

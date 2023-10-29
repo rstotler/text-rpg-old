@@ -25,23 +25,24 @@ from Components.Utility import *
         # Computer/Hacking/Simulation/Breaking The Third Wall
         # Love Story
     # Near Term:
-        # Separate Gun WeaponType Into Pistols & Rifles (why do we need item.ranged?)
+        # Why Do We Need Item.ranged?
         # Auto-Loot
         # Auto-Combat
         # Counter-Attack (Passive Skill)
         # Attacks With Knockback
         # Attacks That Knock Mobs/Player Down
         # Gun Mods, Scopes Modify Accuracy
-        # Classes(?)
-        # Reload while walking?
+        # Reload While Walking?
         # Make Player Lose Sight Of Mobs On Darkness
         # Add Item Skills To Skill List
         # Make Sure Mob Can't Use Cut Limbs To Attack
         # Let Player Do 'All' Combat Skills In Rooms Without Mobs
-        # Fix Heal Spells
         # Make Sure Orbits Are Elliptical
         # Make Sure Damage Stacks In Attack Messages
+        # 'Attack' Command Should Use Weapon In Main Hand
+        # Make Healing Text Number Color Green
     # Far Term:
+        # Classes(?)
         # Enemy groups
         # Move Direction '#'
         # Bleeding
@@ -49,6 +50,7 @@ from Components.Utility import *
         # Mob Vs. Mob Combat
         # Moons
         # Reload Messages For Mobs
+        # Make Sure Items Don't Generate Over Special Item Numbers
 
 class Game:
 
@@ -128,13 +130,6 @@ class Game:
             systemProtoSol.planetList.append(planetProtoPluto)
 
         planetProtoEarth.createContinent(self.galaxyList, [25, 25])
-
-        planetProtoEarth.areaList[0].roomList[210].inside = True
-        planetProtoEarth.areaList[0].roomList[185].inside = True
-        planetProtoEarth.areaList[0].roomList[160].inside = True
-
-        planetProtoEarth.areaList[0].roomList[159].inside = True
-        planetProtoEarth.areaList[0].roomList[161].inside = True
 
         areaCOTUNum = len(planetProtoEarth.areaList)
         areaIceCavernNum = areaCOTUNum + 1

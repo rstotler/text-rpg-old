@@ -181,7 +181,7 @@ class Room:
             for item in self.itemList:
                 displayData = None
                 for data in displayList:
-                    if data["Num"] == item.num:
+                    if "Num" in data and "Pocket" in data and data["Num"] == item.num and data["Pocket"] == item.pocket:
                         if item.num != Item.getSpecialItemNum("Corpse") or item.name["String"] == data["ItemData"].name["String"]:
                             displayData = data
                             break
@@ -189,7 +189,7 @@ class Room:
                     itemCount = 1
                     if hasattr(item, "quantity") == True:
                         itemCount = item.quantity
-                    displayList.append({"Num":item.num, "Count":itemCount, "ItemData":item})
+                    displayList.append({"Num":item.num, "Pocket":item.pocket, "Count":itemCount, "ItemData":item})
                     totalItemCount += itemCount
                 else:
                     displayData["Count"] += 1
@@ -343,7 +343,7 @@ class Room:
                     
         return False
 
-    def getTargetObject(self, targetObjectKey, includeList=["Mobs", "Items", "Spaceships"]):
+    def getTargetObject(self, targetObjectKey, includeList=["Mobs", "Items", "Spaceships"], targetObjectPocket=None):
         objectCheckList = []
         if "Mob" in includeList or "Mobs" in includeList:
             objectCheckList.append(self.mobList)
@@ -355,7 +355,7 @@ class Room:
         for objectList in objectCheckList:
             for tempObject in objectList:
                 if (isinstance(targetObjectKey, str) and targetObjectKey in tempObject.keyList) or \
-                (isinstance(targetObjectKey, int) and targetObjectKey == tempObject.num):
+                (isinstance(targetObjectKey, int) and targetObjectKey == tempObject.num and targetObjectPocket != None and targetObjectPocket == targetObject.pocket):
                     return tempObject
 
         if "Button" in includeList or "Buttons" in includeList:

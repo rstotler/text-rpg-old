@@ -132,14 +132,14 @@ class Item:
                     else:
                         displayData = None
                         for data in displayList:
-                            if "Num" in data and data["Num"] == item.num:
+                            if "Num" in data and "Pocket" in data and data["Num"] == item.num and data["Pocket"] == item.pocket:
                                 displayData = data
                                 break
                         if displayData == None:
                             itemCount = 1
                             if hasattr(item, "quantity") == True:
                                 itemCount = item.quantity
-                            displayList.append({"Num":item.num, "Count":itemCount, "ItemData":item})
+                            displayList.append({"Num":item.num, "Pocket":item.pocket, "Count":itemCount, "ItemData":item})
                         else:
                             displayData["Count"] += 1
 
@@ -208,10 +208,10 @@ class Item:
                 weight += item.getWeight()
         return weight
 
-    def getContainerItem(self, targetItemKey):
+    def getContainerItem(self, targetItemKey, targetItemPocket=None):
         if self.containerList != None:
             for item in self.containerList:
-                if (isinstance(targetItemKey, str) and targetItemKey in item.keyList) or (isinstance(targetItemKey, int) and targetItemKey == item.num):
+                if (isinstance(targetItemKey, str) and targetItemKey in item.keyList) or (isinstance(targetItemKey, int) and targetItemKey == item.num and targetItemPocket != None and targetItemPocket == item.pocket):
                     return item
         return None
 
