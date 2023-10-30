@@ -26,8 +26,11 @@ class Player:
         self.roomDescription = {"String":"is standing here.", "Code":"16w1y"}
         self.keyList = []
 
-        self.weaponSkillList = [Skill(1001), Skill(1002), Skill(1003), Skill(1004), Skill(1005), Skill(1006), Skill(1007), Skill(1008), Skill(1009), Skill(1010), Skill(1011)]
-        self.combatSkillDict = {"Basic":[], "Sword":[], "Dagger":[], "Axe":[], "Blunt":[], "Polearm":[], "Unarmed":[], "Bow":[], "Pistol":[], "Rifle":[], "Offensive Magic":[], "Defensive Magic":[]}
+        self.weaponSkillList = []
+        for i in range(14):
+            self.weaponSkillList.append(Skill(i + 1))
+
+        self.combatSkillDict = {"Melee":[], "Sword":[], "Dagger":[], "Claw":[], "Axe":[], "Blunt":[], "Polearm":[], "Shield":[], "Bow":[], "Pistol":[], "Rifle":[], "Offensive Magic":[], "Defensive Magic":[]}
 
         self.actionList = []
         self.stunList = []
@@ -41,7 +44,7 @@ class Player:
         self.recruitList = []
         self.combatList = []
 
-        self.itemDict = {"Armor":[], "Weapon":[], "Ammo":[], "Materium":[], "Key":[], "Food":[], "Organic":[], "Misc":[]}
+        self.itemDict = {"Armor":[], "Weapon":[], "Ammo":[], "Materium":[], "Key":[], "Organic":[], "Misc":[]}
         self.gearDict = {"Head":None, "Face":None, "Neck":[None, None], "Body Under":None, "Body Over":None, "About Body":None, "Hands":None, "Finger":[None, None], "Legs Under":None, "Legs Over":None, "Feet":None, "Left Hand":None, "Right Hand":None}
         self.cutLimbList = []
         self.dominantHand = "Right Hand"
@@ -1435,7 +1438,7 @@ class Player:
                 else:
                     if int(targetGearSlotKey) == 1 : targetGearSlot = "Left Hand"
                     else : targetGearSlot = "Right Hand"
-                if wieldItem != None and wieldItem.twoHanded and (self.debugDualWield == False or wieldItem.ranged == True):
+                if wieldItem != None and wieldItem.twoHanded and (self.debugDualWield == False or wieldItem.isRanged()):
                     targetGearSlot = self.dominantHand
 
             wieldCount = 0
@@ -1444,10 +1447,10 @@ class Player:
             breakCheck = False
             for c in range(count):
                 defaultGearSlot = self.dominantHand
-                if (targetItemKey == "All" and self.gearDict[defaultGearSlot] != None and self.gearDict[defaultGearSlot].twoHanded == False and (self.debugDualWield == False or self.gearDict[defaultGearSlot].ranged == True)) or \
+                if (targetItemKey == "All" and self.gearDict[defaultGearSlot] != None and self.gearDict[defaultGearSlot].twoHanded == False and (self.debugDualWield == False or self.gearDict[defaultGearSlot].isRanged())) or \
                 (targetItemKey != "All" and self.gearDict[defaultGearSlot] != None and self.gearDict[self.getOppositeHand(defaultGearSlot)] == None and self.gearDict[defaultGearSlot].twoHanded == False and wieldItem.twoHanded == False and count == 1) or \
-                (c == 1 and not (self.gearDict[defaultGearSlot] != None and self.gearDict[defaultGearSlot].twoHanded == True and (self.debugDualWield == False or self.gearDict[defaultGearSlot].ranged == True))) or \
-                (targetItemKey != "All" and self.gearDict[defaultGearSlot] != None and self.gearDict[self.getOppositeHand(defaultGearSlot)] == None and wieldItem.twoHanded == True and wieldItem.ranged == False and self.debugDualWield == True and self.gearDict[defaultGearSlot].ranged == False):
+                (c == 1 and not (self.gearDict[defaultGearSlot] != None and self.gearDict[defaultGearSlot].twoHanded == True and (self.debugDualWield == False or self.gearDict[defaultGearSlot].isRanged()))) or \
+                (targetItemKey != "All" and self.gearDict[defaultGearSlot] != None and self.gearDict[self.getOppositeHand(defaultGearSlot)] == None and wieldItem.twoHanded == True and wieldItem.isRanged() == False and self.debugDualWield == True and self.gearDict[defaultGearSlot].isRanged() == False):
                     defaultGearSlot = self.getOppositeHand(self.dominantHand)
                 if targetGearSlot != None:
                     defaultGearSlot = targetGearSlot
@@ -1455,7 +1458,7 @@ class Player:
                 for i, item in enumerate(self.itemDict["Weapon"]):
                     if targetItemKey == "All" or targetItemKey in item.keyList:
                         if not (targetItemKey == "All" and self.gearDict[defaultGearSlot] != None) and \
-                        not (targetItemKey == "All" and item.twoHanded == True and (self.gearDict[self.dominantHand] != None or self.gearDict[self.getOppositeHand(self.dominantHand)] != None) and (self.debugDualWield == False or item.ranged == True)):
+                        not (targetItemKey == "All" and item.twoHanded == True and (self.gearDict[self.dominantHand] != None or self.gearDict[self.getOppositeHand(self.dominantHand)] != None) and (self.debugDualWield == False or item.isRanged())):
                             if self.gearDict[defaultGearSlot] != None:
                                 self.itemDict[self.gearDict[defaultGearSlot].pocket].append(self.gearDict[defaultGearSlot])
                                 slotCount += 1
@@ -1464,7 +1467,7 @@ class Player:
                                 elif slotItem != "Multiple" and (slotItem.num != self.gearDict[defaultGearSlot].num or slotItem.pocket != self.gearDict[defaultGearSlot].pocket):
                                     slotItem = "Multiple"
                             oppositeHand = self.gearDict[self.getOppositeHand(defaultGearSlot)]
-                            if oppositeHand != None and (item.twoHanded == True or oppositeHand.twoHanded == True) and (self.debugDualWield == False or ((item.twoHanded == True and item.ranged == True) or (oppositeHand.twoHanded == True and oppositeHand.ranged == True))):
+                            if oppositeHand != None and (item.twoHanded == True or oppositeHand.twoHanded == True) and (self.debugDualWield == False or ((item.twoHanded == True and item.isRanged()) or (oppositeHand.twoHanded == True and oppositeHand.isRanged()))):
                                 self.itemDict[oppositeHand.pocket].append(oppositeHand)
                                 self.gearDict[self.getOppositeHand(defaultGearSlot)] = None
                                 slotCount += 1
@@ -1481,7 +1484,7 @@ class Player:
                             delIndex = i
                             break
                 if delIndex != -1:
-                    if self.itemDict["Weapon"][delIndex].twoHanded == True and (self.debugDualWield == False or self.itemDict["Weapon"][delIndex].ranged == True):
+                    if self.itemDict["Weapon"][delIndex].twoHanded == True and (self.debugDualWield == False or self.itemDict["Weapon"][delIndex].isRanged()):
                         breakCheck = True
                     del self.itemDict["Weapon"][delIndex]
                 if breakCheck:
@@ -1693,36 +1696,36 @@ class Player:
             gunInventoryCount = 0
             if reloadSlot != None:
                 if self.gearDict[reloadSlot] != None:
-                    if self.gearDict[reloadSlot].pocket == "Weapon" and self.gearDict[reloadSlot].ranged == True:
+                    if self.gearDict[reloadSlot].pocket == "Weapon" and self.gearDict[reloadSlot].isRanged():
                         reloadList.append(self.gearDict[reloadSlot])
                     else:
                         targetItem = self.gearDict[reloadSlot]
             elif reloadKey == "All":
-                if self.gearDict[self.dominantHand] != None and self.gearDict[self.dominantHand].pocket == "Weapon" and self.gearDict[self.dominantHand].ranged == True:
+                if self.gearDict[self.dominantHand] != None and self.gearDict[self.dominantHand].pocket == "Weapon" and self.gearDict[self.dominantHand].isRanged():
                     reloadList.append(self.gearDict[self.dominantHand])
-                if self.gearDict[self.getOppositeHand(self.dominantHand)] != None and self.gearDict[self.getOppositeHand(self.dominantHand)].pocket == "Weapon" and self.gearDict[self.getOppositeHand(self.dominantHand)].ranged == True:
+                if self.gearDict[self.getOppositeHand(self.dominantHand)] != None and self.gearDict[self.getOppositeHand(self.dominantHand)].pocket == "Weapon" and self.gearDict[self.getOppositeHand(self.dominantHand)].isRanged():
                     reloadList.append(self.gearDict[self.getOppositeHand(self.dominantHand)])
                 if reloadSlotKey == "All":
                     for pocket in self.itemDict:
                         for item in self.itemDict[pocket]:
-                            if pocket == "Weapon" and item.ranged == True:
+                            if pocket == "Weapon" and item.isRanged():
                                 reloadList.append(item)
                                 gunInventoryCount += 1
             else:
                 if self.gearDict["Left Hand"] != None and reloadKey in self.gearDict["Left Hand"].keyList:
-                    if self.gearDict["Left Hand"].ranged == True:
+                    if self.gearDict["Left Hand"].isRanged():
                         reloadList.append(self.gearDict["Left Hand"])
                     else:
                         targetItem = self.gearDict["Left Hand"]
                 elif self.gearDict["Right Hand"] != None and reloadKey in self.gearDict["Right Hand"].keyList:
-                    if self.gearDict["Right Hand"].ranged == True:
+                    if self.gearDict["Right Hand"].isRanged():
                         reloadList.append(self.gearDict["Right Hand"])
                     else:
                         targetItem = self.gearDict["Right Hand"]
                 else:
                     for item in self.getAllItemList(["Inventory"]):
                         if reloadKey in item.keyList:
-                            if item.pocket == "Weapon" and item.ranged == True:
+                            if item.pocket == "Weapon" and item.isRanged():
                                 reloadList.append(item)
                                 targetItem = None
                                 break
@@ -1733,9 +1736,9 @@ class Player:
             if reloadKey not in ["All", None] and reloadSlotKey == None and ammoKey == None:
                 if len(reloadList) == 0:
                     reloadTargetShiftCheck = True
-                    if self.gearDict[self.dominantHand] != None and self.gearDict[self.dominantHand].ranged == True and reloadKey in self.gearDict[self.dominantHand].keyList:
+                    if self.gearDict[self.dominantHand] != None and self.gearDict[self.dominantHand].isRanged() and reloadKey in self.gearDict[self.dominantHand].keyList:
                         reloadList.append(self.gearDict[self.dominantHand])
-                    if self.gearDict[self.getOppositeHand(self.dominantHand)] != None and self.gearDict[self.getOppositeHand(self.dominantHand)].ranged == True and reloadKey in self.gearDict[self.getOppositeHand(self.dominantHand)].keyList:
+                    if self.gearDict[self.getOppositeHand(self.dominantHand)] != None and self.gearDict[self.getOppositeHand(self.dominantHand)].isRanged() and reloadKey in self.gearDict[self.getOppositeHand(self.dominantHand)].keyList:
                         reloadList.append(self.gearDict[self.getOppositeHand(self.dominantHand)])
                             
             alreadyReloadedCheck = False
@@ -1746,7 +1749,7 @@ class Player:
                         alreadyReloadedCheck = False
                         break 
             
-            if reloadKey not in ["All", None] and len(reloadList) == 0 and targetItem != None and (targetItem.pocket != "Weapon" or targetItem.ranged == False):
+            if reloadKey not in ["All", None] and len(reloadList) == 0 and targetItem != None and (targetItem.pocket != "Weapon" or targetItem.isRanged() == False):
                 console.write("You can't reload that.", "7w1y13w1y", True)
             elif alreadyReloadedCheck == True:
                 displayString = "It's already loaded."
@@ -1776,10 +1779,10 @@ class Player:
                 targetAmmo = flags["targetAmmo"]
                 reloadWeapon = flags["reloadWeapon"]
 
-                if autoReload == False and requireWeapon != None and magazineCheck == False and reloadCount == 0 and not (requireWeapon.shellCapacity == None and requireWeapon.magazine != None):
+                if autoReload == False and requireWeapon != None and magazineCheck == False and reloadCount == 0 and not (requireWeapon.ammoCapacity == None and requireWeapon.magazine != None):
                     displayString = "It requires a " + requireWeapon.ammoType + "."
                     displayCode = "14w" + str(len(requireWeapon.ammoType)) + "w1y"
-                    if requireWeapon.shellCapacity == None:
+                    if requireWeapon.ammoCapacity == None:
                         displayString = "You don't have a " + requireWeapon.ammoType + " magazine."
                         displayCode = "7w1y9w" + str(len(requireWeapon.ammoType)) + "w9w1y"
                     console.write(displayString, displayCode, drawBlankLine)
@@ -1884,14 +1887,14 @@ class Player:
             heldMagazineCheck = False
 
             # Non-Magazine Weapons #
-            if weapon.shellCapacity != None:
+            if weapon.ammoCapacity != None:
                 targetAmmo, ammoIndex = targetPlayer.ammoCheck(weapon.ammoType)
                 if ammoKey != None:
                     targetAmmo, ammoIndex = targetPlayer.ammoCheck(weapon.ammoType, ammoKey)
                 elif reloadTargetShiftCheck == True:
                     targetAmmo, ammoIndex = targetPlayer.ammoCheck(weapon.ammoType, reloadKey)
 
-                if weapon.magazine == None or weapon.magazine.quantity < weapon.shellCapacity or (targetAmmo != None and weapon.magazine.num != targetAmmo.num):
+                if weapon.magazine == None or weapon.magazine.quantity < weapon.ammoCapacity or (targetAmmo != None and weapon.magazine.num != targetAmmo.num):
                     if ammoIndex != -1 and not (reloadKey == "All" and ammoKey == None and weapon.magazine != None and weapon.magazine.num != targetAmmo.num):
                         if weapon.magazine != None and weapon.magazine.num != targetAmmo.num:
                             inventoryAmmo, unused = targetPlayer.getTargetItem(weapon.magazine.num, ["Inventory"]. weapon.magazine.pocket)
@@ -1904,7 +1907,7 @@ class Player:
                         alreadyLoadedCount = 0
                         if weapon.magazine != None:
                             alreadyLoadedCount = weapon.magazine.quantity
-                        reloadQuantity = weapon.shellCapacity - alreadyLoadedCount
+                        reloadQuantity = weapon.ammoCapacity - alreadyLoadedCount
                         if reloadQuantity > targetAmmo.quantity:
                             reloadQuantity = targetAmmo.quantity
                         if weapon.magazine == None:
@@ -1936,12 +1939,12 @@ class Player:
                         targetAmmo, ammoIndex = targetPlayer.ammoCheck(weapon.ammoType, reloadKey)
 
                     if ammoIndex != -1 and not (reloadKey == "All" and ammoKey == None and weapon.magazine != None and weapon.magazine.flags["Ammo"] != None and weapon.magazine.flags["Ammo"].num != targetAmmo.num):
-                        if weapon.magazine == None or weapon.magazine.flags["Ammo"] == None or weapon.magazine.flags["Ammo"].quantity < weapon.magazine.shellCapacity or weapon.isLoaded(targetPlayer.itemDict["Ammo"]) == False or (targetAmmo != None and weapon.magazine != None and weapon.magazine.flags["Ammo"] != None and targetAmmo.num != weapon.magazine.flags["Ammo"].num):
+                        if weapon.magazine == None or weapon.magazine.flags["Ammo"] == None or weapon.magazine.flags["Ammo"].quantity < weapon.magazine.ammoCapacity or weapon.isLoaded(targetPlayer.itemDict["Ammo"]) == False or (targetAmmo != None and weapon.magazine != None and weapon.magazine.flags["Ammo"] != None and targetAmmo.num != weapon.magazine.flags["Ammo"].num):
                             weaponMagazine = weapon.magazine
                             if weaponMagazine == None:
                                 weaponMagazine = targetMagazine
                                 heldMagazineCheck = True
-                            elif weaponMagazine != None and targetMagazine != None and weaponMagazine.shellCapacity < targetMagazine.shellCapacity:
+                            elif weaponMagazine != None and targetMagazine != None and weaponMagazine.ammoCapacity < targetMagazine.ammoCapacity:
                                 targetPlayer.itemDict["Ammo"].append(weaponMagazine)
                                 if weaponMagazine.flags["Ammo"] != None:
                                     heldAmmo, unused = targetPlayer.getTargetItem(weaponMagazine.flags["Ammo"].num, ["Inventory"], weaponMagazine.flags["Ammo"].pocket)
@@ -1963,7 +1966,7 @@ class Player:
                             alreadyLoadedCount = 0
                             if weaponMagazine.flags["Ammo"] != None:
                                 alreadyLoadedCount = weaponMagazine.flags["Ammo"].quantity
-                            reloadQuantity = weaponMagazine.shellCapacity - alreadyLoadedCount
+                            reloadQuantity = weaponMagazine.ammoCapacity - alreadyLoadedCount
                             if reloadQuantity > targetAmmo.quantity:
                                 reloadQuantity = targetAmmo.quantity
                             if weaponMagazine.flags["Ammo"] == None:
@@ -2042,51 +2045,51 @@ class Player:
             roomItem = None
             if unloadSlot != None:
                 if self.gearDict[unloadSlot] != None:
-                    if self.gearDict[unloadSlot].pocket == "Weapon" and self.gearDict[unloadSlot].ranged == True:
+                    if self.gearDict[unloadSlot].pocket == "Weapon" and self.gearDict[unloadSlot].isRanged():
                         unloadList.append(self.gearDict[unloadSlot])
                     else:
                         targetItem = self.gearDict[unloadSlot]
             elif unloadKey == "All":
-                if self.gearDict[self.dominantHand] != None and self.gearDict[self.dominantHand].pocket == "Weapon" and self.gearDict[self.dominantHand].ranged == True:
+                if self.gearDict[self.dominantHand] != None and self.gearDict[self.dominantHand].pocket == "Weapon" and self.gearDict[self.dominantHand].isRanged():
                     unloadList.append(self.gearDict[self.dominantHand])
-                if self.gearDict[self.getOppositeHand(self.dominantHand)] != None and self.gearDict[self.getOppositeHand(self.dominantHand)].pocket == "Weapon" and self.gearDict[self.getOppositeHand(self.dominantHand)].ranged == True:
+                if self.gearDict[self.getOppositeHand(self.dominantHand)] != None and self.gearDict[self.getOppositeHand(self.dominantHand)].pocket == "Weapon" and self.gearDict[self.getOppositeHand(self.dominantHand)].isRanged():
                     unloadList.append(self.gearDict[self.getOppositeHand(self.dominantHand)])
                 for item in self.itemDict["Weapon"]:
-                    if item.ranged == True:
+                    if item.isRanged():
                         unloadList.append(item)
             elif unloadKey == None:
                 if self.gearDict[self.dominantHand] != None:
-                    if self.gearDict[self.dominantHand].pocket == "Weapon" and self.gearDict[self.dominantHand].ranged == True:
+                    if self.gearDict[self.dominantHand].pocket == "Weapon" and self.gearDict[self.dominantHand].isRanged():
                         unloadList.append(self.gearDict[self.dominantHand])
                 if self.gearDict[self.getOppositeHand(self.dominantHand)] != None:
-                    if self.gearDict[self.getOppositeHand(self.dominantHand)].pocket == "Weapon" and self.gearDict[self.getOppositeHand(self.dominantHand)].ranged == True:
+                    if self.gearDict[self.getOppositeHand(self.dominantHand)].pocket == "Weapon" and self.gearDict[self.getOppositeHand(self.dominantHand)].isRanged():
                         unloadList.append(self.gearDict[self.getOppositeHand(self.dominantHand)])
             else:
                 if self.gearDict[self.dominantHand] != None and unloadKey in self.gearDict[self.dominantHand].keyList:
-                    if self.gearDict[self.dominantHand].pocket == "Weapon" and self.gearDict[self.dominantHand].ranged == True:
+                    if self.gearDict[self.dominantHand].pocket == "Weapon" and self.gearDict[self.dominantHand].isRanged():
                         unloadList.append(self.gearDict[self.dominantHand])
                     else:
                         targetItem = self.gearDict[self.dominantHand]
                 elif self.gearDict[self.getOppositeHand(self.dominantHand)] != None and unloadKey in self.gearDict[self.getOppositeHand(self.dominantHand)].keyList:
-                    if self.gearDict[self.getOppositeHand(self.dominantHand)].pocket == "Weapon" and self.gearDict[self.getOppositeHand(self.dominantHand)].ranged == True:
+                    if self.gearDict[self.getOppositeHand(self.dominantHand)].pocket == "Weapon" and self.gearDict[self.getOppositeHand(self.dominantHand)].isRanged():
                         unloadList.append(self.gearDict[self.getOppositeHand(self.dominantHand)])
                     else:
                         targetItem = self.gearDict[self.getOppositeHand(self.dominantHand)]
                 elif self.getTargetItem(unloadKey, ["Gear"])[0] != None and unloadKey in self.getTargetItem(unloadKey, ["Gear"])[0].keyList:
                     searchItem = self.getTargetItem(unloadKey, ["Gear"])[0]
-                    if searchItem.pocket == "Weapon" and searchItem.ranged == True:
+                    if searchItem.pocket == "Weapon" and searchItem.isRanged():
                         unloadList.append(searchItem)
                     else:
                         targetItem = searchItem
                 elif self.getTargetItem(unloadKey, ["Inventory"])[0] != None:
                     searchItem = self.getTargetItem(unloadKey, ["Inventory"])[0]
-                    if searchItem.pocket == "Weapon" and searchItem.ranged == True:
+                    if searchItem.pocket == "Weapon" and searchItem.isRanged():
                         unloadList.append(searchItem)
                     else:
                         targetItem = searchItem
                 elif currentRoom.getTargetObject(unloadKey, ["Items"]) != None:
                     searchItem = currentRoom.getTargetObject(unloadKey, ["Items"])
-                    if searchItem.pocket == "Weapon" and searchItem.ranged == True:
+                    if searchItem.pocket == "Weapon" and searchItem.isRanged():
                         unloadList.append(searchItem)
                     else:
                         targetItem = searchItem
@@ -2100,7 +2103,7 @@ class Player:
                         alreadyUnloadedCheck = False
                         break
 
-            if unloadKey not in ["All", None] and len(unloadList) == 0 and targetItem != None and (targetItem.pocket != "Weapon" or targetItem.ranged == False):
+            if unloadKey not in ["All", None] and len(unloadList) == 0 and targetItem != None and (targetItem.pocket != "Weapon" or targetItem.isRanged() == False):
                 console.write("You can't unload that.", "7w1y13w1y", True)
             elif alreadyUnloadedCheck == True:
                 displayString = "It's already unloaded."
@@ -2204,7 +2207,7 @@ class Player:
         for weaponIndex, weapon in enumerate(unloadList):
             
             # Non-Magazine Weapons #
-            if weapon.shellCapacity != None and weapon.magazine != None:
+            if weapon.ammoCapacity != None and weapon.magazine != None:
                 if not (ammoKey != None and ammoKey not in weapon.magazine.keyList):
                     getQuantity = weapon.magazine.quantity
                     if roomItem != None and targetPlayer.getWeight() + roomItem.getWeight() > targetPlayer.getMaxWeight():
@@ -2494,7 +2497,7 @@ class Player:
                                 drawBlankLineCheck = drawBlankLine and (len(messageDataList) == 0 or (len(messageDataList) > 0 and messageDataList[-1]["Message Type"] != messageType))
                                 stackDisplayMessage(messageDataList, messageType, stringHalf1, stringHalf2, codeHalf1, codeHalf2, drawBlankLineCheck)
                                 
-                            self.actionList.append(Action("Combat Skill", actionFlags))
+                            self.actionList.append(Action("Combat Skill", actionFlags, combatSkill.tickCount))
 
         return messageDataList
 
@@ -2688,7 +2691,7 @@ class Player:
                                 targetEnemyString = "you"
                                 targetEnemyCode = "3w"
                             if not (self.num != None and targetRoom.sameRoomCheck(player) == False):
-                                if "Target Block Check" in attackData:
+                                if "Target Block Check" in attackData and attackData["Target Block Check"] == True:
                                     blockString = " Block "
                                     if attackData["Mob Data"].num != None:
                                         blockString = " Blocks "
@@ -2704,15 +2707,17 @@ class Player:
                                     stringHalf2 = blockString + targetUserString + attackData["Attack Data"].name["String"] + stunString
                                     codeHalf1 = targetEnemyCode
                                     codeHalf2 = str(len(blockString)) + "w" + targetUserCode + attackData["Attack Data"].name["Code"] + stunCode
+                                
                                 else:
                                     stunString = "!"
                                     stunCode = "1y"
-                                    if "Stun Check" in attackData:
+                                    if "Stun Check" in attackData and attackData["Stun Check"] == True:
                                         stunString = ", sending them reeling!"
                                         stunCode = "2y20w1y"
                                         if attackData["Mob Data"].num == None:
                                             stunString = ", sending you reeling!"
                                             stunCode = "2y19w1y"
+
                                     attackDamageLine = {"String":"", "Code":""}
                                     if "Attack Damage" in attackData:
                                         attackDamageLine = getDamageString(attackData["Attack Damage"], damageColor)
@@ -2720,6 +2725,19 @@ class Player:
                                     stringHalf2 = secondaryAttackString + attackData["Attack Data"].name["String"] + directionString + directionCountString + hitString + " " + targetEnemyString + stunString + countString + " " + attackDamageLine["String"]
                                     codeHalf1 = targetUserCode
                                     codeHalf2 = secondaryAttackCode + attackData["Attack Data"].name["Code"] + directionCode + directionCountCode + hitCode + "1w" + targetEnemyCode + stunCode + countCode + "1w" + attackDamageLine["Code"]
+                                
+                                    if "Sweep Check" in attackData and attackData["Sweep Check"] == True:
+                                        if attackData["Mob Data"].num == None:
+                                            stringHalf1 = targetUserString
+                                            stringHalf2 = "sweep knocks you to the ground!"
+                                            codeHalf1 = targetUserCode
+                                            codeHalf2 = "30w1y"
+                                        else:
+                                            stringHalf1 = targetUserString
+                                            stringHalf2 = "sweep knocks " + attackData["Mob Data"].prefix + " " + attackData["Mob Data"].name["String"] + " to the ground!"
+                                            codeHalf1 = targetUserCode
+                                            codeHalf2 = "13w" + str(len(attackData["Mob Data"].prefix)) + "w1w" + attackData["Mob Data"].name["Code"] + "14w1y"
+
                                 drawBlankLineCheck = drawBlankLine and (len(messageDataList) == 0 or (len(messageDataList) > 0 and messageDataList[-1]["Message Type"] != messageType))
                                 combineLinesCheck = self.num != None
                                 stackDisplayMessage(messageDataList, messageType, stringHalf1, stringHalf2, codeHalf1, codeHalf2, drawBlankLineCheck, combineLinesCheck)
@@ -2807,19 +2825,23 @@ class Player:
         mainAttackHand = self.gearDict[self.dominantHand]
         offAttackHand = self.gearDict[self.getOppositeHand(self.dominantHand)]
         combatSkill.weaponDataList = []
-        if combatSkill.weaponAttackCheck(mainAttackHand, offAttackHand) == True:
-            attackList.append(combatSkill)
-            if len(combatSkill.weaponDataList) == 1 and (combatSkill.weaponDataList[0] == offAttackHand or (combatSkill.weaponDataList[0] == "Open Hand" and offAttackHand == None)):
-                offAttackHand = self.gearDict[self.dominantHand]
-        if combatSkill.offHandAttacks == True and len(combatSkill.weaponTypeList) != 2 and combatSkill.healCheck == False and len(self.cutLimbList) == 0:
-            offHandFlagList = {"Distance":roomDistance, "Disable Two-Handed Attacks":True, '"All" Attacks Disabled':True, "Disable Healing":True}
-            if self.num == None:
-                offHandFlagList["Disable Weaponless Skills"] = True
-            else:
-                offHandFlagList["Disable No Off-Hand Attack Attacks"] = True
-            offAttackSkill, offAttackMessage = copy.deepcopy(self.getRandomAttackSkill(offAttackHand, None, offHandFlagList))
-            if offAttackSkill != None and offAttackSkill.weaponAttackCheck(offAttackHand) == True:
-                attackList.append(offAttackSkill)
+
+        if len(combatSkill.weaponTypeList) == 2 or combatSkill.offHandAttacks == False:
+            if combatSkill.weaponAttackCheck(mainAttackHand, offAttackHand) == True:
+                attackList.append(combatSkill)
+
+        else:
+            if combatSkill.weaponAttackCheck(mainAttackHand) == True:
+                attackList.append(combatSkill)
+            if combatSkill.healCheck == False and len(self.cutLimbList) == 0:
+                offHandFlagList = {"Distance":roomDistance, "Disable Two-Handed Attacks":True, '"All" Attacks Disabled':True, "Disable Healing":True}
+                if self.num == None:
+                    offHandFlagList["Disable Weaponless Skills"] = True
+                else:
+                    offHandFlagList["Disable No Off-Hand Attack Attacks"] = True
+                offAttackSkill, offAttackMessage = copy.deepcopy(self.getRandomAttackSkill(offAttackHand, "Unused", offHandFlagList))
+                if offAttackSkill != None and offAttackSkill.weaponAttackCheck(offAttackHand) == True:
+                    attackList.append(offAttackSkill)
 
         for skill in attackList:
             displayData = {"Mob Data":None, "Killed Mob Data":None, "Count":0, "Kill Count":0, "Miss Count":0, "Attack Data":skill}
@@ -2885,7 +2907,7 @@ class Player:
 
                                         else:
                                             for w, weapon in enumerate(attackSkill.weaponDataList):
-                                                if weapon != "Open Hand" and weapon.weaponType in ["Pistol", "Rifle"] and weapon.isLoaded(1) == False:
+                                                if weapon != "Melee" and weapon.weaponType in ["Pistol", "Rifle"] and weapon.isLoaded(1) == False:
                                                     # Is This Needed Above, For Two Weapon Attacks? (Probably) #
                                                     attackDisplayList[i]["Miss Check"] = "Out Of Ammo"
                                                     attackDisplayList[i]["Weapon Data List"] = [attackSkill.weaponDataList[0]]
@@ -2898,7 +2920,7 @@ class Player:
                                                         if attackHitCheck == True:
                                                             hitCheck = True
 
-                                                    if copyCheck == False and weapon != "Open Hand" and weapon.weaponType in ["Pistol", "Rifle"] and weapon.isLoaded(1) == True:
+                                                    if copyCheck == False and weapon != "Melee" and weapon.weaponType in ["Pistol", "Rifle"] and weapon.isLoaded(1) == True:
                                                         shootGunDataList.append({"Weapon Data":weapon, "Last Used Ammo Name":weapon.getLoadedAmmo().name["String"].lower()})
                                                         weapon.shoot()
                                         
@@ -2934,8 +2956,9 @@ class Player:
                                                         attackDisplayList[i]["Dodge Check"] = True
                                                         if True: # Stumble Check On Successful Enemy Dodge
                                                             del mob.actionList[0]
-                                                            self.actionList.append(Action("Stumble", {}, 3))
-                                                            attackDisplayList[i]["Stumble Check"] = True
+                                                            if attackSkill.name["String"] != "Sweep": # Don't Stumble If Sweeping
+                                                                self.actionList.append(Action("Stumble", {}, 3))
+                                                                attackDisplayList[i]["Stumble Check"] = True
                                                         break
 
                                                 # Enemy Block Check #
@@ -2943,7 +2966,9 @@ class Player:
                                                     if "Target Block Check" in attackDisplayList[i]:
                                                         if attackDisplayList[i]["Target Block Check"] == True:
                                                             del mob.actionList[0]
-                                                            if attackSkill.canBeStunned == True:
+
+                                                            # Stun-Block Check #
+                                                            if attackSkill.stunUserOnBlock == True:
                                                                 mob.stunList.append(self)
                                                                 self.stunnedByList.append(mob)
                                                                 self.actionList.append(Action("Stun", {}, 4))
@@ -2956,12 +2981,18 @@ class Player:
                                                             mob.actionList.append(Action("Stun", {}, 4))
                                                             # Needs Message Data
 
+                                            # Sweep Enemy #
+                                            elif "Sweep Check" in attackDisplayList[i]:
+                                                if len(mob.actionList) > 0:
+                                                    del mob.actionList[0]
+                                                mob.actionList.append(Action("Knocked Down", {}, 8))
+
                                             # Interrupt Enemy Action & Stun #
-                                            elif combatSkill.healCheck == False and len(mob.actionList) > 0 and hitCheck == True and mob.actionList[0].actionType not in ["Buffer Action", "Stun", "Stumble"]:
-                                                if True: # Interrupt Enemy Action Check
+                                            elif combatSkill.healCheck == False and len(mob.actionList) > 0 and hitCheck == True and mob.actionList[0].actionType not in ["Buffer Action", "Stun", "Stumble", "Knocked Down"]:
+                                                if True: # Interrupt Enemy Action Check Goes Here
                                                     del mob.actionList[0]
                                                     attackDisplayList[i]["Interrupt Check"] = True
-                                                    if True: # Stun Enemy Check
+                                                    if True: # Stun Enemy Check Goes Here
                                                         mob.stunnedByList.append(self)
                                                         mob.actionList.append(Action("Stun", {}, 4))
                                                         attackDisplayList[i]["Stun Check"] = True
@@ -3085,6 +3116,16 @@ class Player:
             console.write(self.prefix + " " + self.name["String"] + " regains their senses.", str(len(self.prefix)) + "w1w" + self.name["Code"] + "21w1y", True)
         elif self.num == None:
             console.write("You regain your senses.", "22w1y", True)
+    
+    def knockedDownCompleteAction(self, console, galaxyList, player, flags):
+        currentRoom = Room.exists(galaxyList, self.spaceship, self.galaxy, self.system, self.planet, self.area, self.room)
+        if currentRoom == None:
+            currentRoom = galaxyList[0].systemList[0].planetList[0].areaList[0].roomList[0]
+
+        if self.num != None and currentRoom.sameRoomCheck(player) == True:
+            console.write(self.prefix + " " + self.name["String"] + " gets back up off the ground.", str(len(self.prefix)) + "w1w" + self.name["Code"] + "28w1y", True)
+        elif self.num == None:
+            console.write("You get up off the ground.", "25w1y", True)
 
     def displayInventory(self, console, galaxyList, player, currentRoom, targetPocketKey):
         targetPocket = None
@@ -3098,8 +3139,6 @@ class Player:
             targetPocket = "Materium"
         elif targetPocketKey in ["key", "ke", "k"]:
             targetPocket = "Key"
-        elif targetPocketKey in ["food", "foo", "fo", "f"]:
-            targetPocket = "Food"
         elif targetPocketKey in ["organic", "organi", "organ", "orga", "org", "or", "o"]:
             targetPocket = "Organic"
 
@@ -3109,7 +3148,7 @@ class Player:
         else:
             displayList = []
             for item in self.itemDict[targetPocket]:
-                if item.pocket == "Weapon" and item.ranged == True:
+                if item.pocket == "Weapon" and item.isRanged():
                     displayList.append({"ItemData":item})
                 else:
                     displayData = None
@@ -3782,9 +3821,17 @@ class Player:
         # Gets An Entire List Of Skills (No Rules) #
 
         skillList = []
+        useableDominantHand = []
+        useableOffHand = []
         for skillGroup in self.combatSkillDict:
             for skill in self.combatSkillDict[skillGroup]:
                 skillList.append(skill)
+                if useableFirst == True:
+                    if skill.weaponAttackCheck(self.gearDict[self.dominantHand]) == True:
+                        useableDominantHand.append(skill)
+                    elif skill.weaponAttackCheck(self.gearDict[self.getOppositeHand(self.dominantHand)]) == True:
+                        useableOffHand.append(skill)
+
         for gearSlot in self.gearDict:
             if isinstance(self.gearDict[gearSlot], list):
                 gearList = self.gearDict[gearSlot]
@@ -3794,7 +3841,8 @@ class Player:
                 if gear != None:
                     for skill in gear.skillList:
                         skillList.append(skill)
-        return skillList
+        
+        return useableDominantHand + useableOffHand + skillList
 
     def getRandomAttackSkill(self, targetWeapon, secondWeapon, ruleCheckFlags):
         # Don't Choose Attacks That Don't Require Weapons #
@@ -3832,12 +3880,12 @@ class Player:
 
         if len(combatSkill.weaponTypeList) == 0:
             return True
-        elif len(combatSkill.weaponTypeList) == 1 and "Open Hand" in combatSkill.weaponTypeList[0]:
+        elif len(combatSkill.weaponTypeList) == 1 and "Melee" in combatSkill.weaponTypeList[0]:
             if not (self.debugDualWield == False and self.gearDict[self.dominantHand] != None and self.gearDict[self.dominantHand].twoHanded == True):
                 if targetWeapon == "Unused":
                     if (self.gearDict["Left Hand"] == None and "Left Arm" not in self.cutLimbList) or (self.gearDict["Right Hand"] == None and "Right Arm" not in self.cutLimbList):
                         return True
-                elif targetWeapon in ["Open Hand", None]:
+                elif targetWeapon in ["Melee", None]:
                     return True
         elif len(combatSkill.weaponTypeList) == 1:
             if targetWeapon == "Unused":
@@ -3847,16 +3895,16 @@ class Player:
                 if self.gearDict["Right Hand"] != None and self.gearDict["Right Hand"].weaponType in combatSkill.weaponTypeList[0]:
                     if not ("Requires Two-Handed Weapon" in combatSkill.ruleDict and self.gearDict["Right Hand"].twoHanded == False):
                         return True
-            elif (targetWeapon in ["Open Hand", None] and "Open Hand" in combatSkill.weaponTypeList[0]) or (targetWeapon != None and targetWeapon.weaponType in combatSkill.weaponTypeList[0]):
-                if not ("Requires Two-Handed Weapon" in combatSkill.ruleDict and targetWeapon not in ["Open Hand", None] and targetWeapon.twoHanded == False):
+            elif (targetWeapon in ["Melee", None] and "Melee" in combatSkill.weaponTypeList[0]) or (targetWeapon != None and targetWeapon.weaponType in combatSkill.weaponTypeList[0]):
+                if not ("Requires Two-Handed Weapon" in combatSkill.ruleDict and targetWeapon not in ["Melee", None] and targetWeapon.twoHanded == False):
                     return True
 
         elif len(combatSkill.weaponTypeList) == 2 and targetWeapon == "Unused" and len(self.cutLimbList) == 0:
             correctWeaponTypeList = [[], []]
             playerHeldList = []
-            if self.gearDict["Left Hand"] == None : playerHeldList.append("Open Hand")
+            if self.gearDict["Left Hand"] == None : playerHeldList.append("Melee")
             else : playerHeldList.append(self.gearDict["Left Hand"])
-            if self.gearDict["Right Hand"] == None : playerHeldList.append("Open Hand")
+            if self.gearDict["Right Hand"] == None : playerHeldList.append("Melee")
             else : playerHeldList.append(self.gearDict["Right Hand"])
 
             if playerHeldList[0] in combatSkill.weaponTypeList[0] and playerHeldList[1] in combatSkill.weaponTypeList[1]:
@@ -3878,12 +3926,12 @@ class Player:
         magazineIndex = -1
         for i, item in enumerate(self.itemDict["Ammo"]):
             if item.ammoType == ammoType and not (ammoKey != None and ammoKey not in item.keyList):
-                if magazineCheck == False and item.shellCapacity == None:
+                if magazineCheck == False and item.ammoCapacity == None:
                     return item, i
-                elif magazineCheck == True and item.shellCapacity != None:
-                    if item.shellCapacity > magSize:
+                elif magazineCheck == True and item.ammoCapacity != None:
+                    if item.ammoCapacity > magSize:
                         returnItem = item
-                        magSize = item.shellCapacity
+                        magSize = item.ammoCapacity
                         magazineIndex = i
         if magazineIndex != -1:
             returnIndex = magazineIndex

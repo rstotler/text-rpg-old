@@ -2,7 +2,7 @@ from Components.Utility import *
 
 class Item:
 
-    def __init__(self, num):
+    def __init__(self, num, loadCheck=True):
         self.num = num
         self.flags = {}
 
@@ -21,63 +21,41 @@ class Item:
 
         self.buttonList = None
 
-        self.loadItem(num)
+        if loadCheck == True:
+            self.loadItem(num)
 
     def loadItem(self, num):
-        
-        # Keys (701 - 800) #
-        if self.name["String"] == "Debug Item":
-            if num == 701:
-                self.name = {"String":"Silver Keycard", "Code":"1ddw1dw1w1ddw1dw1w8w"}
-                self.pocket = "Key"
-                appendKeyList(self.keyList, "card")
-                self.flags["Password List"] = ["COTU Spaceport"]
+        if num == 1:
+            self.name = {"String":"Silver Keycard", "Code":"1ddw1dw1w1ddw1dw1w8w"}
+            self.pocket = "Key"
+            appendKeyList(self.keyList, "card")
+            self.flags["Password List"] = ["COTU Spaceport"]
 
-        # Food (801 - 900) #
-        if self.name["String"] == "Debug Item":
-            if num == 801:
-                self.name = {"String":"Hamburger", "Code":"9w"}
-                self.pocket = "Food"
-            if num == 802:
-                self.name = {"String":"Panini", "Code":"6w"}
-                self.pocket = "Food"
-            if num == 803:
-                self.name = {"String":"Salad", "Code":"5w"}
-                self.pocket = "Food"
-            if num == 804:
-                self.name = {"String":"Cookie", "Code":"6w"}
-                self.pocket = "Food"
+        elif num == 2:
+            self.prefix = "An"
+            self.name = {"String":"Ornate Chest", "Code":"1y1dy1ddy1dddy1ddy1dy1w1ddo4dddo"}
+            self.roomDescription = {"String":"sits on the ground.", "Code":"18w1y"}
+            self.flags["No Get"] = True
+            self.containerList = []
 
-        # Misc. (901 - 1000) #
-        if self.name["String"] == "Debug Item":
-            if num == 902:
-                self.prefix = "An"
-                self.name = {"String":"Ornate Chest", "Code":"1y1dy1ddy1dddy1ddy1dy1w1ddo4dddo"}
-                self.roomDescription = {"String":"sits on the ground.", "Code":"18w1y"}
-                self.flags["No Get"] = True
-                self.containerList = []
-            elif num == 903:
-                self.name = {"String":"Weapon Cabinet", "Code":"1w6ddw1w6ddw"}
-                self.roomDescription = {"String":"is sitting here.", "Code":"15w1y"}
-                self.flags["No Get"] = True
-                self.containerList = []
-                self.containerMaxLimit = 500.0
-            elif num == 904:
-                self.name = {"String":"Lamp", "Code":"4w"}
-                self.roomDescription = {"String":"is sitting in the corner.", "Code":"24w1y"}
-                self.flags["Glowing"] = True
-                self.flags["No Get"] = True
-            elif num == 905:
-                self.name = {"String":"Control Panel", "Code":"13w"}
-                self.roomDescription = {"String":"is attatched to the wall.", "Code":"24w1y"}
-                self.flags["No Get"] = True
-                self.buttonList = []
+        elif num == 3:
+            self.name = {"String":"Weapon Cabinet", "Code":"1w6ddw1w6ddw"}
+            self.roomDescription = {"String":"is sitting here.", "Code":"15w1y"}
+            self.flags["No Get"] = True
+            self.containerList = []
+            self.containerMaxLimit = 500.0
 
-        # Organic (1001 - 1100) #
-        if self.name["String"] == "Debug Item":
-            if self.num == 1001:
-                self.name = {"String":"Seed", "Code":"4w"}
-                self.pocket = "Organic"
+        elif num == 4:
+            self.name = {"String":"Lamp", "Code":"4w"}
+            self.roomDescription = {"String":"is sitting in the corner.", "Code":"24w1y"}
+            self.flags["Glowing"] = True
+            self.flags["No Get"] = True
+
+        elif num == 5:
+            self.name = {"String":"Control Panel", "Code":"13w"}
+            self.roomDescription = {"String":"is attatched to the wall.", "Code":"24w1y"}
+            self.flags["No Get"] = True
+            self.buttonList = []
 
         # Special Items #
         if self.name["String"] == "Debug Item":
@@ -127,7 +105,7 @@ class Item:
                 console.write("It contains:", "11w1y")
                 displayList = []
                 for item in self.containerList:
-                    if item.pocket == "Weapon" and item.ranged == True:
+                    if item.pocket == "Weapon" and item.isRanged():
                         displayList.append({"ItemData":item})
                     else:
                         displayData = None
@@ -161,7 +139,7 @@ class Item:
                     console.write(displayString + weaponStatusString + modString + countString, displayCode + weaponStatusCode + modCode + countCode)
             
         # Gun #
-        elif self.pocket == "Weapon" and self.ranged == True:
+        elif self.pocket == "Weapon" and self.isRanged():
             displayString, displayCode = self.getWeaponStatusString()
             console.write("Rounds:" + displayString, "6w1y" + displayCode)
 
@@ -184,8 +162,8 @@ class Item:
     def getWeight(self, multiplyQuantity=True):
         if hasattr(self, "quantity") == False:
             weight = self.weight + self.getContainerWeight()
-            if self.pocket == "Weapon" and self.ranged == True and self.magazine != None:
-                if self.magazine.shellCapacity == None:
+            if self.pocket == "Weapon" and self.isRanged() and self.magazine != None:
+                if self.magazine.ammoCapacity == None:
                     if self.magazine.quantity != None:
                         weight += self.magazine.weight * self.magazine.quantity
                 else:

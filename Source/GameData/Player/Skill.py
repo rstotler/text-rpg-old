@@ -10,27 +10,31 @@ class Skill:
         self.loadSkill(num)
 
     def loadSkill(self, num):
-
-        # Weapon Skill (1001 - ???) #
-        if num == 1001:
+        if num == 1:
+            self.name = {"String":"Melee", "Code":"1w4ddw"}
+        elif num == 2:
             self.name = {"String":"Swords", "Code":"1w5ddw"}
-        elif num == 1002:
+        elif num == 3:
             self.name = {"String":"Daggers", "Code":"1w6ddw"}
-        elif num == 1003:
+        elif num == 4:
+            self.name = {"String":"Claws", "Code":"1w4ddw"}
+        elif num == 5:
             self.name = {"String":"Axes", "Code":"1w3ddw"}
-        elif num == 1004:
+        elif num == 6:
             self.name = {"String":"Blunt", "Code":"1w4ddw"}
-        elif num == 1005:
+        elif num == 7:
             self.name = {"String":"Polearms", "Code":"1w7ddw"}
-        elif num == 1006:
-            self.name = {"String":"Unarmed", "Code":"1w6ddw"}
-        elif num == 1007:
+        elif num == 8:
+            self.name = {"String":"Shields", "Code":"1w6ddw"}
+        elif num == 9:
             self.name = {"String":"Bows", "Code":"1w3ddw"}
-        elif num == 1008:
+        elif num == 10:
             self.name = {"String":"Pistols", "Code":"1w6ddw"}
-        elif num == 1009:
+        elif num == 11:
             self.name = {"String":"Rifles", "Code":"1w5ddw"}
-        elif num == 1010:
-            self.name = {"String":"Explosives", "Code":"1w9ddw"}
-        elif num == 1011:
+        elif num == 12:
             self.name = {"String":"Throwing", "Code":"1w7ddw"}
+        elif num == 13:
+            self.name = {"String":"Explosives", "Code":"1w9ddw"}
+        elif num == 14:
+            self.name = {"String":"Staves", "Code":"1w5ddw"}

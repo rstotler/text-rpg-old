@@ -33,7 +33,6 @@ class Button:
             spawnedMob = Player(galaxyNum, systemNum, planetNum, currentRoom.area, currentRoom.room, spaceshipNum, self.flags["Num"])
 
             if "Skill List" in self.flags:
-                spawnedMob.combatSkillDict = {"Basic":[], "Sword":[], "Dagger":[], "Axe":[], "Blunt":[], "Polearm":[], "Unarmed":[], "Bow":[], "Pistol":[], "Rifle":[], "Offensive Magic":[], "Healing Magic":[]}
                 for skillNum in self.flags["Skill List"]:
                     combatSkill = CombatSkill(skillNum)
                     spawnedMob.combatSkillDict[combatSkill.skillGroup].append(combatSkill)

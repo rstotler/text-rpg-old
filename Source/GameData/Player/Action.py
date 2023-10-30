@@ -23,5 +23,7 @@ class Action:
                 target.stumbleCompleteAction(console, galaxyList, player, self.flags)
             elif self.actionType == "Stun":
                 target.stunCompleteAction(console, galaxyList, player, self.flags)
+            elif self.actionType == "Knocked Down":
+                target.knockedDownCompleteAction(console, galaxyList, player, self.flags)
 
         return messageDataList

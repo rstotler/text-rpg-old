@@ -25,23 +25,21 @@ from Components.Utility import *
         # Computer/Hacking/Simulation/Breaking The Third Wall
         # Love Story
     # Near Term:
-        # Why Do We Need Item.ranged?
-        # Auto-Loot
-        # Auto-Combat
-        # Counter-Attack (Passive Skill)
-        # Attacks With Knockback
-        # Attacks That Knock Mobs/Player Down
         # Gun Mods, Scopes Modify Accuracy
         # Reload While Walking?
         # Make Player Lose Sight Of Mobs On Darkness
         # Add Item Skills To Skill List
-        # Make Sure Mob Can't Use Cut Limbs To Attack
         # Let Player Do 'All' Combat Skills In Rooms Without Mobs
         # Make Sure Orbits Are Elliptical
         # Make Sure Damage Stacks In Attack Messages
         # 'Attack' Command Should Use Weapon In Main Hand
-        # Make Healing Text Number Color Green
+        # Update Attack Range Logic For Different Weapons/Skills
+        # Message Data For Stunning Enemy On Failed Block
     # Far Term:
+        # Attacks With Knockback (Explosives)
+        # Auto-Combat
+        # Auto-Loot
+        # Counter-Attack (Passive Skill)
         # Classes(?)
         # Enemy groups
         # Move Direction '#'
@@ -173,42 +171,14 @@ class Game:
             roomCOTU03.exit["South"] = [0, 0, 3, areaCOTUNum, 0]
             roomCOTU03.exit["West"] = [0, 0, 3, areaCOTUNum, 4]
 
+            for i in range(10):
+                createItem(i + 1, "Weapon", 2, roomCOTU03)
+
             roomCOTU04Name = {"String":"A Little Wooden Shack", "Code":"9w1do1ddo1dddo1do1ddo1dddo6w"}
             roomCOTU04 = Room(0, 0, 3, areaCOTUNum, 4, roomCOTU04Name)
             areaCOTU.roomList.append(roomCOTU04)
             roomCOTU04.exit["East"] = [0, 0, 3, areaCOTUNum, 3]
             roomCOTU04.inside = True
-
-            createItem(904, roomCOTU04)
-            ornateChest = createItem(902)
-            for i in range(1, 14):
-                ornateChest.containerList.append(createItem(i))
-            ornateChest.containerList.append(createItem(14))
-            roomCOTU04.itemList.append(ornateChest)
-
-            weaponsCabinet = createItem(903)
-            for i in range(101, 105):
-                weaponsCabinet.containerList.append(createItem(i))
-                weaponsCabinet.containerList.append(createItem(i))
-            weaponsCabinet.containerList.append(createItem(105))
-            weaponsCabinet.containerList.append(createItem(106))
-            weaponsCabinet.containerList.append(createItem(107))
-            weaponsCabinet.containerList.append(createItem(108))
-            weaponsCabinet.containerList.append(createItem(108))
-            weaponsCabinet.containerList.append(createItem(109))
-            weaponsCabinet.containerList.append(createItem(201))
-            weaponsCabinet.containerList.append(createItem(202))
-            weaponsCabinet.containerList.append(createItem(201))
-            weaponsCabinet.containerList.append(createItem(202))
-            weaponsCabinet.containerList.append(createItem(203, 50, None))
-            weaponsCabinet.containerList.append(createItem(204, 50, None))
-            weaponsCabinet.containerList.append(createItem(208, 25, None))
-            weaponsCabinet.containerList.append(createItem(205, 25, None))
-            weaponsCabinet.containerList.append(createItem(207, 10, None))
-            weaponsCabinet.containerList.append(createItem(206, 40, None))
-            weaponsCabinet.containerList.append(createItem(209))
-            weaponsCabinet.containerList.append(createItem(210, 25, None))
-            roomCOTU04.itemList.append(weaponsCabinet)
 
             roomCOTU05Name = {"String":"COTU Landing Pad", "Code":"16w"}
             roomCOTU05 = Room(0, 0, 3, areaCOTUNum, 5, roomCOTU05Name)
@@ -232,7 +202,7 @@ class Game:
             roomCOTU08 = Room(0, 0, 3, areaCOTUNum, 8, roomCOTU08Name)
             areaCOTU.roomList.append(roomCOTU08)
             roomCOTU08.exit["South"] = [0, 0, 3, areaCOTUNum, 7]
-            unarmedUnskilledControlPanel = createItem(905)
+            unarmedUnskilledControlPanel = createItem(5)
             unarmedUnskilledFlagList = {"Num":2, "Label":{"String":"[1] - Unarmed, Unskilled Mob", "Code":"1r1w1r3y7w2y13w"}, "Key List":["1"], "Skill List":[1], "Gear Dict":{}}
             unarmedUnskilledControlPanel.buttonList.append(Button("Spawn Mob", unarmedUnskilledFlagList))
             roomCOTU08.itemList.append(unarmedUnskilledControlPanel)
@@ -349,15 +319,12 @@ class Game:
         # self.inputBar.inputList = ["n", "n", "w", "get sniper from cab", "get 5.56 from cab", "get 5.56 from cab", "get 5.56 from cab", "e", "s", "s", "wear sni", "reload"]
         # self.inputBar.inputList = ["s", "s", "board ship", "n"]
         # self.inputBar.inputList = ["s", "e", "u", "n"]
-        self.player.combatSkillDict["Unarmed"] = [CombatSkill(1), CombatSkill(2)]
-        self.player.combatSkillDict["Offensive Magic"] = [CombatSkill(3), CombatSkill(4), CombatSkill(5)]
-        self.player.combatSkillDict["Rifle"] = [CombatSkill(6), CombatSkill(7)]
-        self.player.combatSkillDict["Sword"] = [CombatSkill(8), CombatSkill(9)]
-        self.player.combatSkillDict["Healing Magic"] = [CombatSkill(11), CombatSkill(12)]
-        self.player.combatSkillDict["Pistol"] = [CombatSkill(13)]
-        self.player.combatSkillDict["Basic"] = [CombatSkill(14), CombatSkill(15)]
-        self.player.itemDict["Key"].append(createItem(701))
-        self.player.gearDict["Finger"][0] = createItem(8)
+
+        for i in range(6) : self.player.combatSkillDict["Melee"].append(CombatSkill(1 + i))
+        for i in range(2) : self.player.combatSkillDict["Sword"].append(CombatSkill(101 + i))
+        for i in range(2) : self.player.combatSkillDict["Dagger"].append(CombatSkill(151 + i))
+        self.player.itemDict["Key"].append(createItem(1))
+        self.player.gearDict["Finger"][0] = createItem(8, "Armor")
 
     def draw(self, window):
         window.fill([0, 0, 0])
@@ -444,7 +411,7 @@ class Game:
 
     def processInputBarCommand(self, input):
         directionStringList = ["north", "nort", "nor", "no", "n", "east", "eas", "ea", "e", "south", "sout", "sou", "so", "s", "west", "wes", "we", "w", "up", "u", "down", "dow", "do", "d"]
-        combatSkill, parsedCombatInput = CombatSkill.parseSkillString(input.lower(), self.player.getCombatSkillList())
+        combatSkill, parsedCombatInput = CombatSkill.parseSkillString(input.lower(), self.player.getCombatSkillList(True))
         currentRoom = Room.exists(self.galaxyList, self.player.spaceship, self.player.galaxy, self.player.system, self.player.planet, self.player.area, self.player.room)
         if currentRoom == None:
             currentRoom = self.galaxyList[0].systemList[0].planetList[0].areaList[0].roomList[0]

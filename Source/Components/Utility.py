@@ -265,14 +265,16 @@ def writeCrashReport(errorString, input, player):
                     slotString = str(targetSlot.num) + " - " + targetSlot.name["String"]
                 f.write(gearSlot + indexString + " - " + slotString + "\n")
 
-def createItem(num, quantity=None, targetRoom=None):
-    if num in range(1, 101):
+def createItem(num, type=None, quantity=None, targetRoom=None):
+    import copy
+    
+    if type == "Armor":
         from GameData.Item.Armor import Armor
         createdItem = Armor(num)
-    elif num in range(101, 201):
+    elif type == "Weapon":
         from GameData.Item.Weapon import Weapon
         createdItem = Weapon(num)
-    elif num in range(201, 301):
+    elif type == "Ammo":
         from GameData.Item.Ammo import Ammo
         createdItem = Ammo(num, quantity)
     else:
@@ -280,5 +282,9 @@ def createItem(num, quantity=None, targetRoom=None):
         createdItem = Item(num)
 
     if targetRoom != None:
-        targetRoom.itemList.append(createdItem)
+        loopRange = 1
+        if quantity != None:
+            loopRange = quantity
+        for i in range(loopRange):
+            targetRoom.itemList.append(copy.deepcopy(createdItem))
     return createdItem

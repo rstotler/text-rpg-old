@@ -355,7 +355,7 @@ class Room:
         for objectList in objectCheckList:
             for tempObject in objectList:
                 if (isinstance(targetObjectKey, str) and targetObjectKey in tempObject.keyList) or \
-                (isinstance(targetObjectKey, int) and targetObjectKey == tempObject.num and targetObjectPocket != None and targetObjectPocket == targetObject.pocket):
+                (isinstance(targetObjectKey, int) and targetObjectKey == tempObject.num and targetObjectPocket != None and targetObjectPocket == tempObject.pocket):
                     return tempObject
 
         if "Button" in includeList or "Buttons" in includeList:

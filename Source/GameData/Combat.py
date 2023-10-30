@@ -1,5 +1,6 @@
 import random
 from GameData.Item.Item import Item
+from GameData.Item.Weapon import Weapon
 
 class Combat:
 
@@ -13,7 +14,7 @@ class Combat:
         elif roundNum == 0 and target.getCombatAction() != None and target.getCombatAction().name["String"] == "Block":
             hitChance = None # 100% Hit-Rate
             attackDisplayList["Target Block Check"] = True
-        elif (len(target.actionList) > 0 and target.actionList[0].actionType in ["Stun", "Stumble"]):
+        elif (len(target.actionList) > 0 and target.actionList[0].actionType in ["Stun", "Stumble", "Knocked Down"]):
             hitChance = None # 100% Hit-Rate
         
         # Miss Attack #
@@ -38,13 +39,27 @@ class Combat:
                 if attackDisplayList["Target Block Check"] == True:
                     attackDamage = 0
 
-            if attackDamage > 0:
+            # Sweep Check #
+            if attackSkill.name["String"] == "Sweep" and ("Target Block Check" not in attackDisplayList or attackDisplayList["Target Block Check"] == False):
+                attackDisplayList["Sweep Check"] = True
+
+            elif attackDamage > 0:
                 target.currentHealth -= attackDamage
                 attackDisplayList["Attack Damage"] = attackDamage
 
                 # Cut Off Limb #
-                if target.num != None and attackSkill.cutLimbPercent != None and attackSkill.cutLimbPercent > 0:
-                    if len(target.cutLimbList) == 0 and random.randrange(100) + 1 <= attackSkill.cutLimbPercent:
+                cutLimbPercent = 0
+                if len(attackSkill.weaponDataList) > 0:
+                    for weaponData in attackSkill.weaponDataList:
+                        if isinstance(weaponData, Weapon) and weaponData.cutLimbPercent > 0:
+                            divideCheck = False
+                            if cutLimbPercent > 0 : divideCheck = True
+                            cutLimbPercent += weaponData.cutLimbPercent
+                            if divideCheck == True:
+                                cutLimbPercent = round(cutLimbPercent / 2)
+
+                if target.num != None and cutLimbPercent > 0:
+                    if len(target.cutLimbList) == 0 and random.randrange(100) + 1 <= cutLimbPercent:
                         limbList = ["Left Arm", "Left Arm", "Right Arm", "Right Arm", "Head"]
                         if "Target Block Check" in attackDisplayList and attackDisplayList["Target Block Check"] == True:
                             limbList = ["Left Arm", "Left Arm", "Right Arm", "Right Arm"]
