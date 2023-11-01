@@ -8,6 +8,7 @@ from Components.Keyboard import Keyboard
 from GameData.Config import Config
 from GameData.Player.Player import Player
 from GameData.Player.Action import Action
+from GameData.Player.Skill import Skill
 from GameData.Player.CombatSkill import CombatSkill
 from GameData.World.Galaxy import Galaxy
 from GameData.World.SolarSystem import SolarSystem
@@ -35,6 +36,9 @@ from Components.Utility import *
         # 'Attack' Command Should Use Weapon In Main Hand
         # Update Attack Range Logic For Different Weapons/Skills
         # Message Data For Stunning Enemy On Failed Block
+        # Make Combat Prioritize Hitting Available Targets First
+        # Mute Mob Speech If More Than One In Room
+        # Create & Apply .stunCheck In CombatSkill (Bash &?)
     # Far Term:
         # Attacks With Knockback (Explosives)
         # Auto-Combat
@@ -319,10 +323,17 @@ class Game:
         # self.inputBar.inputList = ["n", "n", "w", "get sniper from cab", "get 5.56 from cab", "get 5.56 from cab", "get 5.56 from cab", "e", "s", "s", "wear sni", "reload"]
         # self.inputBar.inputList = ["s", "s", "board ship", "n"]
         # self.inputBar.inputList = ["s", "e", "u", "n"]
+        self.inputBar.inputList = ["man mob 2", "man mob 3", "man mob 1", "man mob 2", "n", "n"]
 
+        # Load Skills #
+        for i in range(3):
+            skill = CombatSkill(1001 + i)
+            for weaponType in skill.weaponTypeList[0]:
+                self.player.combatSkillDict[weaponType].append(skill)
         for i in range(6) : self.player.combatSkillDict["Melee"].append(CombatSkill(1 + i))
-        for i in range(2) : self.player.combatSkillDict["Sword"].append(CombatSkill(101 + i))
-        for i in range(2) : self.player.combatSkillDict["Dagger"].append(CombatSkill(151 + i))
+        for i in range(1) : self.player.combatSkillDict["Blunt"].append(CombatSkill(251 + i))
+        for i in range(2) : self.player.combatSkillDict["Polearm"].append(CombatSkill(301 + i))
+
         self.player.itemDict["Key"].append(createItem(1))
         self.player.gearDict["Finger"][0] = createItem(8, "Armor")
 

@@ -1,12 +1,18 @@
 Traceback (most recent call last):
   File "D:\Codes\Python\Universe\Source\Screen\InputBar.py", line 49, in processInput
     game.processInputBarCommand(self.input)
-  File "D:\Codes\Python\Universe\Source\Game.py", line 414, in processInputBarCommand
-    combatSkill, parsedCombatInput = CombatSkill.parseSkillString(input.lower(), self.player.getCombatSkillList(), True)
-TypeError: parseSkillString() takes 2 positional arguments but 3 were given
+  File "D:\Codes\Python\Universe\Source\Game.py", line 1041, in processInputBarCommand
+    self.player.combatSkillCheck(self.config, self.console, self.galaxyList, self.player, currentRoom, combatSkill, mobCount, mobKey, None, None)
+  File "D:\Codes\Python\Universe\Source\GameData\Player\Player.py", line 2461, in combatSkillCheck
+    flags = self.combatSkillFunction(config, player, combatSkill, currentRoom, targetRoom, roomDistance, mobKey, mobCount, directionKey, True, {})
+  File "D:\Codes\Python\Universe\Source\GameData\Player\Player.py", line 2832, in combatSkillFunction
+    combatSkill.attackModCheck()
+  File "D:\Codes\Python\Universe\Source\GameData\Player\CombatSkill.py", line 256, in attackModCheck
+    if self.name["String"] == "Slash" and len(self.weaponDataList) > 0 and self.weaponDataList[0].weaponType == "Axe" and self.weaponDataList[0].twoHanded == True and (targetUser.gearDict[targetUser.getOppositeHand(targetUser.dominantHand)] == None or targetUser.gearDict[targetUser.dominantHand] == None):
+NameError: name 'targetUser' is not defined
 
-Input: get sw
-Player Loc: [0, 0, 3, 1, 3]
+Input: slash all
+Player Loc: [0, 0, 3, 1, 1]
 Player Spaceship: None
 Player Targets: 0
 Player Group: 0
@@ -14,7 +20,7 @@ Player Group: 0
 Player Inventory: 1
 1 - [Key] Silver Keycard
 
-Player Gear: 1
+Player Gear: 3
 Head - None
 Face - None
 Neck (0) - None
@@ -28,5 +34,5 @@ Finger (1) - None
 Legs Under - None
 Legs Over - None
 Feet - None
-Left Hand - None
-Right Hand - None
+Left Hand - 4 - Axe
+Right Hand - 5 - Battle Axe

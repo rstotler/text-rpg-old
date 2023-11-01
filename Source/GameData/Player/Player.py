@@ -26,11 +26,7 @@ class Player:
         self.roomDescription = {"String":"is standing here.", "Code":"16w1y"}
         self.keyList = []
 
-        self.weaponSkillList = []
-        for i in range(14):
-            self.weaponSkillList.append(Skill(i + 1))
-
-        self.combatSkillDict = {"Melee":[], "Sword":[], "Dagger":[], "Claw":[], "Axe":[], "Blunt":[], "Polearm":[], "Shield":[], "Bow":[], "Pistol":[], "Rifle":[], "Offensive Magic":[], "Defensive Magic":[]}
+        self.combatSkillDict = {"Melee":[], "Sword":[], "Dagger":[], "Axe":[], "Blunt":[], "Polearm":[], "Claw":[], "Shield":[], "Bow":[], "Pistol":[], "Rifle":[]}
 
         self.actionList = []
         self.stunList = []
@@ -51,7 +47,7 @@ class Player:
 
         self.emoteList = ["hmm", "hm", "nod", "nodnod", "tap", "boggle", "ahah", "jump", "gasp", "haha", "lol", "cheer", "smile", "swear", "sigh", "grin", "snicker", "whistle"]
 
-        self.debugDualWield = False
+        self.debugDualWield = True
 
         # Mob-Specific Variables #
         self.speechTickMax = 8
@@ -87,7 +83,7 @@ class Player:
                         # Chase Player, Next Room Locked Door Check #
                         if distanceToPlayer > 0:
                             if not (currentRoom.door[directionToPlayer] != None and currentRoom.door[directionToPlayer]["Status"] == "Locked" and "Password" in currentRoom.door[directionToPlayer] and self.hasKey(currentRoom.door[directionToPlayer]["Password"]) == False):
-                                self.moveCheck(console, map, galaxyList, player, currentRoom, directionToPlayer.lower())
+                                messageDataList += self.moveCheck(console, map, galaxyList, player, currentRoom, directionToPlayer.lower())
 
                         # Use Skill #
                         elif len(skillChoiceList) > 0:
@@ -97,7 +93,7 @@ class Player:
                             if directionToPlayer != None:
                                 directionKey = directionToPlayer
                                 directionCount = distanceToPlayer
-                            messageDataList = self.combatSkillCheck(config, console, galaxyList, player, currentRoom, targetSkill, 1, "Player", directionKey, directionCount, messageDataList)
+                            messageDataList += self.combatSkillCheck(config, console, galaxyList, player, currentRoom, targetSkill, 1, "Player", directionKey, directionCount, messageDataList)
 
             else:
 
@@ -557,6 +553,8 @@ class Player:
                     console.write(displayString + dirString + dirCountString, displayCode + dirCode + dirCountCode, True)
 
     def moveCheck(self, console, map, galaxyList, player, currentRoom, targetDirKey):
+        messageDataList = []
+
         if targetDirKey.lower() in ["north", "nort", "nor", "no", "n"] : targetDir = "North"
         elif targetDirKey.lower() in ["east", "eas", "ea", "e"] : targetDir = "East"
         elif targetDirKey.lower() in ["south", "sout", "sou", "so", "s"] : targetDir = "South"
@@ -583,9 +581,9 @@ class Player:
                 if self.num == None:
                     console.write("You stop " + targetAction.actionType.lower() + "ing and move.", "9w" + str(len(targetAction.actionType)) + "w12w1y", True)
                 elif currentRoom.sameRoomCheck(player):
-                    console.write(mobString + " stops " + targetAction.actionType.lower() + "ing and moves " + targetDir + ".", mobCode + "7w" + str(len(targetAction.actionType)) + "w14w" + str(len(targetDir)) + "w1y", True)
+                    messageDataList.append({"String":mobString + " stops " + targetAction.actionType.lower() + "ing and moves " + targetDir + ".", "Code":mobCode + "7w" + str(len(targetAction.actionType)) + "w14w" + str(len(targetDir)) + "w1y", "Draw Blank Line":True})
             elif self.num != None and currentRoom.sameRoomCheck(player) and not (currentRoom.door[targetDir] != None and currentRoom.door[targetDir]["Type"] == "Automatic"):
-                console.write(mobString + " moves " + targetDir + ".", mobCode + "7w" + str(len(targetDir)) + "w1y", True)
+                messageDataList.append({"String":mobString + " moves " + targetDir + ".", "Code":mobCode + "7w" + str(len(targetDir)) + "w1y", "Draw Blank Line":True})
 
             currentArea = Room.getAreaAndRoom(galaxyList, self)[0]
             targetArea, targetRoom, unusedDistance, unusedMessage = Room.getTargetRoomFromStartRoom(galaxyList, currentArea, currentRoom, targetDir, 1, True)
@@ -597,7 +595,7 @@ class Player:
                     if self.num == None:
                         console.write("You move out of your attack range.", "33w1y", True)
                     else:
-                        console.write(mobString + " releases their attack.", mobCode + "22w1y", True)
+                        messageDataList.append({"String":mobString + " releases their attack.", "Code":mobCode + "22w1y", "Draw Blank Line":True})
 
             # Move #
             automaticDoorCheck = False
@@ -642,11 +640,11 @@ class Player:
                             openString = "unlocks and opens"
                         displayString = self.prefix + " " + self.name["String"] + " " + openString + " the door to the " + targetDir + " and walks through."
                         displayCode = str(len(self.prefix)) + "w1w" + self.name["Code"] + "1w" + str(len(openString)) + "w17w" + str(len(targetDir)) + "w18w1y"
-                        console.write(displayString, displayCode, True)
+                        messageDataList.append({"String":displayString, "Code":displayCode, "Draw Blank Line":True})
                     elif targetRoom.sameRoomCheck(player) == True:
                         displayString = "The door to the " + Room.getOppositeDirection(targetDir) + " opens as " + self.prefix.lower() + " " + self.name["String"] + " walks through."
                         displayCode = "16w" + str(len(Room.getOppositeDirection(targetDir))) + "w10w" + str(len(self.prefix)) + "w1w" + self.name["Code"] + "14w1y"
-                        console.write(displayString, displayCode, True)
+                        messageDataList.append({"String":displayString, "Code":displayCode, "Draw Blank Line":True})
                 
                 elif currentRoom.door[targetDir] != None and currentRoom.door[targetDir]["Type"] == "Automatic":
                     doorString = "door"
@@ -662,7 +660,7 @@ class Player:
                             leavesString = " enters"
                         displayString = "The door to the " + displayDirection + " opens and closes as " + mobString + leavesString + "."
                         displayCode = "16w" + str(len(displayDirection)) + "w21w" + mobCode + str(len(leavesString)) + "w1y"
-                        console.write(displayString, displayCode, True)
+                        messageDataList.append({"String":displayString, "Code":displayCode, "Draw Blank Line":True})
                     automaticDoorCheck = True
 
             if self.num == None:
@@ -702,14 +700,14 @@ class Player:
                 mobDistance, mobDirection, unused = Room.getTargetRange(galaxyList, targetRoom, playerRoom, player.maxTargetDistance + 1)
                 if len(player.targetList) > 0 and player.targetList[0] == self and len(player.actionList) > 0 and player.actionList[0].actionType == "Combat Skill" and player.actionList[0].flags["combatSkill"].onTarget == True and mobDistance > player.actionList[0].flags["combatSkill"].maxRange:
                     del player.actionList[0]
-                    console.write("Your target moved out of range for your attack.", "46w1y", True)
+                    messageDataList.append({"String":"Your target moved out of range for your attack.", "Code":"46w1y", "Draw Blank Line":True})
                 elif self in player.targetList and mobDistance > player.maxTargetDistance:
                     displayString = "You lose sight of " + self.prefix.lower() + " " + self.name["String"] + " as it moves " + Room.getOppositeDirection(mobDirection) + "."
                     displayCode = "18w" + str(len(self.prefix)) + "w1w" + self.name["Code"] + "13w" + str(len(Room.getOppositeDirection(mobDirection))) + "w1y"
-                    console.write(displayString, displayCode, True)
+                    messageDataList.append({"String":displayString, "Code":displayCode})
                     if player.targetList[0] == self and len(player.actionList) > 0 and player.actionList[0].actionType == "Combat Skill" and player.actionList[0].flags["combatSkill"].onTarget == True:
                         del player.actionList[0]
-                        console.write("Your target moved out of range for your attack.", "46w1y")
+                        messageDataList.append({"String":"Your target moved out of range for your attack.", "Code":"46w1y", "Draw Blank Line":False})
                     del player.targetList[player.targetList.index(self)]
                     
             if self.num == None and len(delTargetList) > 0:
@@ -729,7 +727,9 @@ class Player:
             elif self.num != None and targetRoom.sameRoomCheck(player) == True and automaticDoorCheck == False:
                 displayString = self.prefix + " " + self.name["String"] + " enters from the " + Room.getOppositeDirection(targetDir) + "."
                 displayCode = str(len(self.prefix)) + "w1w" + self.name["Code"] + "17w" + str(len(Room.getOppositeDirection(targetDir))) + "w1y"
-                console.write(displayString, displayCode, True)
+                messageDataList.append({"String":displayString, "Code":displayCode, "Draw Blank Line":True})
+
+        return messageDataList
 
     def openCloseDoorCheck(self, console, galaxyList, player, currentRoom, targetAction, targetDirKey):
         targetDoorAction = targetAction
@@ -1440,6 +1440,9 @@ class Player:
                     else : targetGearSlot = "Right Hand"
                 if wieldItem != None and wieldItem.twoHanded and (self.debugDualWield == False or wieldItem.isRanged()):
                     targetGearSlot = self.dominantHand
+            else:
+                if wieldItem.twoHanded == False and self.debugDualWield == True and self.gearDict[self.dominantHand] != None and self.gearDict[self.dominantHand].twoHanded == True and self.gearDict[self.getOppositeHand(self.dominantHand)] == None:
+                    targetGearSlot = self.getOppositeHand(self.dominantHand)
 
             wieldCount = 0
             slotCount = 0
@@ -2718,6 +2721,13 @@ class Player:
                                             stunString = ", sending you reeling!"
                                             stunCode = "2y19w1y"
 
+                                    if "Knock Down Check" in attackData and attackData["Knock Down Check"] == True:
+                                        stunString = ", knocking them to the ground!"
+                                        stunCode = "2y27w1y"
+                                        if attackData["Mob Data"].num == None:
+                                            stunString = ", knocking you to the ground!"
+                                            stunCode = "2y26w1y"
+
                                     attackDamageLine = {"String":"", "Code":""}
                                     if "Attack Damage" in attackData:
                                         attackDamageLine = getDamageString(attackData["Attack Damage"], damageColor)
@@ -2745,9 +2755,9 @@ class Player:
                         if "Cut Limb" in attackData:
                             if attackData["Cut Limb"] == "Head":
                                 stringHalf1 = targetUserString
-                                stringHalf2 = secondaryAttackString + attackData["Attack Data"].name["String"] + " completely DECAPITATES " + attackData["Mob Data"].prefix.lower() + " " + attackData["Mob Data"].name["String"] + "!"
+                                stringHalf2 = attackData["Attack Data"].name["String"] + " completely DECAPITATES " + attackData["Mob Data"].prefix.lower() + " " + attackData["Mob Data"].name["String"] + "!"
                                 codeHalf1 = targetUserCode
-                                codeHalf2 = secondaryAttackCode + attackData["Attack Data"].name["Code"] + "24w" + str(len(attackData["Mob Data"].prefix)) + "w1w" + attackData["Mob Data"].name["Code"] + "1y"
+                                codeHalf2 = attackData["Attack Data"].name["Code"] + "24w" + str(len(attackData["Mob Data"].prefix)) + "w1w" + attackData["Mob Data"].name["Code"] + "1y"
                                 drawBlankLineCheck = drawBlankLine and (len(messageDataList) == 0 or (len(messageDataList) > 0 and messageDataList[-1]["Message Type"] != messageType))
                                 combineLinesCheck = self.num != None
                                 stackDisplayMessage(messageDataList, messageType, stringHalf1, stringHalf2, codeHalf1, codeHalf2, drawBlankLineCheck, combineLinesCheck)
@@ -2761,9 +2771,9 @@ class Player:
                                     codeHalf2 = attackData["Attack Data"].name["Code"] + "16w" + str(len(targetLimb)) + "w1y"
                                 else:
                                     stringHalf1 = targetUserString
-                                    stringHalf2 = secondaryAttackString + attackData["Attack Data"].name["String"] + " cuts off " + attackData["Mob Data"].prefix.lower() + " " + attackData["Mob Data"].name["String"] + "'s " + targetLimb.lower() + "!"
+                                    stringHalf2 = attackData["Attack Data"].name["String"] + " cuts off " + attackData["Mob Data"].prefix.lower() + " " + attackData["Mob Data"].name["String"] + "'s " + targetLimb.lower() + "!"
                                     codeHalf1 = targetUserCode
-                                    codeHalf2 = secondaryAttackCode + attackData["Attack Data"].name["Code"] + "10w" + str(len(attackData["Mob Data"].prefix)) + "w1w" + attackData["Mob Data"].name["Code"] + "1y2w" + str(len(targetLimb)) + "w1y"
+                                    codeHalf2 = attackData["Attack Data"].name["Code"] + "10w" + str(len(attackData["Mob Data"].prefix)) + "w1w" + attackData["Mob Data"].name["Code"] + "1y2w" + str(len(targetLimb)) + "w1y"
                                 drawBlankLineCheck = drawBlankLine and (len(messageDataList) == 0 or (len(messageDataList) > 0 and messageDataList[-1]["Message Type"] != messageType))
                                 combineLinesCheck = self.num != None
                                 stackDisplayMessage(messageDataList, messageType, stringHalf1, stringHalf2, codeHalf1, codeHalf2, drawBlankLineCheck, combineLinesCheck)
@@ -2821,26 +2831,35 @@ class Player:
     def combatSkillFunction(self, config, player, combatSkill, currentRoom, targetRoom, roomDistance, mobKey, mobCount, directionKey, copyCheck, flags):
         attackDisplayList = []                
 
+        # Get Attack List Data #
         attackList = []
         mainAttackHand = self.gearDict[self.dominantHand]
         offAttackHand = self.gearDict[self.getOppositeHand(self.dominantHand)]
-        combatSkill.weaponDataList = []
+        combatSkill = copy.deepcopy(combatSkill)
 
         if len(combatSkill.weaponTypeList) == 2 or combatSkill.offHandAttacks == False:
             if combatSkill.weaponAttackCheck(mainAttackHand, offAttackHand) == True:
+                enableSecondAttackCheck = combatSkill.attackModCheck(self)
                 attackList.append(combatSkill)
+                if enableSecondAttackCheck == True and len(combatSkill.weaponDataList) == 1 and (combatSkill.weaponDataList[0] == offAttackHand or (combatSkill.weaponDataList[0] == "Open Hand" and offAttackHand == None)):
+                    offAttackHand = self.gearDict[self.dominantHand]
 
-        else:
-            if combatSkill.weaponAttackCheck(mainAttackHand) == True:
+        if len(combatSkill.weaponTypeList) in [0, 1] or combatSkill.offHandAttacks == True:
+            if len(attackList) == 0 and combatSkill.weaponAttackCheck(mainAttackHand, offAttackHand) == True:
+                combatSkill.attackModCheck(self)
                 attackList.append(combatSkill)
-            if combatSkill.healCheck == False and len(self.cutLimbList) == 0:
+                if len(combatSkill.weaponDataList) == 1 and (combatSkill.weaponDataList[0] == offAttackHand or (combatSkill.weaponDataList[0] == "Open Hand" and offAttackHand == None)):
+                    offAttackHand = self.gearDict[self.dominantHand]
+            if combatSkill.healCheck == False and len(self.cutLimbList) == 0 and combatSkill.offHandAttacks == True:
                 offHandFlagList = {"Distance":roomDistance, "Disable Two-Handed Attacks":True, '"All" Attacks Disabled':True, "Disable Healing":True}
                 if self.num == None:
                     offHandFlagList["Disable Weaponless Skills"] = True
                 else:
                     offHandFlagList["Disable No Off-Hand Attack Attacks"] = True
-                offAttackSkill, offAttackMessage = copy.deepcopy(self.getRandomAttackSkill(offAttackHand, "Unused", offHandFlagList))
+                offAttackSkill, offAttackMessage = self.getRandomAttackSkill(offAttackHand, "Unused", offHandFlagList)
+                offAttackSkill = copy.deepcopy(offAttackSkill)
                 if offAttackSkill != None and offAttackSkill.weaponAttackCheck(offAttackHand) == True:
+                    offAttackSkill.attackModCheck(self)
                     attackList.append(offAttackSkill)
 
         for skill in attackList:
@@ -2882,6 +2901,7 @@ class Player:
                 else:
                     targetList = targetRoom.mobList
                 for mob in targetList:
+                    # print(mob.num)
                     if not (combatSkill.healCheck == False and mob == self):
                         if mobKey == "All" or allOnlyCheck == True or \
                         (mobKey != None and mobKey in mob.keyList) or \
@@ -2894,6 +2914,7 @@ class Player:
                                 if allOnlyCheck == True or not (mobCount == "Group" and mob not in self.recruitList):
                                     for i, attackSkill in enumerate(attackList):
                                         hitCheck = False
+                                        print(attackSkill.weaponTypeList)
                                         
                                         if len(attackSkill.weaponDataList) in [0, 2]:
                                             if copyCheck == True:
@@ -2981,8 +3002,8 @@ class Player:
                                                             mob.actionList.append(Action("Stun", {}, 4))
                                                             # Needs Message Data
 
-                                            # Sweep Enemy #
-                                            elif "Sweep Check" in attackDisplayList[i]:
+                                            # Knock Down Enemy Check #
+                                            elif "Knock Down Check" in attackDisplayList[i] and attackDisplayList[i]["Knock Down Check"] == True:
                                                 if len(mob.actionList) > 0:
                                                     del mob.actionList[0]
                                                 mob.actionList.append(Action("Knocked Down", {}, 8))
@@ -3044,7 +3065,7 @@ class Player:
                                         targetMob = mob
                                     elif targetMob != "Multiple" and targetMob.num != mob.num:
                                         targetMob = "Multiple"
-                                    if (allOnlyCheck != True and len(targetMobList) >= maxTargets) or "Stun Check" in attackDisplayList[0]:
+                                    if len(targetMobList) >= maxTargets or "Stun Check" in attackDisplayList[0]:
                                         break
             
         if copyCheck == False:
@@ -3275,16 +3296,11 @@ class Player:
         targetGroup = None
         if targetGroupKey != None:
             if targetGroupKey == "all" : targetGroup = None
-            elif targetGroupKey[0] in ["w", "p"] : targetGroup = "Weapon"
             else:
                 for skillGroup in self.combatSkillDict:
                     if targetGroupKey[0] == skillGroup[0].lower():
                         targetGroup = skillGroup
                         break
-
-        if targetGroup in [None, "Weapon"]:
-            skillGroupLabel = {"String":"Weapon Proficiencies", "Code":"1w6ddw1w12ddw"}
-            displaySkillGroup(skillGroupLabel, self.weaponSkillList)
 
         for skillGroup in self.combatSkillDict:
             if targetGroup in [None, skillGroup]:
@@ -3352,7 +3368,7 @@ class Player:
                 else:
                     targetSlot = self.gearDict[gearSlot]
                 if targetSlot == None:
-                    if self.debugDualWield == False and gearSlot == self.getOppositeHand(self.dominantHand) and self.gearDict[self.dominantHand] != None and self.gearDict[self.dominantHand].twoHanded == True:
+                    if gearSlot == self.getOppositeHand(self.dominantHand) and self.gearDict[self.dominantHand] != None and self.gearDict[self.dominantHand].twoHanded == True:
                         gearString = "[Two-Handed]"
                         gearCode = "1r3ddw1y6ddw1r"
                 else:
@@ -3827,7 +3843,10 @@ class Player:
             for skill in self.combatSkillDict[skillGroup]:
                 skillList.append(skill)
                 if useableFirst == True:
-                    if skill.weaponAttackCheck(self.gearDict[self.dominantHand]) == True:
+                    if skill.name["String"] == "Slash" and skill.weaponTypeList[0] == ["Polearm"] and \
+                    self.gearDict["Left Hand"] != None and self.gearDict["Right Hand"] != None:
+                        pass
+                    elif skill.weaponAttackCheck(self.gearDict[self.dominantHand]) == True:
                         useableDominantHand.append(skill)
                     elif skill.weaponAttackCheck(self.gearDict[self.getOppositeHand(self.dominantHand)]) == True:
                         useableOffHand.append(skill)
@@ -3867,6 +3886,14 @@ class Player:
 
     def skillWeaponCheck(self, combatSkill, targetWeapon="Unused"):
         # Weapon Checks & Gear Skill Check #
+
+        # Polearm Slash Check (Weapon Requires CutLimb%) #
+        if combatSkill.name["String"] == "Slash" and combatSkill.weaponTypeList[0] == ["Polearm"]:
+            if self.gearDict["Left Hand"] != None and self.gearDict["Right Hand"] != None:
+                return False
+            elif (self.gearDict["Left Hand"] != None and self.gearDict["Left Hand"].cutLimbPercent == 0) or \
+            (self.gearDict["Right Hand"] != None and self.gearDict["Right Hand"].cutLimbPercent == 0):
+                return False
 
         if "Gear Num List" in combatSkill.ruleDict:
             if targetWeapon == "Unused":

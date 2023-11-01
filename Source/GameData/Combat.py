@@ -42,10 +42,16 @@ class Combat:
             # Sweep Check #
             if attackSkill.name["String"] == "Sweep" and ("Target Block Check" not in attackDisplayList or attackDisplayList["Target Block Check"] == False):
                 attackDisplayList["Sweep Check"] = True
+                attackDisplayList["Knock Down Check"] = True
 
             elif attackDamage > 0:
                 target.currentHealth -= attackDamage
                 attackDisplayList["Attack Damage"] = attackDamage
+
+                # Knock Down Check #
+                if attackSkill.knockDownCheck == True:
+                    if True: # Knock Down Check Goes Here
+                        attackDisplayList["Knock Down Check"] = True
 
                 # Cut Off Limb #
                 cutLimbPercent = 0
@@ -58,7 +64,7 @@ class Combat:
                             if divideCheck == True:
                                 cutLimbPercent = round(cutLimbPercent / 2)
 
-                if target.num != None and cutLimbPercent > 0:
+                if target.num != None and cutLimbPercent > 0 and attackSkill.disableCutLimb == False:
                     if len(target.cutLimbList) == 0 and random.randrange(100) + 1 <= cutLimbPercent:
                         limbList = ["Left Arm", "Left Arm", "Right Arm", "Right Arm", "Head"]
                         if "Target Block Check" in attackDisplayList and attackDisplayList["Target Block Check"] == True:

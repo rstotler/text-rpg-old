@@ -40,29 +40,31 @@ class Weapon(Item):
             self.weaponType = "Dagger"
 
         elif num == 4:
-            self.name = {"String":"Claws", "Code":"5w"}
-            self.weaponType = "Claw"
-
-        elif num == 5:
             self.prefix = "An"
             self.name = {"String":"Axe", "Code":"3w"}
             self.weaponType = "Axe"
 
-        elif num == 6:
+        elif num == 5:
             self.name = {"String":"Battle Axe", "Code":"10w"}
             self.weaponType = "Axe"
+            self.twoHanded = True
 
-        elif num == 7:
+        elif num == 6:
             self.name = {"String":"Mace", "Code":"4w"}
             self.weaponType = "Blunt"
 
-        elif num == 8:
+        elif num == 7:
             self.name = {"String":"Spear", "Code":"5w"}
             self.weaponType = "Polearm"
 
-        elif num == 9:
+        elif num == 8:
             self.name = {"String":"Halberd", "Code":"7w"}
             self.weaponType = "Polearm"
+            self.cutLimbPercent = 20
+
+        elif num == 9:
+            self.name = {"String":"Claws", "Code":"5w"}
+            self.weaponType = "Claw"
 
         elif num == 10:
             self.name = {"String":"Shield", "Code":"1w5ddw"}

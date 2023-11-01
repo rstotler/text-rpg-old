@@ -6,8 +6,6 @@ class CombatSkill(Skill):
     def __init__(self, num):
         Skill.__init__(self, num)
         
-        self.skillGroup = "Basic" # Used As A Key For Player.combatSkillDict
-        
         self.weaponTypeList = []
         self.weaponDataList = []
         self.offHandAttacks = True
@@ -18,7 +16,10 @@ class CombatSkill(Skill):
         self.healCheck = False
         self.onTarget = False
 
+        self.knockDownCheck = False
         self.stunUserOnBlock = False
+
+        self.disableCutLimb = False
 
         self.ruleDict = {}
 
@@ -45,148 +46,98 @@ class CombatSkill(Skill):
 
         elif num == 4: # Kick #
             self.name = {"String":"Kick", "Code":"4w"}
-            self.skillGroup = "Melee"
             self.offHandAttacks = False
             self.stunUserOnBlock = True
 
         elif num == 5: # Punch #
             self.name = {"String":"Punch", "Code":"5w"}
-            self.skillGroup = "Melee"
             self.weaponTypeList = [["Melee"]]
             self.stunUserOnBlock = True
 
         elif num == 6: # Jab #
             self.name = {"String":"Jab", "Code":"3w"}
-            self.skillGroup = "Melee"
             self.weaponTypeList = [["Melee"]]
             self.offHandAttacks = False
             self.tickCount = 1
 
         # Sword (101 - 150) #
-        elif num == 101:
-            self.name = {"String":"Stab", "Code":"4w"}
-            self.skillGroup = "Sword"
-            self.weaponTypeList = [["Sword"]]
-            self.stunUserOnBlock = True
-
-        elif num == 102:
-            self.name = {"String":"Slash", "Code":"5w"}
-            self.skillGroup = "Sword"
-            self.weaponTypeList = [["Sword"]]
-            self.stunUserOnBlock = True
 
         # Dagger (151 - 200) #
-        elif num == 151:
+        
+        # Axes (201 - 250) #
+
+        # Blunt (251 - 300) #
+        elif num == 251: # Smash #
+            self.name = {"String":"Smash", "Code":"5w"}
+            self.weaponTypeList = [["Blunt"]]
+            self.offHandAttacks = False
+            self.knockDownCheck = True
+            self.stunUserOnBlock = True
+
+        # Polearm (301 - 350) #
+        elif num == 301: # Stab #
             self.name = {"String":"Stab", "Code":"4w"}
-            self.skillGroup = "Dagger"
-            self.weaponTypeList = [["Dagger"]]
-            self.stunUserOnBlock = True
+            self.weaponTypeList = [["Polearm"]]
+            self.maxRange = 1
+            self.disableCutLimb = True
 
-        elif num == 152:
+        elif num == 302: # Slash #
             self.name = {"String":"Slash", "Code":"5w"}
-            self.skillGroup = "Dagger"
-            self.weaponTypeList = [["Dagger"]]
-            self.stunUserOnBlock = True
-
-        # Claws (201 - 250) #
-        elif num == 201:
-            self.name = {"String":"Slash", "Code":"5w"}
-            self.skillGroup = "Claw"
-            self.weaponTypeList = [["Claw"]]
-            self.stunUserOnBlock = True
-
-        # Axes (251 - 300) #
-        elif num == 251:
-            self.name = {"String":"Slash", "Code":"5w"}
-            self.skillGroup = "Axe"
-            self.weaponTypeList = [["Axe"]]
-            self.stunUserOnBlock = True
-
-        elif num == 252:
-            self.name = {"String":"Bash", "Code":"4w"}
-            self.skillGroup = "Axe"
-            self.weaponTypeList = [["Axe"]]
-            self.stunUserOnBlock = True
-
-        elif num == 253:
-            self.name = {"String":"Slash All", "Code":"9w"}
-            self.skillGroup = "Axe"
-            self.weaponTypeList = [["Axe"]]
+            self.weaponTypeList = [["Polearm"]]
             self.offHandAttacks = False
             self.stunUserOnBlock = True
-            self.maxTargets = 3
 
-        # Blunt (301 - 350) #
-        elif num == 301:
-            self.name = {"String":"Bash", "Code":"4w"}
-            self.skillGroup = "Blunt"
-            self.weaponTypeList = [["Blunt"]]
-            self.stunUserOnBlock = True
-
-        elif num == 302:
-            self.name = {"String":"Smash", "Code":"5w"}
-            self.skillGroup = "Blunt"
-            self.weaponTypeList = [["Blunt"]]
-
-        # Polearm (351 - 400) #
-        elif num == 351:
-            self.name = {"String":"Stab", "Code":"4w"}
-            self.skillGroup = "Polearm"
-            self.weaponTypeList = [["Polearm"]]
-            self.stunUserOnBlock = True
-
-        elif num == 352:
-            self.name = {"String":"Slash", "Code":"5w"}
-            self.skillGroup = "Polearm"
-            self.weaponTypeList = [["Polearm"]]
-            self.stunUserOnBlock = True
+        # Claws (351 - 400) #
 
         # Shield (401 - 450) #
-        elif num == 401:
-            self.name = {"String":"Bash", "Code":"4w"}
-            self.skillGroup = "Shield"
-            self.weaponTypeList = [["Shield"]]
         
         # Bow (451 - 500) #
         elif num == 451:
             self.name = {"String":"Shoot", "Code":"5w"}
-            self.skillGroup = "Bow"
             self.weaponTypeList = [["Bow"]]
             self.maxRange = 2
 
         # Pistol (501 - 550) #
         elif num == 501:
             self.name = {"String":"Shoot", "Code":"5w"}
-            self.skillGroup = "Pistol"
             self.weaponTypeList = [["Pistol"]]
             self.maxRange = 2
 
         # Rifle (551 - 600) #
         elif num == 551:
             self.name = {"String":"Shoot", "Code":"5w"}
-            self.skillGroup = "Rifle"
             self.weaponTypeList = [["Rifle"]]
             self.maxRange = 2
 
         elif num == 552:
             self.name = {"String":"Snipe", "Code":"5w"}
-            self.skillGroup = "Rifle"
             self.ruleDict["From Another Room"] = True
             self.ruleDict["Requires Two-Handed Weapon"] = True
             self.weaponTypeList = [["Rifle"]]
             self.maxRange = 3
             self.offHandAttacks = False
 
-        # Combined Skills (1000 - 2000) #
-        elif num == 1000:
+        # Combined Skills (1001 - 2000) #
+        elif num == 1001:
+            self.name = {"String":"Stab", "Code":"4w"}
+            self.weaponTypeList = [["Sword", "Dagger"]]
+            self.stunUserOnBlock = True
+            self.disableCutLimb = True
+
+        elif num == 1002:
+            self.name = {"String":"Slash", "Code":"5w"}
+            self.weaponTypeList = [["Sword", "Dagger", "Axe", "Claw"]]
+            self.stunUserOnBlock = True
+
+        elif num == 1003:
             self.name = {"String":"Bash", "Code":"4w"}
-            self.skillGroup = None # ???
+            self.weaponTypeList = [["Sword", "Dagger", "Axe", "Blunt", "Shield"]]
+            self.offHandAttacks = False
             self.stunUserOnBlock = True
 
         # Test Skills #
             # elif num == X:
             #     self.name = {"String":"Spin Fist", "Code":"9w"}
-            #     self.skillGroup = "Melee"
             #     self.weaponTypeList = [["Melee"], ["Melee"]]
             #     self.maxTargets = "All"
             #     self.offHandAttacks = False
@@ -194,7 +145,6 @@ class CombatSkill(Skill):
 
             # elif num == X:
             #     self.name = {"String":"Slash All", "Code":"9w"}
-            #     self.skillGroup = "Sword"
             #     self.weaponTypeList = [["Sword"]]
             #     self.ruleDict["All Only"] = True
             #     self.offHandAttacks = False
@@ -203,7 +153,6 @@ class CombatSkill(Skill):
 
             # elif num == X:
             #     self.name = {"String":"Bullet Storm", "Code":"12w"}
-            #     self.skillGroup = "Pistol"
             #     self.weaponTypeList = [["Pistol"]]
             #     self.ruleDict["All Only"] = True
             #     self.maxRange = 1
@@ -212,19 +161,16 @@ class CombatSkill(Skill):
 
             # elif num == X:
             #     self.name = {"String":"Fireball", "Code":"8w"}
-            #     self.skillGroup = "Offensive Magic"
             #     self.maxRange = 2
 
             # elif num == X:
             #     self.name = {"String":"Inferno", "Code":"7w"}
-            #     self.skillGroup = "Offensive Magic"
             #     self.maxTargets = "All"
             #     self.maxRange = 1
             #     self.offHandAttacks = False
 
             # elif num == X:
             #     self.name = {"String":"Explosion", "Code":"9w"}
-            #     self.skillGroup = "Offensive Magic"
             #     self.ruleDict["All Only"] = True
             #     self.maxRange = 1
             #     self.offHandAttacks = False
@@ -232,14 +178,12 @@ class CombatSkill(Skill):
 
             # elif num == X:
             #     self.name = {"String":"Pray", "Code":"4w"}
-            #     self.skillGroup = "Healing Magic"
             #     self.maxRange = 1
             #     self.maxTargets = 1
             #     self.healCheck = True
 
             # elif num == X:
             #     self.name = {"String":"Bless", "Code":"5w"}
-            #     self.skillGroup = "Healing Magic"
             #     self.ruleDict["All Only"] = True
             #     self.maxRange = 1
             #     self.healCheck = True
@@ -248,12 +192,8 @@ class CombatSkill(Skill):
             # Gear/Weapon Skill #
             # elif num == X:
             #     self.name = {"String":"Power Bash", "Code":"10w"}
-            #     self.skillGroup = None
             #     self.ruleDict["Gear Num List"] = [10] # On A Shield Or Something
             #     self.stunUserOnBlock = True
-
-        if "All Only" in self.ruleDict:
-            self.maxTargets = "All"
 
         # Create Key List #
         nameStringList = self.name["String"].lower().split()
@@ -300,6 +240,25 @@ class CombatSkill(Skill):
                 self.weaponDataList = [offHandWeapon]
                 return True
         return False
+
+    def attackModCheck(self, targetUser):
+        enableSecondAttackCheck = False
+
+        # 2-Handed Axe Slash Mod #
+        if self.name["String"] == "Slash" and len(self.weaponDataList) > 0 and self.weaponDataList[0].weaponType == "Axe" and self.weaponDataList[0].twoHanded == True and (targetUser.gearDict[targetUser.getOppositeHand(targetUser.dominantHand)] == None or targetUser.gearDict[targetUser.dominantHand] == None):
+            self.offHandAttacks = False
+            self.maxTargets = 3
+            self.ruleDict["All Only"] = True
+
+        # Blunt/Shield Bash Mod #
+        elif self.name["String"] == "Bash" and len(self.weaponDataList) > 0 and self.weaponDataList[0].weaponType in ["Blunt", "Shield"]:
+            if self.offHandAttacks == False:
+                enableSecondAttackCheck = True
+
+            self.offHandAttacks = True
+            self.stunUserOnBlock = False
+
+        return enableSecondAttackCheck
 
     def ruleCheck(self, flags):
         if "Distance" in flags:
