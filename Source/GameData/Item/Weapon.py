@@ -74,16 +74,17 @@ class Weapon(Item):
         elif num == 11:
             self.name = {"String":"Bow", "Code":"3w"}
             self.weaponType = "Bow"
+            self.twoHanded = True
+            self.flags["Disable Dual Wielding"] = True
 
         elif num == 12:
-            self.prefix = "An"
-            self.name = {"String":"Ebony Pistol", "Code":"1w5ddw1w5ddw"}
+            self.name = {"String":"9mm Pistol", "Code":"1w3ddw1w5ddw"}
             self.weaponType = "Pistol"
-            self.ammoType = ".45"
+            self.ammoType = "9mm"
 
         elif num == 13:
             self.prefix = "An"
-            self.name = {"String":"Ivory Pistol", "Code":"1w5ddw1w5ddw"}
+            self.name = {"String":".45 Pistol", "Code":"1y4w5ddw"}
             self.weaponType = "Pistol"
             self.ammoType = ".45"
 
@@ -92,6 +93,7 @@ class Weapon(Item):
             self.weaponType = "Rifle"
             self.twoHanded = True
             self.ammoType = "5.56"
+            self.flags["Disable Dual Wielding"] = True
 
         elif num == 15:
             self.name = {"String":"Shotgun", "Code":"7w"}
@@ -99,6 +101,7 @@ class Weapon(Item):
             self.twoHanded = True
             self.ammoCapacity = 5
             self.ammoType = "12 Gauge"
+            self.flags["Disable Dual Wielding"] = True
 
         elif num == 16:
             self.name = {"String":"Rocket Launcher", "Code":"15w"}
@@ -134,8 +137,8 @@ class Weapon(Item):
         if "Code" not in self.roomDescription:
             self.roomDescription["Code"] = str(len(self.roomDescription["String"])) + "w"
 
-    def isRanged(self):
-        if self.weaponType in ["Pistol", "Rifle", "Bow", "Throwable"]:
+    def isGun(self):
+        if self.weaponType in ["Pistol", "Rifle"]:
             return True
         return False
 
@@ -148,7 +151,7 @@ class Weapon(Item):
                     if item.ammoCapacity > maxInventoryMagCapacity:
                         maxInventoryMagCapacity = item.ammoCapacity
 
-        if self.weaponType in ["Pistol", "Rifle"]:
+        if self.isGun():
             if self.ammoCapacity != None and self.magazine != None:
                 maxCapacity = self.ammoCapacity
                 if isinstance(ammoList, int) : maxCapacity = ammoList
@@ -175,7 +178,7 @@ class Weapon(Item):
         return False
 
     def getLoadedAmmo(self):
-        if self.weaponType in ["Pistol", "Rifle"]:
+        if self.isGun():
             if self.ammoCapacity != None:
                 if self.magazine != None:
                     return self.magazine
@@ -187,7 +190,7 @@ class Weapon(Item):
     def getWeaponStatusString(self):
         statusString = ""
         statusCode = ""
-        if self.isRanged():
+        if self.isGun():
             if self.ammoCapacity == None and self.magazine == None:
                 statusString = " [Empty]"
                 statusCode = "2y5w1y"
@@ -207,14 +210,38 @@ class Weapon(Item):
 
         return statusString, statusCode
 
-    def shoot(self):
-        if self.ammoCapacity != None:
-            if self.magazine != None:
-                self.magazine.quantity -= 1
-                if self.magazine.quantity <= 0:
-                    self.magazine = None
-        else:
-            if "Ammo" in self.magazine.flags and self.magazine.flags["Ammo"] != None:
-                self.magazine.flags["Ammo"].quantity -= 1
-                if self.magazine.flags["Ammo"].quantity <= 0:
-                    self.magazine.flags["Ammo"] = None
+    def shoot(self, targetUser=None):
+
+        # Bows #
+        if self.weaponType == "Bow" and targetUser != None:
+            targetAmmoLoc = None
+            for item in targetUser.itemDict["Ammo"]:
+                if item.ammoType == "Arrow" and item.ammoCapacity != None and len(item.containerList) > 0:
+                    targetAmmoLoc = item.containerList
+                    break
+            if targetAmmoLoc == None:
+                targetAmmoLoc = targetUser.itemDict["Ammo"]
+            
+            delIndex = -1
+            for i, item in enumerate(targetAmmoLoc):
+                if item.ammoType == "Arrow" and item.ammoCapacity == None:
+                    if item.quantity > 1:
+                        item.quantity -= 1
+                    else:
+                        delIndex = i
+                        break
+            if delIndex != -1:
+                del targetAmmoLoc[delIndex]
+
+        # Pistols & Rifles #
+        elif self.isGun():
+            if self.ammoCapacity != None:
+                if self.magazine != None:
+                    self.magazine.quantity -= 1
+                    if self.magazine.quantity <= 0:
+                        self.magazine = None
+            else:
+                if "Ammo" in self.magazine.flags and self.magazine.flags["Ammo"] != None:
+                    self.magazine.flags["Ammo"].quantity -= 1
+                    if self.magazine.flags["Ammo"].quantity <= 0:
+                        self.magazine.flags["Ammo"] = None

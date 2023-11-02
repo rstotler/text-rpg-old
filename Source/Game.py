@@ -26,20 +26,20 @@ from Components.Utility import *
         # Computer/Hacking/Simulation/Breaking The Third Wall
         # Love Story
     # Near Term:
-        # Gun Mods, Scopes Modify Accuracy
         # Reload While Walking?
-        # Make Player Lose Sight Of Mobs On Darkness
+        # Make Player Lose Sight Of Mobs On Darkness & Other Darkness Effects
         # Add Item Skills To Skill List
         # Let Player Do 'All' Combat Skills In Rooms Without Mobs
         # Make Sure Orbits Are Elliptical
-        # Make Sure Damage Stacks In Attack Messages
-        # 'Attack' Command Should Use Weapon In Main Hand
-        # Update Attack Range Logic For Different Weapons/Skills
+        # Stack Damage In Attack Messages
+        # 'Attack' Command Should Use Weapon In Dominant Hand
         # Message Data For Stunning Enemy On Failed Block
-        # Make Combat Prioritize Hitting Available Targets First
-        # Mute Mob Speech If More Than One In Room
-        # Create & Apply .stunCheck In CombatSkill (Bash &?)
+        # Make Combat Prioritize Hitting Available Targets In Player.targetList First
+        # Mute Mob Speech If More Than One Copy In Room
+        # Create & Apply .stunCheck In CombatSkill
+        # Ensure Player Can Only Put Arrows In Quivers
     # Far Term:
+        # Gun Mods, Scopes Modify Accuracy
         # Attacks With Knockback (Explosives)
         # Auto-Combat
         # Auto-Loot
@@ -175,8 +175,13 @@ class Game:
             roomCOTU03.exit["South"] = [0, 0, 3, areaCOTUNum, 0]
             roomCOTU03.exit["West"] = [0, 0, 3, areaCOTUNum, 4]
 
+            for i in range(6):
+                createItem(i + 11, "Weapon", 2, roomCOTU03)
             for i in range(10):
-                createItem(i + 1, "Weapon", 2, roomCOTU03)
+                quantity = None
+                if i + 1 not in [1, 3, 5, 7]:
+                    quantity = 25
+                createItem(i + 1, "Ammo", quantity, roomCOTU03)
 
             roomCOTU04Name = {"String":"A Little Wooden Shack", "Code":"9w1do1ddo1dddo1do1ddo1dddo6w"}
             roomCOTU04 = Room(0, 0, 3, areaCOTUNum, 4, roomCOTU04Name)
@@ -323,7 +328,7 @@ class Game:
         # self.inputBar.inputList = ["n", "n", "w", "get sniper from cab", "get 5.56 from cab", "get 5.56 from cab", "get 5.56 from cab", "e", "s", "s", "wear sni", "reload"]
         # self.inputBar.inputList = ["s", "s", "board ship", "n"]
         # self.inputBar.inputList = ["s", "e", "u", "n"]
-        self.inputBar.inputList = ["man mob 2", "man mob 3", "man mob 1", "man mob 2", "n", "n"]
+        # self.inputBar.inputList = ["man mob 2", "man mob 3", "man mob 1", "man mob 2", "n", "n"]
 
         # Load Skills #
         for i in range(3):
@@ -333,6 +338,9 @@ class Game:
         for i in range(6) : self.player.combatSkillDict["Melee"].append(CombatSkill(1 + i))
         for i in range(1) : self.player.combatSkillDict["Blunt"].append(CombatSkill(251 + i))
         for i in range(2) : self.player.combatSkillDict["Polearm"].append(CombatSkill(301 + i))
+        for i in range(1) : self.player.combatSkillDict["Bow"].append(CombatSkill(451 + i))
+        for i in range(1) : self.player.combatSkillDict["Pistol"].append(CombatSkill(501 + i))
+        for i in range(2) : self.player.combatSkillDict["Rifle"].append(CombatSkill(551 + i))
 
         self.player.itemDict["Key"].append(createItem(1))
         self.player.gearDict["Finger"][0] = createItem(8, "Armor")

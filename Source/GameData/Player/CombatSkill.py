@@ -42,6 +42,7 @@ class CombatSkill(Skill):
         elif num == 3: # Sweep #
             self.name = {"String":"Sweep", "Code":"5w"}
             self.offHandAttacks = False
+            self.stunUserOnBlock = True
             self.tickCount = 2
 
         elif num == 4: # Kick #
@@ -92,83 +93,44 @@ class CombatSkill(Skill):
         # Shield (401 - 450) #
         
         # Bow (451 - 500) #
-        elif num == 451:
+        elif num == 451: # Shoot #
             self.name = {"String":"Shoot", "Code":"5w"}
             self.weaponTypeList = [["Bow"]]
-            self.maxRange = 2
 
         # Pistol (501 - 550) #
-        elif num == 501:
+        elif num == 501: # Shoot #
             self.name = {"String":"Shoot", "Code":"5w"}
             self.weaponTypeList = [["Pistol"]]
-            self.maxRange = 2
 
         # Rifle (551 - 600) #
-        elif num == 551:
+        elif num == 551: # Shoot #
             self.name = {"String":"Shoot", "Code":"5w"}
             self.weaponTypeList = [["Rifle"]]
-            self.maxRange = 2
 
-        elif num == 552:
+        elif num == 552: # Snipe #
             self.name = {"String":"Snipe", "Code":"5w"}
-            self.ruleDict["From Another Room"] = True
-            self.ruleDict["Requires Two-Handed Weapon"] = True
             self.weaponTypeList = [["Rifle"]]
-            self.maxRange = 3
-            self.offHandAttacks = False
+            self.ruleDict["From Another Room"] = True
 
         # Combined Skills (1001 - 2000) #
-        elif num == 1001:
+        elif num == 1001: # Stab #
             self.name = {"String":"Stab", "Code":"4w"}
             self.weaponTypeList = [["Sword", "Dagger"]]
             self.stunUserOnBlock = True
             self.disableCutLimb = True
 
-        elif num == 1002:
+        elif num == 1002: # Slash #
             self.name = {"String":"Slash", "Code":"5w"}
             self.weaponTypeList = [["Sword", "Dagger", "Axe", "Claw"]]
             self.stunUserOnBlock = True
 
-        elif num == 1003:
+        elif num == 1003: # Bash #
             self.name = {"String":"Bash", "Code":"4w"}
             self.weaponTypeList = [["Sword", "Dagger", "Axe", "Blunt", "Shield"]]
             self.offHandAttacks = False
             self.stunUserOnBlock = True
 
         # Test Skills #
-            # elif num == X:
-            #     self.name = {"String":"Spin Fist", "Code":"9w"}
-            #     self.weaponTypeList = [["Melee"], ["Melee"]]
-            #     self.maxTargets = "All"
-            #     self.offHandAttacks = False
-            #     self.stunUserOnBlock = True
-
-            # elif num == X:
-            #     self.name = {"String":"Slash All", "Code":"9w"}
-            #     self.weaponTypeList = [["Sword"]]
-            #     self.ruleDict["All Only"] = True
-            #     self.offHandAttacks = False
-            #     self.stunUserOnBlock = True
-            #     # self.maxTargets = "All" # Is Automatically Set Below
-
-            # elif num == X:
-            #     self.name = {"String":"Bullet Storm", "Code":"12w"}
-            #     self.weaponTypeList = [["Pistol"]]
-            #     self.ruleDict["All Only"] = True
-            #     self.maxRange = 1
-            #     self.offHandAttacks = False
-            #     # self.maxTargets = "All" # Is Automatically Set Below
-
-            # elif num == X:
-            #     self.name = {"String":"Fireball", "Code":"8w"}
-            #     self.maxRange = 2
-
-            # elif num == X:
-            #     self.name = {"String":"Inferno", "Code":"7w"}
-            #     self.maxTargets = "All"
-            #     self.maxRange = 1
-            #     self.offHandAttacks = False
-
             # elif num == X:
             #     self.name = {"String":"Explosion", "Code":"9w"}
             #     self.ruleDict["All Only"] = True
@@ -268,9 +230,6 @@ class CombatSkill(Skill):
                 return False
 
         if '"All" Attacks Disabled' in flags and "All Only" in self.ruleDict:
-            return False
-
-        if "Disable Two-Handed Attacks" in flags and "Requires Two-Handed Weapon" in self.ruleDict:
             return False
 
         if "Disable No Off-Hand Attack Attacks" in flags and self.offHandAttacks == False:

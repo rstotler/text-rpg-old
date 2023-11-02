@@ -187,7 +187,7 @@ class Room:
                             break
                 if displayData == None:
                     itemCount = 1
-                    if hasattr(item, "quantity") == True:
+                    if hasattr(item, "quantity") == True and item.quantity != None:
                         itemCount = item.quantity
                     displayList.append({"Num":item.num, "Pocket":item.pocket, "Count":itemCount, "ItemData":item})
                     totalItemCount += itemCount

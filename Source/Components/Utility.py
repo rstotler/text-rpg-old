@@ -152,7 +152,7 @@ def getCountString(targetCount, blankSpace=True):
 
 def getDamageString(targetDamage, color="dr"):
     stringWithCommas = insertCommasInNumber(str(targetDamage), color)
-    displayString = "(" + stringWithCommas["String"] + ")"
+    displayString = "[" + stringWithCommas["String"] + "]"
     displayCode = "1y" + stringWithCommas["Code"] + "1y"
     return {"String":displayString, "Code":displayCode}
 
@@ -243,7 +243,7 @@ def writeCrashReport(errorString, input, player):
         f.write("Player Inventory: " + str(len(player.getAllItemList(["Inventory"]))) + "\n")
         for item in player.getAllItemList(["Inventory"]):
             quantityString = ""
-            if hasattr(item, "quantity") == True:
+            if hasattr(item, "quantity") == True and item.quantity != None:
                 quantityString = " (" + str(item.quantity) + ")"
             f.write(str(item.num) + " - [" + item.pocket + "] " + str(item.name["String"] + quantityString) + "\n")
         f.write("\n")
@@ -283,7 +283,7 @@ def createItem(num, type=None, quantity=None, targetRoom=None):
 
     if targetRoom != None:
         loopRange = 1
-        if quantity != None:
+        if quantity != None and type not in ["Ammo"]: # Add Other Quantity Items Here
             loopRange = quantity
         for i in range(loopRange):
             targetRoom.itemList.append(copy.deepcopy(createdItem))

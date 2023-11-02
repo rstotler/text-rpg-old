@@ -16,39 +16,54 @@ class Ammo(Item):
 
     def loadAmmo(self, num):
         if num == 1:
-            self.name = {"String":".45 8-Round Magazine", "Code":"1y4w1y14w"}
-            self.ammoType = ".45"
-            self.ammoCapacity = 8
-
-        if num == 2:
-            self.name = {"String":".45 Standard Round", "Code":"1y17w"}
-            self.ammoType = ".45"
-
-        if num == 3:
-            self.name = {"String":"5.56 6-Round Magazine", "Code":"1w1y4w1y14w"}
-            self.ammoType = "5.56"
-            self.ammoCapacity = 6
-
-        if num == 4:
-            self.name = {"String":"5.56 Standard Round", "Code":"1w1y17w"}
-            self.ammoType = "5.56"
-
-        if num == 5:
             self.name = {"String":"Quiver", "Code":"6w"}
             self.ammoType = "Arrow"
             self.ammoCapacity = 25
 
-        if num == 6:
+        elif num == 2:
+            self.prefix = "An"
             self.name = {"String":"Arrow", "Code":"5w"}
             self.ammoType = "Arrow"
 
-        if num == 7:
+        elif num == 3:
+            self.name = {"String":"9mm 12-Round Magazine", "Code":"6w1y14w"}
+            self.ammoType = "9mm"
+            self.ammoCapacity = 12
+
+        elif num == 4:
+            self.name = {"String":"9mm Standard Round", "Code":"18w"}
+            self.ammoType = "9mm"
+
+        elif num == 5:
+            self.name = {"String":".45 8-Round Magazine", "Code":"1y4w1y14w"}
+            self.ammoType = ".45"
+            self.ammoCapacity = 8
+
+        elif num == 6:
+            self.name = {"String":".45 Standard Round", "Code":"1y17w"}
+            self.ammoType = ".45"
+
+        elif num == 7:
+            self.name = {"String":"5.56 6-Round Magazine", "Code":"1w1y4w1y14w"}
+            self.ammoType = "5.56"
+            self.ammoCapacity = 6
+
+        elif num == 8:
+            self.name = {"String":"5.56 Standard Round", "Code":"1w1y17w"}
+            self.ammoType = "5.56"
+
+        elif num == 9:
             self.name = {"String":"12 Gauge Shell", "Code":"14w"}
             self.ammoType = "12 Gauge"
 
-        if num == 8:
+        elif num == 10:
             self.name = {"String":"Missile", "Code":"7w"}
             self.ammoType = "Missile"
+
+        # Quiver Setup #
+        if self.ammoType == "Arrow" and self.ammoCapacity != None:
+            self.containerList = []
+            self.containerMaxLimit = 10.0
 
         # Magazine Setup #
         if self.ammoCapacity != None:

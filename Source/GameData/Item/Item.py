@@ -105,7 +105,7 @@ class Item:
                 console.write("It contains:", "11w1y")
                 displayList = []
                 for item in self.containerList:
-                    if item.pocket == "Weapon" and item.isRanged():
+                    if item.pocket == "Weapon" and item.isGun():
                         displayList.append({"ItemData":item})
                     else:
                         displayData = None
@@ -115,7 +115,7 @@ class Item:
                                 break
                         if displayData == None:
                             itemCount = 1
-                            if hasattr(item, "quantity") == True:
+                            if hasattr(item, "quantity") == True and item.quantity != None:
                                 itemCount = item.quantity
                             displayList.append({"Num":item.num, "Pocket":item.pocket, "Count":itemCount, "ItemData":item})
                         else:
@@ -139,7 +139,7 @@ class Item:
                     console.write(displayString + weaponStatusString + modString + countString, displayCode + weaponStatusCode + modCode + countCode)
             
         # Gun #
-        elif self.pocket == "Weapon" and self.isRanged():
+        elif self.pocket == "Weapon" and self.isGun():
             displayString, displayCode = self.getWeaponStatusString()
             console.write("Rounds:" + displayString, "6w1y" + displayCode)
 
@@ -160,9 +160,9 @@ class Item:
                         console.write(displayString, displayCode)
 
     def getWeight(self, multiplyQuantity=True):
-        if hasattr(self, "quantity") == False:
+        if hasattr(self, "quantity") == False or self.quantity == None:
             weight = self.weight + self.getContainerWeight()
-            if self.pocket == "Weapon" and self.isRanged() and self.magazine != None:
+            if self.pocket == "Weapon" and self.isGun() and self.magazine != None:
                 if self.magazine.ammoCapacity == None:
                     if self.magazine.quantity != None:
                         weight += self.magazine.weight * self.magazine.quantity
@@ -174,7 +174,7 @@ class Item:
             return weight
 
         else:
-            if multiplyQuantity == True and hasattr(self, "quantity") == True:
+            if multiplyQuantity == True:
                 return self.weight * self.quantity
             else:
                 return self.weight
