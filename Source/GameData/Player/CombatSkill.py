@@ -226,7 +226,7 @@ class CombatSkill(Skill):
         if "Distance" in flags:
             if "From Another Room" in self.ruleDict and flags["Distance"] == 0:
                 return False
-            elif flags["Distance"] > self.maxRange:
+            elif flags["Distance"] > self.maxRange and (len(self.weaponTypeList) == 0 or (len(self.weaponTypeList) > 0 and self.weaponTypeList[0] not in [["Bow"], ["Pistol"], ["Rifle"]])):
                 return False
 
         if '"All" Attacks Disabled' in flags and "All Only" in self.ruleDict:

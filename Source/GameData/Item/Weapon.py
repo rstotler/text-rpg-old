@@ -83,7 +83,6 @@ class Weapon(Item):
             self.ammoType = "9mm"
 
         elif num == 13:
-            self.prefix = "An"
             self.name = {"String":".45 Pistol", "Code":"1y4w5ddw"}
             self.weaponType = "Pistol"
             self.ammoType = ".45"

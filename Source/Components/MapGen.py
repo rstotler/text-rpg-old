@@ -1,6 +1,6 @@
 import pygame, random, opensimplex
 from pygame import *
-from Components.Utility import *
+from Utility import *
 
 pygame.init()
 pygame.display.set_caption("Map Generation Test")

@@ -25,30 +25,26 @@ from Components.Utility import *
         # Elemental Planetary Energy
         # Computer/Hacking/Simulation/Breaking The Third Wall
         # Love Story
-    # Near Term:
-        # Reload While Walking?
+    # Test To Do:
         # Make Player Lose Sight Of Mobs On Darkness & Other Darkness Effects
-        # Add Item Skills To Skill List
         # Let Player Do 'All' Combat Skills In Rooms Without Mobs
-        # Make Sure Orbits Are Elliptical
         # Stack Damage In Attack Messages
-        # 'Attack' Command Should Use Weapon In Dominant Hand
         # Message Data For Stunning Enemy On Failed Block
         # Make Combat Prioritize Hitting Available Targets In Player.targetList First
         # Mute Mob Speech If More Than One Copy In Room
-        # Create & Apply .stunCheck In CombatSkill
-        # Ensure Player Can Only Put Arrows In Quivers
-    # Far Term:
-        # Gun Mods, Scopes Modify Accuracy
+        # Create & Apply .stunCheck In CombatSkill, Go Over Stun/Stumble
         # Attacks With Knockback (Explosives)
         # Auto-Combat
-        # Auto-Loot
         # Counter-Attack (Passive Skill)
-        # Classes(?)
-        # Enemy groups
+        # Enemy Groups
         # Move Direction '#'
         # Bleeding
         # Add Mob To Player Target List If Mob Attacks First (Agro Mobs)
+        # Make Reload Function Prioritize Guns Over Magazines/Etc. ("Reload 45" Tries To Reload Magazine First)
+        # Wall Texture
+    # Other To Do:
+        # Gun Mods, Scopes Modify Accuracy
+        # Add Item Skills To Skill List
         # Mob Vs. Mob Combat
         # Moons
         # Reload Messages For Mobs
@@ -64,7 +60,6 @@ class Game:
         self.roomScreen = RoomScreen()
 
         self.player = Player(0, 0, 3, 1, 1, None, None)
-        # self.player = Player(0, 0, 3, 0, 260, None, None)
         self.galaxyList = []
         self.config = Config()
 
@@ -133,6 +128,28 @@ class Game:
 
         planetProtoEarth.createContinent(self.galaxyList, [25, 25])
 
+        # Test Zone #
+        if False:
+            planetProtoEarth.areaList[0].roomList[208].inside = True
+            planetProtoEarth.areaList[0].roomList[183].inside = True
+            # planetProtoEarth.areaList[0].roomList[158].inside = True
+
+            planetProtoEarth.areaList[0].roomList[209].inside = True
+            planetProtoEarth.areaList[0].roomList[184].inside = True
+            planetProtoEarth.areaList[0].roomList[159].inside = True
+
+            planetProtoEarth.areaList[0].roomList[210].inside = True
+            planetProtoEarth.areaList[0].roomList[185].inside = True
+            planetProtoEarth.areaList[0].roomList[160].inside = True
+            
+            planetProtoEarth.areaList[0].roomList[211].inside = True
+            # planetProtoEarth.areaList[0].roomList[186].inside = True
+            planetProtoEarth.areaList[0].roomList[161].inside = True
+
+            planetProtoEarth.areaList[0].roomList[212].inside = True
+            planetProtoEarth.areaList[0].roomList[187].inside = True
+            planetProtoEarth.areaList[0].roomList[162].inside = True
+
         areaCOTUNum = len(planetProtoEarth.areaList)
         areaIceCavernNum = areaCOTUNum + 1
 
@@ -175,8 +192,8 @@ class Game:
             roomCOTU03.exit["South"] = [0, 0, 3, areaCOTUNum, 0]
             roomCOTU03.exit["West"] = [0, 0, 3, areaCOTUNum, 4]
 
-            for i in range(6):
-                createItem(i + 11, "Weapon", 2, roomCOTU03)
+            for i in range(16):
+                createItem(i + 1, "Weapon", 2, roomCOTU03)
             for i in range(10):
                 quantity = None
                 if i + 1 not in [1, 3, 5, 7]:
@@ -329,6 +346,7 @@ class Game:
         # self.inputBar.inputList = ["s", "s", "board ship", "n"]
         # self.inputBar.inputList = ["s", "e", "u", "n"]
         # self.inputBar.inputList = ["man mob 2", "man mob 3", "man mob 1", "man mob 2", "n", "n"]
+        self.inputBar.inputList = ["n", "n", "get sw", "get 45", "get 45", "get 45", "get 45", "get 45", "drop 45", "wear all", "s", "s", "drop 1 sta", "rel"]
 
         # Load Skills #
         for i in range(3):
@@ -1119,7 +1137,7 @@ class Game:
                 self.player.reloadCheck(self.console, self.galaxyList, self.player, currentRoom, "All", "All", None)
 
             # Reload Left/Right #
-            elif len(input.split()) == 2 and (input.lower().split()[1] in ["left", "lef", "le", "l", "right", "righ", "rig", "ri", "r"] or (stringIsNumber(input.split()[1]) and int(input.split()[1] > 0))):
+            elif len(input.split()) == 2 and (input.lower().split()[1] in ["left", "lef", "le", "l", "right", "righ", "rig", "ri", "r"] or (stringIsNumber(input.split()[1]) and int(input.split()[1]) > 0)):
                 reloadSlot = input.lower().split()[1]
                 self.player.reloadCheck(self.console, self.galaxyList, self.player, currentRoom, None, reloadSlot, None)
 

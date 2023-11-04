@@ -32,10 +32,10 @@ class Player:
         self.stunList = []
         self.stunnedByList = []
 
-        self.currentHealth = 10
+        self.currentHealth = 2
 
         self.maxLookDistance = 5
-        self.maxTargetDistance = 3
+
         self.targetList = []
         self.recruitList = []
         self.combatList = []
@@ -60,12 +60,12 @@ class Player:
 
     def update(self, config, console, map, galaxyList, player, currentRoom, messageDataList):
         messageDataList = self.updateAction(config, console, galaxyList, player, currentRoom, messageDataList)
-
+        
         # Mob Update #
         if self.num != None:
             if self in player.combatList:
                 if len(self.actionList) == 0:
-                    distanceToPlayer, directionToPlayer, unused = Room.getTargetRange(galaxyList, currentRoom, player, self.maxTargetDistance)
+                    distanceToPlayer, directionToPlayer, unused = Room.getTargetRange(galaxyList, currentRoom, player, self.maxLookDistance)
                     if distanceToPlayer != -1:
                         skillChoiceList = []
                         maxSkillRange = -1
@@ -275,7 +275,7 @@ class Player:
     def targetCheck(self, console, galaxyList, currentRoom, targetMobKey, targetDirKey, targetMobCount, targetDirCount):
         if targetDirCount != None and targetDirCount > self.maxLookDistance:
             console.write("You can't see that far.", "7w1y14w1y", True)
-        elif targetDirCount != None and targetDirCount > self.maxTargetDistance:
+        elif targetDirCount != None and targetDirCount > self.maxLookDistance:
             console.write("It's too far away to target.", "2w1y24w1y", True)
         
         else:
@@ -486,7 +486,7 @@ class Player:
                                 if targetMob == None:
                                     targetMob = mob
                                 elif targetMob != "Multiple" and targetMob.num != mob.num:
-                                    targetMobRange, targetMobDir, message =  Room.getTargetRange(galaxyList, targetRoom, targetMob, self.maxTargetDistance)
+                                    targetMobRange, targetMobDir, message =  Room.getTargetRange(galaxyList, targetRoom, targetMob, self.maxLookDistance)
                                     if targetMobRange != -1 and targetMobDir != None:
                                         targetDir = targetMobDir
                                         roomCount = targetMobRange
@@ -509,7 +509,7 @@ class Player:
                 
                 elif targetMob != "Multiple":
                     if targetDirKey == None and targetDirCount == None and targetMob not in targetRoom.mobList and len(targetRoomList) == 1:
-                        targetMobRange, targetMobDir, message =  Room.getTargetRange(galaxyList, targetRoom, targetMob, self.maxTargetDistance)
+                        targetMobRange, targetMobDir, message =  Room.getTargetRange(galaxyList, targetRoom, targetMob, self.maxLookDistance)
                         if targetMobRange != -1 and targetMobDir != None:
                             targetDir = targetMobDir
                             roomCount = targetMobRange
@@ -575,7 +575,7 @@ class Player:
         else:
             mobString = self.prefix + " " + self.name["String"]
             mobCode = str(len(self.prefix)) + "w1w" + self.name["Code"]
-            if len(self.actionList) > 0 and self.actionList[0].actionType != "Combat Skill":
+            if len(self.actionList) > 0 and self.actionList[0].actionType not in ["Combat Skill", "Reload"]:
                 targetAction = self.actionList[0]
                 self.actionList = []
                 if self.num == None:
@@ -679,8 +679,8 @@ class Player:
             loseSightDir = None
             if self.num == None:
                 for targetMob in self.targetList:
-                    distance, direction, message = Room.getTargetRange(galaxyList, targetRoom, targetMob, self.maxTargetDistance + 1)
-                    if distance == self.maxTargetDistance + 1:
+                    distance, direction, message = Room.getTargetRange(galaxyList, targetRoom, targetMob, self.maxLookDistance + 1)
+                    if distance == self.maxLookDistance + 1:
                         delTargetList.append(targetMob)
                         loseSightDir = direction
                         if delMobData == None:
@@ -697,11 +697,11 @@ class Player:
                 playerRoom = Room.exists(galaxyList, player.spaceship, player.galaxy, player.system, player.planet, player.area, player.room)
                 if playerRoom == None:
                     playerRoom = galaxyList[0].systemList[0].planetList[0].areaList[0].roomList[0]
-                mobDistance, mobDirection, unused = Room.getTargetRange(galaxyList, targetRoom, playerRoom, player.maxTargetDistance + 1)
+                mobDistance, mobDirection, unused = Room.getTargetRange(galaxyList, targetRoom, playerRoom, player.maxLookDistance + 1)
                 if len(player.targetList) > 0 and player.targetList[0] == self and len(player.actionList) > 0 and player.actionList[0].actionType == "Combat Skill" and player.actionList[0].flags["combatSkill"].onTarget == True and mobDistance > player.actionList[0].flags["combatSkill"].maxRange:
                     del player.actionList[0]
                     messageDataList.append({"String":"Your target moved out of range for your attack.", "Code":"46w1y", "Draw Blank Line":True})
-                elif self in player.targetList and mobDistance > player.maxTargetDistance:
+                elif self in player.targetList and mobDistance > player.maxLookDistance:
                     displayString = "You lose sight of " + self.prefix.lower() + " " + self.name["String"] + " as it moves " + Room.getOppositeDirection(mobDirection) + "."
                     displayCode = "18w" + str(len(self.prefix)) + "w1w" + self.name["Code"] + "13w" + str(len(Room.getOppositeDirection(mobDirection))) + "w1y"
                     messageDataList.append({"String":displayString, "Code":displayCode})
@@ -878,8 +878,12 @@ class Player:
             else:
                 console.write("There is no need to " + targetAction.lower() + " it.", "20w" + str(len(targetAction)) + "w3w1y", True)
 
-    def getCheck(self, console, galaxyList, player, currentRoom, targetItemKey, targetContainerKey, count):
-        drawBlankLine = self.stopActions(console, galaxyList, player)
+    def getCheck(self, console, galaxyList, player, currentRoom, targetItemKey, targetContainerKey, count, overrideContainer=None, messageDataList=[]):
+        drawBlankLine = True
+        if overrideContainer == None:
+            drawBlankLine = self.stopActions(console, galaxyList, player)
+
+        targetContainer = overrideContainer
 
         itemList = currentRoom.itemList
         playerItemLocation = None
@@ -894,7 +898,9 @@ class Player:
         if targetContainerKey not in [None, "All"] and itemList != None and (isinstance(itemList, Item) == False or itemList.containerList == None):
             console.write("That's not a container!", "4w1y17w1y", drawBlankLine)
         else:
-            if targetItemKey == "All" and (targetContainerKey in ["All", None]) and count == "All":
+            if targetContainer != None:
+                combinedItemList = [targetContainer]
+            elif targetItemKey == "All" and (targetContainerKey in ["All", None]) and count == "All":
                 combinedItemList = currentRoom.itemList
             else:
                 combinedItemList = currentRoom.itemList + self.getAllItemList()
@@ -925,6 +931,8 @@ class Player:
                 console.write("You can't find it.", "7w1y9w1y", drawBlankLine)
 
             else:
+                if targetContainer != None:
+                    itemList = targetContainer.containerList
                 if itemList == "All Room Containers":
                     itemCount = 0
                     for container in combinedItemList:
@@ -940,7 +948,6 @@ class Player:
                     getCount = 0
                     quantityCount = count
                     getContainerIndexList = []
-                    targetContainer = None
                     noGetCheck = False
                     tooMuchWeightCheck = False
                     breakCheck = False
@@ -1038,17 +1045,28 @@ class Player:
                                 modString = "every corner of "
                                 modCode = "16w"
                             consonle.write("You loot " + modString + "the place.", "9w" + modCode + "9w1y", drawBlankLine)
-                        elif targetContainerKey == None and getItem == "Multiple" and getCount > 1 and getCount == itemCount:
+                        elif targetContainerKey == None and getItem == "Multiple" and getCount > 1 and getCount == itemCount and overrideContainer == None:
                             console.write("You pick everything up.", "22w1y", drawBlankLine)
                         elif getItem == "Multiple":
                             if targetContainerKey == "All" : totalContainerCount = len(combinedItemList)
                             else:
                                 if playerItemLocation != None : totalContainerCount = len(self.getAllItemList([playerItemLocation]))
                                 else : totalContainerCount = len(currentRoom.itemList)
-                            if targetContainerKey != None and getContainerIndexList[-1] < totalContainerCount:
-                                console.write("You get some things out of " + targetContainer.prefix.lower() + " " + targetContainer.name["String"] + ".", "27w" + str(len(targetContainer.prefix)) + "w1w" + targetContainer.name["Code"] + "1y", drawBlankLine)
+                            
+                            if (targetContainerKey != None and getContainerIndexList[-1] < totalContainerCount) or overrideContainer != None:
+                                if overrideContainer != None:
+                                    stringHalf1 = "You get some things out of " + targetContainer.prefix.lower() + " " + targetContainer.name["String"] + "."
+                                    stringHalf2 = ""
+                                    codeHalf1 = "27w" + str(len(targetContainer.prefix)) + "w1w" + targetContainer.name["Code"] + "1y"
+                                    codeHalf2 = ""
+                                    drawBlankLineCheck = drawBlankLine and (len(messageDataList) == 0 or (len(messageDataList) > 0 and messageDataList[-1]["Message Type"] != "Get Check"))
+                                    combineLinesCheck = self.num != None
+                                    stackDisplayMessage(messageDataList, "Get Check", stringHalf1, stringHalf2, codeHalf1, codeHalf2, drawBlankLineCheck, combineLinesCheck)
+                                else:
+                                    console.write("You get some things out of " + targetContainer.prefix.lower() + " " + targetContainer.name["String"] + ".", "27w" + str(len(targetContainer.prefix)) + "w1w" + targetContainer.name["Code"] + "1y", drawBlankLine)
                             else:
                                 console.write("You pick some things up.", "23w1y", drawBlankLine)
+                        
                         elif getItem != "Multiple":
                             countString, countCode = getCountString(getCount)
                             fromString = ""
@@ -1057,7 +1075,7 @@ class Player:
                             else:
                                 if playerItemLocation != None : totalContainerCount = len(self.getAllItemList([playerItemLocation]))
                                 else : totalContainerCount = len(currentRoom.itemList)
-                            if targetContainerKey != None and getContainerIndexList[0] < totalContainerCount:
+                            if (targetContainerKey != None and getContainerIndexList[0] < totalContainerCount) or overrideContainer != None:
                                 targetContainerString = targetContainer.prefix.lower() + " " + targetContainer.name["String"]
                                 targetContainerCode = str(len(targetContainer.prefix)) + "w1w" + targetContainer.name["Code"]
                                 if currentRoom.isLit(galaxyList, player, self) == False:
@@ -1077,8 +1095,20 @@ class Player:
                                 itemNameCode = "8w"
                             getString = "You " + pickUpString + itemNameString + countString + fromString + "."
                             getCode = "4w" + pickUpCode + itemNameCode + countCode + fromCode + "1y"
-                            console.write(getString, getCode, drawBlankLine)
+
+                            if overrideContainer != None:
+                                stringHalf1 = getString
+                                stringHalf2 = ""
+                                codeHalf1 = getCode
+                                codeHalf2 = ""
+                                drawBlankLineCheck = drawBlankLine and (len(messageDataList) == 0 or (len(messageDataList) > 0 and messageDataList[-1]["Message Type"] != "Get Check"))
+                                combineLinesCheck = self.num != None
+                                stackDisplayMessage(messageDataList, "Get Check", stringHalf1, stringHalf2, codeHalf1, codeHalf2, drawBlankLineCheck, combineLinesCheck)
+                            else:
+                                console.write(getString, getCode, drawBlankLine)
         
+        return messageDataList
+
     def putCheck(self, console, galaxyList, player, currentRoom, targetItemKey, targetContainerKey, count):
         drawBlankLine = self.stopActions(console, galaxyList, player)
 
@@ -1108,6 +1138,8 @@ class Player:
                 console.write("You can't put something inside itself.", "7w1y29w1y", drawBlankLine)
             elif inventorySize == 0:
                 console.write("You don't have anything to put in.", "7w1y25w1y", drawBlankLine)
+            elif targetItemKey != "All" and hasattr(targetContainer, "ammoCapacity") and targetContainer.ammoCapacity != None and targetContainer.ammoType == "Arrow" and not (putItem != None and putItem.pocket == "Ammo" and putItem.ammoType == "Arrow" and putItem.ammoCapacity == None):
+                console.write("You can only put arrows in that.", "31w1y", drawBlankLine)
 
             else:
                 putCount = 0
@@ -1119,42 +1151,43 @@ class Player:
                         for i, item in enumerate(self.itemDict[pocket]):
                             if targetContainer.getContainerWeight() + item.getWeight(False) <= targetContainer.containerMaxLimit:
                                 if item != targetContainer and (targetItemKey == "All" or targetItemKey in item.keyList):
-                                    if hasattr(item, "quantity") == True and item.quantity != None:
-                                        if quantityCount != "All" : putQuantity = quantityCount
-                                        else : putQuantity = item.quantity
-                                        if putQuantity > item.quantity:
-                                            putQuantity = item.quantity
-                                        if putQuantity * item.getWeight(False) > targetContainer.containerMaxLimit - targetContainer.getContainerWeight():
-                                            putQuantity = int((targetContainer.containerMaxLimit - targetContainer.getContainerWeight()) / item.getWeight(False))
-                                            
-                                        containerQuantityItem = targetContainer.getContainerItem(item.num, item.pocket)
-                                        if containerQuantityItem != None:
-                                            if hasattr(containerQuantityItem, "quantity") == True and containerQuantityItem.quantity != None:
-                                                containerQuantityItem.quantity += putQuantity
-                                        else:
-                                            splitItem = copy.deepcopy(item)
-                                            splitItem.quantity = putQuantity
-                                            targetContainer.containerList.append(splitItem)
+                                    if not (hasattr(targetContainer, "ammoCapacity") and targetContainer.ammoCapacity != None and targetContainer.ammoType == "Arrow" and not (item.pocket == "Ammo" and item.ammoType == "Arrow" and item.ammoCapacity == None)):
+                                        if hasattr(item, "quantity") == True and item.quantity != None:
+                                            if quantityCount != "All" : putQuantity = quantityCount
+                                            else : putQuantity = item.quantity
+                                            if putQuantity > item.quantity:
+                                                putQuantity = item.quantity
+                                            if putQuantity * item.getWeight(False) > targetContainer.containerMaxLimit - targetContainer.getContainerWeight():
+                                                putQuantity = int((targetContainer.containerMaxLimit - targetContainer.getContainerWeight()) / item.getWeight(False))
+                                                
+                                            containerQuantityItem = targetContainer.getContainerItem(item.num, item.pocket)
+                                            if containerQuantityItem != None:
+                                                if hasattr(containerQuantityItem, "quantity") == True and containerQuantityItem.quantity != None:
+                                                    containerQuantityItem.quantity += putQuantity
+                                            else:
+                                                splitItem = copy.deepcopy(item)
+                                                splitItem.quantity = putQuantity
+                                                targetContainer.containerList.append(splitItem)
 
-                                        if putQuantity < item.quantity:
-                                            item.quantity -= putQuantity
+                                            if putQuantity < item.quantity:
+                                                item.quantity -= putQuantity
+                                            else:
+                                                delIndex = i
+
+                                            putCount += putQuantity
+                                            if quantityCount != "All":
+                                                quantityCount -= putCount
                                         else:
+                                            targetContainer.containerList.append(item)
+                                            putCount += 1
                                             delIndex = i
 
-                                        putCount += putQuantity
-                                        if quantityCount != "All":
-                                            quantityCount -= putCount
-                                    else:
-                                        targetContainer.containerList.append(item)
-                                        putCount += 1
-                                        delIndex = i
-
-                                    if putItem == None:
-                                        putItem = item
-                                    elif putItem != "Multiple" and (putItem.num != item.num or putItem.pocket != item.pocket):
-                                        putItem = "Multiple"
-                                    breakCheck = True
-                                    break
+                                        if putItem == None:
+                                            putItem = item
+                                        elif putItem != "Multiple" and (putItem.num != item.num or putItem.pocket != item.pocket):
+                                            putItem = "Multiple"
+                                        breakCheck = True
+                                        break
                         if delIndex != -1:
                             del self.itemDict[pocket][i]
                         if breakCheck == True:
@@ -2389,15 +2422,17 @@ class Player:
             distance = 0
             directionKey = None
             directionCount = None
-            if len(self.targetList) > 0:
-                targetDistance, targetDirection, unused = Room.getTargetRange(galaxyList, currentRoom, self.targetList[0], self.maxTargetDistance)
+            if len(self.targetList) > 0 and mobKey == None:
+                targetDistance, targetDirection, unused = Room.getTargetRange(galaxyList, currentRoom, self.targetList[0], self.maxLookDistance)
                 if targetDistance != -1:
                     distance = targetDistance
-                    if mobKey == None and targetDistance > 0:
+                    if targetDistance > 0:
                         directionKey = targetDirection.lower()
                         directionCount = targetDistance
 
-            randomCombatSkill, unused = self.getRandomAttackSkill(self.gearDict[self.dominantHand], self.gearDict[self.getOppositeHand(self.dominantHand)], {"Distance":distance})
+            randomCombatSkill, unused = self.getRandomAttackSkill(self.gearDict[self.dominantHand], None, {"Distance":distance})
+            if randomCombatSkill == None:
+                randomCombatSkill, unused = self.getRandomAttackSkill(self.gearDict[self.getOppositeHand(self.dominantHand)], None, {"Distance":distance})
 
             if randomCombatSkill == None:
                 console.write("You can't attack from here!", "7w1y18w1y", True)
@@ -2456,7 +2491,7 @@ class Player:
                 targetDirection = None
                 if mobKey == None and len(self.targetList) > 0:
                     targetArea, targetRoom = Room.getAreaAndRoom(galaxyList, self.targetList[0])
-                    roomDistance, targetDirection, message = Room.getTargetRange(galaxyList, currentRoom, self.targetList[0], self.maxTargetDistance)
+                    roomDistance, targetDirection, message = Room.getTargetRange(galaxyList, currentRoom, self.targetList[0], self.maxLookDistance)
                 elif directionCount != None:
                     targetDirection = Room.getTargetDirection(directionKey)
                     targetArea, targetRoom = Room.getAreaAndRoom(galaxyList, targetRoom)
@@ -2517,7 +2552,7 @@ class Player:
 
         else:
             combatSkill = flags["combatSkill"]
-            targetRoom = flags["targetRoom"]
+            oldTargetRoom = flags["targetRoom"]
             roomDistance = flags["roomDistance"]
             mobKey = flags["mobKey"]
             mobCount = flags["mobCount"]
@@ -2533,11 +2568,14 @@ class Player:
 
             if combatSkillRange == 0:
                 targetRoom = currentRoom
-            elif len(self.targetList) > 0 and not (mobKey in ["All", "Self"]):
+            elif len(self.targetList) > 0 and mobKey == None:
                 targetRoom = Room.exists(galaxyList, self.targetList[0].spaceship, self.targetList[0].galaxy, self.targetList[0].system, self.targetList[0].planet, self.targetList[0].area, self.targetList[0].room)
                 if targetRoom == None:
                     targetRoom = galaxyList[0].systemList[0].planetList[0].areaList[0].roomList[0]
-            if currentRoom != targetRoom:
+            else:
+                targetRoom = oldTargetRoom
+
+            if oldTargetRoom != targetRoom:
                 distance, targetDirection, unused = Room.getTargetRange(galaxyList, targetRoom, currentRoom, combatSkillRange)
                 if distance != -1:
                     roomDistance = distance
@@ -2829,6 +2867,12 @@ class Player:
                         combineLinesCheck = self.num != None
                         stackDisplayMessage(messageDataList, messageType, stringHalf1, stringHalf2, codeHalf1, codeHalf2, drawBlankLineCheck, combineLinesCheck)
 
+            # Auto-Loot Check #
+            if len(attackDisplayList[0]["Mob Corpse List"]) > 0 and self.num == None and config.autoLoot == True and targetRoom.sameRoomCheck(player):
+                for mobCorpse in attackDisplayList[0]["Mob Corpse List"]:
+                    if len(mobCorpse.containerList) > 0:
+                        messageDataList = self.getCheck(console, galaxyList, player, currentRoom, "All", None, "All", mobCorpse, messageDataList)
+
             # Auto-Reload Check #
             if len(shootGunDataList) > 0:
                 if (self.num == None and config.autoReload == True) or self.num != None:
@@ -2862,8 +2906,8 @@ class Player:
                 if len(combatSkill.weaponDataList) == 1 and (combatSkill.weaponDataList[0] == offAttackHand or (combatSkill.weaponDataList[0] == "Open Hand" and offAttackHand == None)):
                     offAttackHand = self.gearDict[self.dominantHand]
             if combatSkill.healCheck == False and len(self.cutLimbList) == 0 and combatSkill.offHandAttacks == True and \
-            not (len(combatSkill.weaponDataList) == 1 and combatSkill.weaponDataList[0].twoHanded == True and ("Disable Dual Wielding" in combatSkill.weaponDataList[0].flags or self.debugDualWield == False)):
-                offHandFlagList = {"Distance":roomDistance, '"All" Attacks Disabled':True, "Disable Healing":True}
+            not (len(combatSkill.weaponDataList) == 1 and combatSkill.weaponDataList[0] != "Melee" and combatSkill.weaponDataList[0].twoHanded == True and ("Disable Dual Wielding" in combatSkill.weaponDataList[0].flags or self.debugDualWield == False)):
+                offHandFlagList = {"Distance":roomDistance, '"All" Attacks Disabled':True, "Disable Off Hand Attacks":True, "Disable Healing":True}
                 if self.num == None:
                     offHandFlagList["Disable Weaponless Skills"] = True
                 else:
@@ -2875,7 +2919,7 @@ class Player:
                     attackList.append(offAttackSkill)
 
         for skill in attackList:
-            displayData = {"Mob Data":None, "Killed Mob Data":None, "Count":0, "Kill Count":0, "Miss Count":0, "Attack Data":skill}
+            displayData = {"Mob Data":None, "Killed Mob Data":None, "Count":0, "Kill Count":0, "Mob Corpse List":[], "Miss Count":0, "Attack Data":skill}
             attackDisplayList.append(displayData)
             if mobKey == None and directionKey == None:
                 skill.onTarget = True
@@ -2913,7 +2957,6 @@ class Player:
                 else:
                     targetList = targetRoom.mobList
                 for mob in targetList:
-                    # print(mob.num)
                     if not (combatSkill.healCheck == False and mob == self):
                         if mobKey == "All" or allOnlyCheck == True or \
                         (mobKey != None and mobKey in mob.keyList) or \
@@ -3048,6 +3091,8 @@ class Player:
 
                                         # Player/Mob Dead Check #
                                         if mob.currentHealth <= 0:
+                                            testItem = createItem(1, "Armor", None)#
+                                            mob.itemDict[testItem.pocket].append(testItem)#
                                             mobKillList.append(mob)
                                             if self.num != None and self in player.combatList:
                                                 self.speechIndex = 0
@@ -3057,7 +3102,7 @@ class Player:
                                                 attackDisplayList[0]["Killed Mob Data"] = mob
                                             elif attackDisplayList[0]["Killed Mob Data"] != "Multiple" and attackDisplayList[0]["Killed Mob Data"].num != mob.num:
                                                 attackDisplayList[0]["Killed Mob Data"] = "Multiple"
-
+                                            
                                         # Mob NOT Dead #
                                         else:
                                             if self.num == None:
@@ -3096,9 +3141,11 @@ class Player:
                         if mob in stunnedByMob.stunList:
                             del stunnedByMob.stunList[stunnedByMob.stunList.index(mob)]
 
-                targetRoom.itemList.append(Item.createCorpse(mob))
+                mobCorpse = Item.createCorpse(mob)
+                targetRoom.itemList.append(mobCorpse)
                 if mob in targetRoom.mobList:
                     del targetRoom.mobList[targetRoom.mobList.index(mob)]
+                attackDisplayList[0]["Mob Corpse List"].append(mobCorpse)
 
                 if mob.num == None:
                     mob.currentHealth = 3
@@ -3879,20 +3926,22 @@ class Player:
 
     def getRandomAttackSkill(self, targetWeapon, secondWeapon, ruleCheckFlags):
         # Don't Choose Attacks That Don't Require Weapons #
+        # Don't Choose Dodge Or Block #
         # Ammo Check #
 
         skillList = []
         returnMessage = None
         for skill in self.getCombatSkillList():
-            if skill.ruleCheck(ruleCheckFlags) == True:
-                if self.skillWeaponCheck(skill, targetWeapon) == True:
-                    if len(skill.weaponTypeList) == 0 and "Disable Weaponless Skills" in ruleCheckFlags:
-                        pass
-                    elif len(skill.weaponTypeList) > 0 and ("Pistol" in skill.weaponTypeList[0] or "Rifle" in skill.weaponTypeList[0]) and ((targetWeapon != None and targetWeapon.isGun() and targetWeapon.isEmpty(True) == True) and (secondWeapon == None or (secondWeapon != None and secondWeapon.isGun() and secondWeapon.isEmpty(True) == True))):
-                        returnMessage = "Reload"
-                        skillList.append(skill)
-                    else:
-                        skillList.append(skill)
+            if skill.name["String"] not in ["Dodge", "Block"] and skill.ruleCheck(ruleCheckFlags) == True:
+                if not ("Disable Off Hand Attacks" in ruleCheckFlags and skill.offHandAttacks == False):
+                    if self.skillWeaponCheck(skill, targetWeapon) == True:
+                        if len(skill.weaponTypeList) == 0 and "Disable Weaponless Skills" in ruleCheckFlags:
+                            pass
+                        elif len(skill.weaponTypeList) > 0 and ("Pistol" in skill.weaponTypeList[0] or "Rifle" in skill.weaponTypeList[0]) and ((targetWeapon not in [None, "Unused"] and targetWeapon.isGun() and targetWeapon.isEmpty(True) == True) and (secondWeapon == None or (secondWeapon not in [None, "Unused"] and secondWeapon.isGun() and secondWeapon.isEmpty(True) == True))):
+                            returnMessage = "Reload"
+                            skillList.append(skill)
+                        else:
+                            skillList.append(skill)
                     
         if len(skillList) > 0:
             return random.choice(skillList), returnMessage
@@ -4008,10 +4057,14 @@ class Player:
     def stopActions(self, console, galaxyList, player):
         if len(self.actionList) > 0:
             currentRoom = Room.exists(galaxyList, self.spaceship, self.galaxy, self.system, self.planet, self.area, self.room)
+            actionString = self.actionList[0].actionType.lower()
+            if actionString == "combat skill":
+                actionString = self.actionList[0].flags["combatSkill"].name["String"].lower()
+
             if self.num == None:
-                console.write("You stop " + self.actionList[0].actionType.lower() + "ing.", "9w" + str(len(self.actionList[0].actionType)) + "w3w1y", True)
+                console.write("You stop " + actionString + "ing.", "9w" + str(len(actionString)) + "w3w1y", True)
             elif currentRoom != None and currentRoom.sameRoomCheck(player):
-                console.write(self.prefix + " " + self.name["String"] + " stops " + self.actionList[0].actionType.lower() + "ing.", str(len(self.prefix)) + "w1w" + self.name["Code"] + "7w" + str(len(self.actionList[0].actionType)) + "w3w1y", True)
+                console.write(self.prefix + " " + self.name["String"] + " stops " + actionString + "ing.", str(len(self.prefix)) + "w1w" + self.name["Code"] + "7w" + str(len(actionString)) + "w3w1y", True)
             
             self.actionList = []
             return False

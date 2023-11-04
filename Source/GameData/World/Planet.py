@@ -89,7 +89,7 @@ class Planet:
                         targetRoom = areaContinent.roomList[roomNum]
                         if not (renderIndex in [1, 2, 3] and targetRoom.terrainType == "Water"):
                             targetRoom.terrainType = terrainType
-
+                        
                     # Round Edges #
                     if renderIndex == 3 or renderRange == 1:
                         if renderRange == 1:
@@ -120,6 +120,10 @@ class Planet:
                         #elevationValue = 1.0 - heightValue
                         #newRoom.mapElevationValue = elevationValue # Shadow Effect On Map #
                             
+                    # Debug Line #
+                    if areaContinent.roomList[roomNum].terrainType != "Water":
+                        areaContinent.roomList[roomNum].terrainType = "Dirt"
+
                     # Exits #
                     if renderIndex == 3 or renderRange == 1:
                         if renderRange == 1:
@@ -217,7 +221,7 @@ class Planet:
 
         if self.minutesInYear != 0:
             x = math.cos(math.radians((self.currentMinutesInYear / self.minutesInYear) * 360)) * self.distanceFromSun
-            y = ((math.sin(math.radians((self.currentMinutesInYear / self.minutesInYear) * 360)) * self.distanceFromSun) / 1.5) * orbitMod
+            y = ((math.sin(math.radians((self.currentMinutesInYear / self.minutesInYear) * 360)) * self.distanceFromSun) / 1.4) * orbitMod
         
         self.position = [x, y]
 

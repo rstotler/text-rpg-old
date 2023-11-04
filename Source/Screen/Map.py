@@ -30,11 +30,12 @@ class Map:
         self.init()
 
     def init(self):
-        for terrainType in ["Default", "Water", "Beach", "Grass", "Desert", "Mountain"]:
+        for terrainType in ["Default", "Water", "Beach", "Dirt", "Grass", "Desert", "Mountain"]:
             terrainCell = pygame.Surface([self.cellSize, self.cellSize])
             if terrainType == "Default" : terrainCell.fill([130, 130, 130])
             elif terrainType == "Water" : terrainCell.fill([30, 65, 200])
             elif terrainType == "Beach" : terrainCell.fill([200, 200, 120])
+            elif terrainType == "Dirt" : terrainCell.fill([130, 75, 60])
             elif terrainType == "Grass" : terrainCell.fill([30, 140, 45])
             elif terrainType == "Desert" : terrainCell.fill([200, 200, 120])
             elif terrainType == "Mountain" : terrainCell.fill([85, 60, 10])
@@ -150,6 +151,7 @@ class Map:
         self.surface.fill([10, 10, 10])
         
         distance = 0
+        orbitRadius = 0
         for p, planet in enumerate(self.targetSystem.planetList):
             orbitMod = 1
             if planet.orbit == "Clockwise":
@@ -159,12 +161,16 @@ class Map:
             y = 0
             if planet.minutesInYear != 0:
                 x = math.cos(math.radians((planet.currentMinutesInYear / planet.minutesInYear) * 360)) * distance
-                y = ((math.sin(math.radians((planet.currentMinutesInYear / planet.minutesInYear) * 360)) * distance) / 1.5) * orbitMod
+                y = (math.sin(math.radians((planet.currentMinutesInYear / planet.minutesInYear) * 360)) * distance) * orbitMod
 
+            if p > 0:
+                pygame.draw.circle(self.surface, [110, 110, 110], [100, 100], distance, 1)
+            
             pygame.draw.circle(self.surface, planet.getDrawColor(), [100 + x, 100 + y], planet.getDrawRadius())
             if p < len(self.targetSystem.planetList) - 1:
                 distance += planet.getDrawRadius() + self.targetSystem.planetList[p + 1].getDrawRadius() + 2
-                if p == 0 : distance += 6
+                if p == 0:
+                    distance += 6
 
         writeFast("System: " + self.targetSystem.name["String"], [200, 200, 200], [0, 0], self.font, self.surface)
         
