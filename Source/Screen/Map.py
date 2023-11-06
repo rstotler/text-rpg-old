@@ -6,9 +6,10 @@ from Components.Utility import *
 class Map:
 
     def __init__(self):
-        self.surface = pygame.Surface([200, 200])
+        self.surface = pygame.Surface([220, 220])
         self.surface.fill([10, 30, 70])
         self.font = pygame.font.Font("../Assets/Fonts/CodeNewRomanB.otf", 12)
+        self.border = pygame.image.load("../Assets/Images/Interface/Border_Map.png").convert_alpha()
 
         self.screenLevel = "Area"
 
@@ -141,10 +142,11 @@ class Map:
         if player.planet != None:
             targetPlanet = galaxyList[player.galaxy].systemList[player.system].planetList[player.planet]
             targetPlanetName = targetPlanet.name
-        writeFast("Planet: " + targetPlanetName["String"], [200, 200, 200], [0, 0], self.font, self.surface)
-        writeFast("Area: " + targetArea.name["String"], [200, 200, 200], [0, 10], self.font, self.surface)
+        writeFast("Planet: " + targetPlanetName["String"], [200, 200, 200], [6, 6], self.font, self.surface)
+        writeFast("Area: " + targetArea.name["String"], [200, 200, 200], [6, 16], self.font, self.surface)
                 
-        window.blit(self.surface, [600, 0])
+        self.surface.blit(self.border, [0, 0])
+        window.blit(self.surface, [580, 0])
         
     def drawSystemMap(self, window, galaxyList, player):
         import math
@@ -172,6 +174,7 @@ class Map:
                 if p == 0:
                     distance += 6
 
-        writeFast("System: " + self.targetSystem.name["String"], [200, 200, 200], [0, 0], self.font, self.surface)
+        writeFast("System: " + self.targetSystem.name["String"], [200, 200, 200], [6, 6], self.font, self.surface)
         
-        window.blit(self.surface, [600, 0])
+        self.surface.blit(self.border, [0, 0])
+        window.blit(self.surface, [580, 0])

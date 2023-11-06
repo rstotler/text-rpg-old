@@ -16,7 +16,7 @@ class Room:
         self.mapCoordinates = [None, None]
 
         self.name = createDefaultString(name)
-        self.description = []
+        self.description = {"String":"", "Code":""}
         self.searchList = []
 
         self.exit = {"North": None, "East": None, "South": None, "West": None, "Up":None, "Down":None}
@@ -52,9 +52,8 @@ class Room:
         # Description #
         if roomIsLit == False:
             console.write("It's too dark to see..", "2w1y17w2y")
-        else:
-            for line in self.description:
-                console.write(line["String"], line["Code"])
+        elif self.description["String"] != "":
+            console.write(self.description["String"], self.description["Code"])
 
         # Exits #
         otherRoomSpaceshipNum = None

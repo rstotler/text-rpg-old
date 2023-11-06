@@ -2,16 +2,16 @@ import pygame, traceback
 from pygame import *
 from Components.Utility import *
 
-# Input Bar Width (Characters) - 56 #
+# Input Bar Width (Characters) - 54 #
 # Character Size - [10, 18] #
 
 class InputBar:
 
     def __init__(self):
-        rectSize = [600, 22]
+        rectSize = [580, 22]
         self.surface = pygame.Surface(rectSize)
         self.font = pygame.font.Font("../Assets/Fonts/CodeNewRomanB.otf", 18)
-
+        
         self.input = ""
         self.inputBlinkerTimer = 0
 
@@ -82,7 +82,7 @@ class InputBar:
         if self.inputBlinkerTimer >= 60:
             self.inputBlinkerTimer = 0
 
-        self.surface.fill([10, 30, 70])
+        self.surface.fill([10, 25, 50])
         
         carrotColor = "y"
         if player.getCombatAction() != None and player.getCombatAction().name["String"] in ["Block", "Dodge"]:
@@ -92,8 +92,8 @@ class InputBar:
         elif player.inStunnedTargetRoom(galaxyList) == True:
             carrotColor = "m"
         displayInput = self.input
-        if len(displayInput) >= 57:
-            displayInput = displayInput[-56:]
+        if len(displayInput) >= 55:
+            displayInput = displayInput[-54:]
         if self.inputBlinkerTimer >= 30:
             displayInput = displayInput + "_"
         displayInput = "> " + displayInput

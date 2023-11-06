@@ -41,6 +41,48 @@ class Planet:
         areaContinent = Area(areaNum, areaName)
         areaContinent.size = size
         
+        # Dirt, Beach & Water #
+        for y in range(size[1]):
+            for x in range(size[0]):
+                if not circleCircleCollide([x, y], 1, [int(size[0] / 2), int(size[1] / 2)], int(size[0] * .365)):
+                    terrainType = "Water"
+                elif not circleCircleCollide([x, y], 1, [int(size[0] / 2), int(size[1] / 2)], int(size[0] * .315)):
+                    terrainType = "Beach"
+                else:
+                    terrainType = "Dirt"
+
+                roomNum = (y * size[0]) + x
+                roomName = {"String":terrainType, "Code":str(len(terrainType)) + "w"}
+                targetRoom = Room(self.galaxy, self.system, self.planet, areaNum, roomNum, roomName)
+                targetRoom.terrainType = terrainType
+                targetRoom.mapCoordinates = [x, y]
+                areaContinent.roomList.append(targetRoom)
+
+                # Exits #
+                if y > 0:
+                    targetRoom.exit["North"] = [self.galaxy, self.system, self.planet, areaNum, roomNum - size[0]]
+                if x < size[0] - 1:
+                    targetRoom.exit["East"] = [self.galaxy, self.system, self.planet, areaNum, roomNum + 1]
+                if y < size[1] - 1:
+                    targetRoom.exit["South"] = [self.galaxy, self.system, self.planet, areaNum, roomNum + size[0]]
+                if x > 0:
+                    targetRoom.exit["West"] = [self.galaxy, self.system, self.planet, areaNum, roomNum - 1]
+
+        # Create RoomNumMap #
+        areaContinent.roomNumMap = []
+        for x in range(size[0]):
+            areaContinent.roomNumMap.append([])
+            for y in range(size[1]):
+                areaContinent.roomNumMap[-1].append((y * size[1]) + x)
+
+        self.areaList.append(areaContinent)
+
+    def createContinent2(self, galaxyList, size):
+        areaNum = len(self.areaList)
+        areaName = {"String":"Continent " + str(areaNum + 1), "Code":"10w" + str(len(str(areaNum)))}
+        areaContinent = Area(areaNum, areaName)
+        areaContinent.size = size
+        
         renderRange = 1
         for renderIndex in range(renderRange):
             simplexBase = opensimplex.OpenSimplex(random.randrange(2560))

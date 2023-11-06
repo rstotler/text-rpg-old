@@ -1,17 +1,15 @@
 Traceback (most recent call last):
   File "D:\Codes\Python\Universe\Source\Screen\InputBar.py", line 49, in processInput
     game.processInputBarCommand(self.input)
-  File "D:\Codes\Python\Universe\Source\Game.py", line 1091, in processInputBarCommand
-    self.player.combatSkillCheck(self.config, self.console, self.galaxyList, self.player, currentRoom, combatSkill, None, None, None, None)
-  File "D:\Codes\Python\Universe\Source\GameData\Player\Player.py", line 2479, in combatSkillCheck
-    flags = self.combatSkillFunction(config, player, combatSkill, currentRoom, targetRoom, roomDistance, mobKey, mobCount, directionKey, True, {})
-  File "D:\Codes\Python\Universe\Source\GameData\Player\Player.py", line 2876, in combatSkillFunction
-    offAttackSkill, offAttackMessage = self.getRandomAttackSkill(offAttackHand, "Unused", offHandFlagList)
-  File "D:\Codes\Python\Universe\Source\GameData\Player\Player.py", line 3900, in getRandomAttackSkill
-    elif len(skill.weaponTypeList) > 0 and ("Pistol" in skill.weaponTypeList[0] or "Rifle" in skill.weaponTypeList[0]) and ((targetWeapon not in [None, "Unused"] and targetWeapon.isGun() and targetWeapon.isEmpty(True) == True) and (secondWeapon == None or (secondWeapon != None and secondWeapon.isGun() and secondWeapon.isEmpty(True) == True))):
-AttributeError: 'str' object has no attribute 'isGun'
+  File "D:\Codes\Python\Universe\Source\Game.py", line 1084, in processInputBarCommand
+    self.player.combatSkillCheck(self.config, self.console, self.galaxyList, self.player, currentRoom, combatSkill, mobCount, mobKey, None, None)
+  File "D:\Codes\Python\Universe\Source\GameData\Player\Player.py", line 2552, in combatSkillCheck
+    stackDisplayMessage(messageDataList, "Combat Check", stringHalf1, stringHalf2, codeHalf1, codeHalf2, False)
+  File "D:\Codes\Python\Universe\Source\Components\Utility.py", line 177, in stackDisplayMessage
+    for messageData in messageDataList:
+TypeError: 'NoneType' object is not iterable
 
-Input: slash
+Input: pun dro
 Player Loc: [0, 0, 3, 1, 1]
 Player Spaceship: None
 Player Targets: 1
@@ -20,7 +18,7 @@ Player Group: 0
 Player Inventory: 1
 1 - [Key] Silver Keycard
 
-Player Gear: 3
+Player Gear: 1
 Head - None
 Face - None
 Neck (0) - None
@@ -34,5 +32,5 @@ Finger (1) - None
 Legs Under - None
 Legs Over - None
 Feet - None
-Left Hand - 13 - .45 Pistol
-Right Hand - 1 - Sword
+Left Hand - None
+Right Hand - None

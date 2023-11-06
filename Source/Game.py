@@ -25,30 +25,27 @@ from Components.Utility import *
         # Elemental Planetary Energy
         # Computer/Hacking/Simulation/Breaking The Third Wall
         # Love Story
-    # Test To Do:
-        # Make Player Lose Sight Of Mobs On Darkness & Other Darkness Effects
-        # Let Player Do 'All' Combat Skills In Rooms Without Mobs
-        # Stack Damage In Attack Messages
-        # Message Data For Stunning Enemy On Failed Block
-        # Make Combat Prioritize Hitting Available Targets In Player.targetList First
-        # Mute Mob Speech If More Than One Copy In Room
-        # Create & Apply .stunCheck In CombatSkill, Go Over Stun/Stumble
-        # Attacks With Knockback (Explosives)
-        # Auto-Combat
-        # Counter-Attack (Passive Skill)
-        # Enemy Groups
-        # Move Direction '#'
-        # Bleeding
-        # Add Mob To Player Target List If Mob Attacks First (Agro Mobs)
-        # Make Reload Function Prioritize Guns Over Magazines/Etc. ("Reload 45" Tries To Reload Magazine First)
-        # Wall Texture
-    # Other To Do:
-        # Gun Mods, Scopes Modify Accuracy
-        # Add Item Skills To Skill List
-        # Mob Vs. Mob Combat
-        # Moons
-        # Reload Messages For Mobs
-        # Make Sure Items Don't Generate Over Special Item Numbers
+    # Make Player Lose Sight Of Mobs On Darkness & Other Darkness Effects
+    # Let Player Do 'All' Combat Skills In Rooms Without Mobs
+    # Stack Damage In Attack Messages
+    # Make Combat Prioritize Hitting Available Targets In Player.targetList First
+    # Create & Apply .stunCheck In CombatSkill, Go Over Stun/Stumble
+    # Move Canceling Attacks
+    # Attacks With Knockback (Explosives)
+    # Counter-Attack (Passive Skill)
+    # Move Direction '#'
+    # Bleeding
+    # Make Reload Function Prioritize Guns Over Magazines/Etc. ("Reload 45" Tries To Reload Magazine First)
+    # Wall Texture
+    # Message Data For Stunning Enemy On Failed Block
+    # Gun Mods, Scopes Modify Accuracy
+    # Add Item Skills To Skill List
+    # Enemy Groups
+    # Mob Vs. Mob Combat
+    # Add Mob To Player Target List If Mob Attacks First (Agro Mobs)
+    # Moons
+    # Reload Messages For Mobs
+    # Make Sure Items Don't Generate Over Special Item Numbers
 
 class Game:
 
@@ -126,29 +123,31 @@ class Game:
             planetProtoPluto = Planet(self.galaxyList, 0, 0, 9, protoPlutoName, "Planet", 3700000000, 9180, 130348800, 119.61, 1476)
             systemProtoSol.planetList.append(planetProtoPluto)
 
-        planetProtoEarth.createContinent(self.galaxyList, [25, 25])
+        continentSize = 40
+        planetProtoEarth.createContinent(self.galaxyList, [continentSize, continentSize])
 
         # Test Zone #
-        if False:
-            planetProtoEarth.areaList[0].roomList[208].inside = True
-            planetProtoEarth.areaList[0].roomList[183].inside = True
-            # planetProtoEarth.areaList[0].roomList[158].inside = True
+        if True:
+            startLoc = 738
+            planetProtoEarth.areaList[0].roomList[startLoc].inside = True
+            planetProtoEarth.areaList[0].roomList[startLoc - continentSize].inside = True
+            # planetProtoEarth.areaList[0].roomList[209 - (continentSize * 2)].inside = True
 
-            planetProtoEarth.areaList[0].roomList[209].inside = True
-            planetProtoEarth.areaList[0].roomList[184].inside = True
-            planetProtoEarth.areaList[0].roomList[159].inside = True
+            planetProtoEarth.areaList[0].roomList[startLoc + 1].inside = True
+            planetProtoEarth.areaList[0].roomList[startLoc + 1 - continentSize].inside = True
+            planetProtoEarth.areaList[0].roomList[startLoc + 1 - (continentSize * 2)].inside = True
 
-            planetProtoEarth.areaList[0].roomList[210].inside = True
-            planetProtoEarth.areaList[0].roomList[185].inside = True
-            planetProtoEarth.areaList[0].roomList[160].inside = True
+            planetProtoEarth.areaList[0].roomList[startLoc + 2].inside = True
+            planetProtoEarth.areaList[0].roomList[startLoc + 2 - continentSize].inside = True
+            planetProtoEarth.areaList[0].roomList[startLoc + 2 - (continentSize * 2)].inside = True
             
-            planetProtoEarth.areaList[0].roomList[211].inside = True
-            # planetProtoEarth.areaList[0].roomList[186].inside = True
-            planetProtoEarth.areaList[0].roomList[161].inside = True
+            planetProtoEarth.areaList[0].roomList[startLoc + 3].inside = True
+            # planetProtoEarth.areaList[0].roomList[startLoc + 3 - continentSize].inside = True
+            planetProtoEarth.areaList[0].roomList[startLoc + 3 - (continentSize * 2)].inside = True
 
-            planetProtoEarth.areaList[0].roomList[212].inside = True
-            planetProtoEarth.areaList[0].roomList[187].inside = True
-            planetProtoEarth.areaList[0].roomList[162].inside = True
+            planetProtoEarth.areaList[0].roomList[startLoc + 4].inside = True
+            planetProtoEarth.areaList[0].roomList[startLoc + 4 - continentSize].inside = True
+            planetProtoEarth.areaList[0].roomList[startLoc + 4 - (continentSize * 2)].inside = True
 
         areaCOTUNum = len(planetProtoEarth.areaList)
         areaIceCavernNum = areaCOTUNum + 1
@@ -165,11 +164,8 @@ class Game:
             roomCOTU00.exit["South"] = [0, 0, 3, areaCOTUNum, 1]
             roomCOTU00.exit["North"] = [0, 0, 3, areaCOTUNum, 3]
             roomCOTU00.exit["East"] = [0, 0, 3, areaIceCavernNum, 0]
-            roomCOTU00.exit["West"] = [0, 0, 3, 0, 260] # Temporary Debug Teleporter To Earth
-            roomCOTU00.description = [{"String":"You stand on a large floating platform at the Center of the", "Code":"46w1w1ddw1da2dw2da1dw2ddw1da1dw1w"},
-                                    {"String":"Universe. Billions of multi-colored stars twinkle and flash", "Code":"1w2dw2ddw1da2ddw2y13w1dc1c1ddc1w1y1r1dr1do1o1y1dy1ddy7w1c1dc1ddc2dc1c1ddc5w1c1dc1ddc1dc1c"},
-                                    {"String":"from ages past. You see a bridge leading to the Spaceport", "Code":"14w2y32w1w1dw2ddw1dw1w1dw1ddw1dw"},
-                                    {"String":"to the South and a garden to the North.", "Code":"7w1w5ddw6w1g1dg1ddg1g1dg1ddg8w1w4ddw1y"}]
+            roomCOTU00.exit["West"] = [0, 0, 3, 0, 780] # Temporary Debug Teleporter To Earth
+            roomCOTU00.description = {"String":"You stand on a large floating platform at the Center of the Universe. Billions of multi-colored stars twinkle and flash from ages past. You see a bridge leading to the Spaceport to the South and a garden to the North.", "Code":"46w1w1ddw1da2dw2da1dw2ddw1da1dw2w1w2dw2ddw1da2ddw2y13w1dc1c1ddc1w1y1r1dr1do1o1y1dy1ddy7w1c1dc1ddc2dc1c1ddc5w1c1dc1ddc1dc1c1w14w2y32w1w1dw2ddw1dw1w1dw1ddw1dw1w7w1w5ddw6w1g1dg1ddg1g1dg1ddg8w1w4ddw1y"}
             
             roomCOTU01Name = {"String":"Bridge To The Spaceport", "Code":"14w1w1dw2ddw1dw1w1dw1ddw1dw"}
             roomCOTU01 = Room(0, 0, 3, areaCOTUNum, 1, roomCOTU01Name)
@@ -346,7 +342,7 @@ class Game:
         # self.inputBar.inputList = ["s", "s", "board ship", "n"]
         # self.inputBar.inputList = ["s", "e", "u", "n"]
         # self.inputBar.inputList = ["man mob 2", "man mob 3", "man mob 1", "man mob 2", "n", "n"]
-        self.inputBar.inputList = ["n", "n", "get sw", "get 45", "get 45", "get 45", "get 45", "get 45", "drop 45", "wear all", "s", "s", "drop 1 sta", "rel"]
+        # self.inputBar.inputList = ["n", "n", "get sw", "get 45", "get 45", "get 45", "get 45", "get 45", "drop 45", "wear all", "s", "s", "drop 1 sta", "rel"]
 
         # Load Skills #
         for i in range(3):
@@ -366,10 +362,11 @@ class Game:
     def draw(self, window):
         window.fill([0, 0, 0])
 
+        self.roomScreen.draw(window, self.galaxyList, self.player)
         self.console.draw(window)
         self.inputBar.draw(window, self.galaxyList, self.player)
+
         self.map.draw(window, self.galaxyList, self.player)
-        self.roomScreen.draw(window, self.galaxyList, self.player)
 
     def update(self, window):
         self.processInput()

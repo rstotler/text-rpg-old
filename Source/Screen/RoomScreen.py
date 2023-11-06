@@ -5,7 +5,7 @@ from GameData.World.Room import Room
 class RoomScreen:
     def __init__(self):
         self.imageDict = self.loadImages()
-        self.surface = pygame.Surface([200, 200])
+        self.surface = pygame.Surface([580, 248])
 
     def loadImages(self):
         imageDict = {}
@@ -14,24 +14,25 @@ class RoomScreen:
             imageDict[area] = {}
             for row in ["Back", "Middle", "Front", "BackWall"]:
                 imageDict[area][row] = {}
-                for terrainType in ["Default", "Dirt"]:
+                for terrainType in ["Default"]:
                     try:
                         imageDict[area][row][terrainType] = {}
                         if not (area != "Wall" and row == "BackWall") and \
                         not (area != "Floor" and terrainType == "Dirt"):
-                            
                             if not (area == "Wall" and row == "Front"):
                                 imageDict[area][row][terrainType]["Middle"] = pygame.image.load("../Assets/Images/RoomScreen/" + area + "/" + terrainType + "/" + row + "_Middle.png").convert_alpha()
                             imageDict[area][row][terrainType]["Left 1"] = pygame.image.load("../Assets/Images/RoomScreen/" + area + "/" + terrainType + "/" + row + "_Left_1.png").convert_alpha()
                             imageDict[area][row][terrainType]["Right 1"] = pygame.image.load("../Assets/Images/RoomScreen/" + area + "/" + terrainType + "/" + row + "_Right_1.png").convert_alpha()
+                            imageDict[area][row][terrainType]["Left 2"] = pygame.image.load("../Assets/Images/RoomScreen/" + area + "/" + terrainType + "/" + row + "_Left_2.png").convert_alpha()
+                            imageDict[area][row][terrainType]["Right 2"] = pygame.image.load("../Assets/Images/RoomScreen/" + area + "/" + terrainType + "/" + row + "_Right_2.png").convert_alpha()
                             if row in ["Back", "Middle", "BackWall"]:
-                                imageDict[area][row][terrainType]["Left 2"] = pygame.image.load("../Assets/Images/RoomScreen/" + area + "/" + terrainType + "/" + row + "_Left_2.png").convert_alpha()
-                                imageDict[area][row][terrainType]["Right 2"] = pygame.image.load("../Assets/Images/RoomScreen/" + area + "/" + terrainType + "/" + row + "_Right_2.png").convert_alpha()
-                            if row in ["Back", "BackWall"]:
                                 imageDict[area][row][terrainType]["Left 3"] = pygame.image.load("../Assets/Images/RoomScreen/" + area + "/" + terrainType + "/" + row + "_Left_3.png").convert_alpha()
                                 imageDict[area][row][terrainType]["Right 3"] = pygame.image.load("../Assets/Images/RoomScreen/" + area + "/" + terrainType + "/" + row + "_Right_3.png").convert_alpha()
+                            if row in ["Back", "BackWall"]:
+                                imageDict[area][row][terrainType]["Left 4"] = pygame.image.load("../Assets/Images/RoomScreen/" + area + "/" + terrainType + "/" + row + "_Left_4.png").convert_alpha()
+                                imageDict[area][row][terrainType]["Right 4"] = pygame.image.load("../Assets/Images/RoomScreen/" + area + "/" + terrainType + "/" + row + "_Right_4.png").convert_alpha()
+                    
                     except Exception as error:
-                        print(area, row)
                         print(traceback.format_exc())
 
         return imageDict
@@ -53,9 +54,9 @@ class RoomScreen:
         # Draw Room Rows #
         rowList = ["Back", "Middle", "Front"]
         for row in rowList:
-            if row == "Back" : loopRange = 4
-            elif row == "Middle" : loopRange = 3
-            else : loopRange = 2
+            if row == "Back" : loopRange = 5
+            elif row == "Middle" : loopRange = 4
+            else : loopRange = 3
             for i in range(loopRange):
                 sideList = ["Left", "Right"]
                 if i == loopRange - 1:
@@ -121,4 +122,4 @@ class RoomScreen:
                             floorImage = self.imageDict["Floor"][row][terrainType][targetSide]
                             self.surface.blit(floorImage, [0, 0])
 
-        window.blit(self.surface, [600, 200])
+        window.blit(self.surface, [0, 0])
