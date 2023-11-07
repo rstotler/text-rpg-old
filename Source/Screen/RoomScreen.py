@@ -14,7 +14,7 @@ class RoomScreen:
             imageDict[area] = {}
             for row in ["Back", "Middle", "Front", "BackWall"]:
                 imageDict[area][row] = {}
-                for terrainType in ["Default"]:
+                for terrainType in ["Default", "Dirt"]:
                     try:
                         imageDict[area][row][terrainType] = {}
                         if not (area != "Wall" and row == "BackWall") and \
@@ -38,8 +38,6 @@ class RoomScreen:
         return imageDict
 
     def draw(self, window, galaxyList, player):
-        self.surface.fill([10, 30, 70])
-
         playerPlanet = None
         playerArea, playerRoom = Room.getAreaAndRoom(galaxyList, player)
         targetSpaceshipNum = None
@@ -47,9 +45,7 @@ class RoomScreen:
             playerPlanet = galaxyList[player.galaxy].systemList[player.system].planetList[player.planet]
             targetSpaceshipNum = playerRoom.spaceshipObject.num
 
-        # Draw Sky #
-        if playerRoom.inside == False:
-            pass
+        self.surface.fill([10, 30, 70])
 
         # Draw Room Rows #
         rowList = ["Back", "Middle", "Front"]

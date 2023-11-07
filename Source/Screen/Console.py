@@ -1,4 +1,4 @@
-import pygame
+import pygame, random
 from pygame import *
 from Components.Utility import *
 
@@ -13,14 +13,41 @@ class Console:
         rectSize = [580, (self.consoleLines * 18) + 6]
         self.surface = pygame.Surface(rectSize)
         self.font = pygame.font.Font("../Assets/Fonts/CodeNewRomanB.otf", 18)
-        
+
+        self.starBackgroundList = []
+        self.starBackgroundAlpha = [55, 35, 15]
+        self.starBackgroundDir = []
+
         self.characterWidth = 57
         
         self.lineList = []
         self.displayLine = 0
 
+        self.loadSurfaces(rectSize)
+
+    def loadSurfaces(self, rectSize):
+        for i in range(len(self.starBackgroundAlpha)):
+            self.starBackgroundList.append(pygame.Surface(rectSize, flags=SRCALPHA))
+            self.starBackgroundDir.append(random.randrange(8) / 2)
+            for s in range(50):
+                x = random.randrange(rectSize[0])
+                y = random.randrange(rectSize[1])
+                starColor = [200, 200, 200]
+                if random.randrange(7) == 0:
+                    colorNum = random.randrange(3)
+                    if colorNum == 0 : starColor = [200, 0, 0]
+                    elif colorNum == 1 : starColor = [0, 200, 0]
+                    elif colorNum == 2 : starColor = [0, 0, 200]
+                self.starBackgroundList[-1].set_at([x, y], starColor)
+
     def draw(self, window):
-        self.surface.fill([5, 15, 35])
+        self.surface.fill([15, 15, 15])
+        for i in range(len(self.starBackgroundAlpha)):
+            self.starBackgroundAlpha[i] += self.starBackgroundDir[i]
+            if self.starBackgroundAlpha[i] >= 120 or self.starBackgroundAlpha[i] <= 15:
+                self.starBackgroundDir[i] *= -1
+            self.starBackgroundList[i].set_alpha(self.starBackgroundAlpha[i])
+            self.surface.blit(self.starBackgroundList[i], [0, 0])
 
         startIndex = self.displayLine
         endIndex = startIndex + self.consoleLines
