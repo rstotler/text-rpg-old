@@ -50,6 +50,8 @@ class Player:
         self.debugDualWield = True
 
         # Mob-Specific Variables #
+        self.displayOffset = [0, 0]
+
         self.speechTickMax = 8
         self.speechTick = 0
         self.speechIndex = 0
@@ -679,7 +681,7 @@ class Player:
             if self.num != None:
                 if self in currentRoom.mobList:
                     del currentRoom.mobList[currentRoom.mobList.index(self)]
-                targetRoom.mobList.append(self)
+                createMob(None, targetRoom, self)
                 self.actionList.append(Action("Buffer Action", {}, 3))
 
             delTargetList = []
@@ -2374,11 +2376,6 @@ class Player:
                         if len(recruitList) > maxRecruitCount:
                             break
 
-            for mob in recruitList:
-                if mob in currentRoom.mobList:
-                    del currentRoom.mobList[currentRoom.mobList.index(mob)]
-                    currentRoom.mobList.append(mob)
-
             if mobKey not in ["All", None] and len(recruitList) == 0 and alreadyInGroupCheck == False and currentlyFightingCheck == False:
                 console.write("You don't see them.", "7w1y10w1y", drawBlankLine)
             elif len(recruitList) == 0 and alreadyInGroupCheck == True:
@@ -3891,25 +3888,9 @@ class Player:
 
     def manifestCheck(self, console, currentRoom, targetType, targetNum, targetCount):
         manifestTarget = None
-        if currentRoom.spaceshipObject != None:
-            targetGalaxy = currentRoom.spaceshipObject.galaxy
-            targetSystem = currentRoom.spaceshipObject.system
-            targetPlanet = currentRoom.spaceshipObject.planet
-            targetArea = currentRoom.area
-            targetRoom = currentRoom.room
-            targetSpaceship = currentRoom.spaceshipObject.num
-        else:
-            targetGalaxy = currentRoom.galaxy
-            targetSystem = currentRoom.system
-            targetPlanet = currentRoom.planet
-            targetArea = currentRoom.area
-            targetRoom = currentRoom.room
-            targetSpaceship = None
-
         for i in range(targetCount):
             if targetType == "Mob":
-                newMob = Player(targetGalaxy, targetSystem, targetPlanet, targetArea, targetRoom, targetSpaceship, targetNum)
-                currentRoom.mobList.append(newMob)
+                newMob = createMob(targetNum, currentRoom)
                 if manifestTarget == None:
                     manifestTarget = newMob
 
@@ -4252,11 +4233,7 @@ class Player:
             self.speechList = [{"String":"Welcome to the COTU Spaceport!", "Code":"29w1y"}, \
                                {"String":"Please have your badge ready.", "Code":"28w1y"}]
         elif num == 2:
-            self.name = {"String":"Man", "Code":"3w"}
-        elif num == 3:
-            self.name = {"String":"Reptoid", "Code":"7w"}
-        elif num == 4:
-            self.name = {"String":"Tall Droid", "Code":"10w"}
+            self.name = {"String":"Spider", "Code":"1w5ddw"}
 
         # Create Key List #
         appendKeyList(self.keyList, self.name["String"].lower())

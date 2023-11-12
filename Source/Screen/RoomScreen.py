@@ -1,15 +1,24 @@
-import pygame, traceback
+import pygame, os, traceback
 from pygame import *
 from GameData.World.Room import Room
+from Components.Utility import *
 
 class RoomScreen:
+    displayOffset = {"Back":{"Left 2":[57, 147], "Left 3":[133, 147], "Left 4":[212, 147], "Middle":[291, 147], "Right 4":[366, 147], "Right 3":[445, 147], "Right 2":[521, 147]}, \
+                     "Middle":{"Left 2":[63, 164], "Left 3":[177, 164], "Middle":[291, 164], "Right 3":[401, 164], "Right 2":[515, 164]}, \
+                     "Front":{"Left 2":[100, 207], "Middle":[291, 207], "Right 2":[478, 207]}}
+
     def __init__(self):
         self.imageDict = self.loadImages()
         self.surface = pygame.Surface([580, 248])
+        self.mobSurface = pygame.Surface([580, 248], pygame.SRCALPHA)
+
+        self.font = pygame.font.Font("../Assets/Fonts/CodeNewRomanB.otf", 33)
 
     def loadImages(self):
         imageDict = {}
 
+        # Floors, Ceilings, Walls #
         for area in ["Floor", "Ceiling", "Wall"]:
             imageDict[area] = {}
             for row in ["Back", "Middle", "Front", "BackWall"]:
@@ -35,6 +44,23 @@ class RoomScreen:
                     except Exception as error:
                         print(traceback.format_exc())
 
+        # Mobs #
+        imageDict["Mob"] = {}
+        for subdir, dirs, files in os.walk("../Assets/Images/Mob/"):
+            for file in files:
+                mobNum = file[0:file.rindex('.')]
+                if stringIsNumber(mobNum):
+                    mobNum = int(mobNum)
+                    mobImage = pygame.image.load(subdir + file).convert_alpha()
+                    imageDict["Mob"][mobNum] = {"Front":mobImage, "Middle":None, "Back":None}
+                    for row in ["Middle", "Back"]:
+                        if row == "Middle":
+                            newSize = [int(mobImage.get_width() * .75), int(mobImage.get_height() * .75)]
+                            imageDict["Mob"][mobNum][row] = pygame.transform.scale(mobImage, newSize)
+                        elif row == "Back":
+                            newSize = [int(mobImage.get_width() * .5), int(mobImage.get_height() * .5)]
+                            imageDict["Mob"][mobNum][row] = pygame.transform.scale(mobImage, newSize)
+
         return imageDict
 
     def draw(self, window, galaxyList, player):
@@ -42,10 +68,51 @@ class RoomScreen:
         playerArea, playerRoom = Room.getAreaAndRoom(galaxyList, player)
         targetSpaceshipNum = None
         if playerRoom.spaceshipObject != None:
-            playerPlanet = galaxyList[player.galaxy].systemList[player.system].planetList[player.planet]
             targetSpaceshipNum = playerRoom.spaceshipObject.num
+        if playerRoom.spaceshipObject == None or playerRoom.spaceshipObject.landedLocation != None:
+            playerPlanet = galaxyList[player.galaxy].systemList[player.system].planetList[player.planet]
 
-        self.surface.fill([10, 30, 70])
+        mobSurface = self.mobSurface.copy()
+
+        # Sky #
+        if True:
+            totalDayPercent = playerPlanet.currentMinutesInDay / playerPlanet.minutesInDay
+            skyColor = playerPlanet.skyColor
+            if totalDayPercent < playerPlanet.dawnPercent or totalDayPercent >= playerPlanet.sunsetPercent:
+                skyColor = playerPlanet.nightSkyColor
+
+            dawnDuskPercent = None
+            minutesBeforeDusk = None
+            minutesBeforeDawn = (playerPlanet.dawnPercent * playerPlanet.minutesInDay)
+            if totalDayPercent >= playerPlanet.dawnPercent and totalDayPercent < playerPlanet.sunrisePercent:
+                dawnMinutes = (playerPlanet.sunrisePercent * playerPlanet.minutesInDay) - minutesBeforeDawn
+                dawnDuskPercent = (playerPlanet.currentMinutesInDay - minutesBeforeDawn) / dawnMinutes
+            elif totalDayPercent >= playerPlanet.duskPercent and totalDayPercent < playerPlanet.sunsetPercent:
+                minutesBeforeDusk = (playerPlanet.duskPercent * playerPlanet.minutesInDay)
+                duskMinutes = (playerPlanet.sunsetPercent * playerPlanet.minutesInDay) - minutesBeforeDusk
+                dawnDuskPercent = (playerPlanet.currentMinutesInDay - minutesBeforeDusk) / duskMinutes
+
+            if dawnDuskPercent != None:
+                if dawnDuskPercent <= .5 : dawnDuskPercentMod = dawnDuskPercent * 2
+                else : dawnDuskPercentMod = (dawnDuskPercent - .5) * 2
+                if dawnDuskPercent > .5 and playerPlanet.switchSkyColorCheck == False:
+                    playerPlanet.switchSkyColorCheck = True
+                    playerPlanet.currentSkyColor = playerPlanet.targetSkyColor
+                    playerPlanet.targetSkyColor = playerPlanet.skyColor
+                    if minutesBeforeDusk != None:
+                        playerPlanet.targetSkyColor = playerPlanet.nightSkyColor
+                skyColor = playerPlanet.updateSkyColor(dawnDuskPercentMod)
+            self.surface.fill(skyColor)
+
+        # Outside - Draw Sun #
+        if totalDayPercent >= playerPlanet.dawnPercent and totalDayPercent < playerPlanet.sunsetPercent:
+            import math
+
+            dayMinutes = (playerPlanet.sunsetPercent * playerPlanet.minutesInDay) - minutesBeforeDawn
+            dayLightPercent = (playerPlanet.currentMinutesInDay - minutesBeforeDawn) / dayMinutes
+            x = (math.cos(math.radians(dayLightPercent * 180)) * 260)
+            y = ((math.sin(math.radians(dayLightPercent * 180)) * 175) * -1)
+            pygame.draw.circle(self.surface, [100, 100, 0], [290 + x, 175 + y], 30)
 
         # Draw Room Rows #
         rowList = ["Back", "Middle", "Front"]
@@ -54,6 +121,16 @@ class RoomScreen:
             elif row == "Middle" : loopRange = 4
             else : loopRange = 3
             for i in range(loopRange):
+
+                # Static Ground #
+                if i == 0:
+                    if row == "Back":
+                        pygame.draw.rect(self.surface, [20, 10, 0], [0, 141, 580, 13])
+                    elif row == "Middle":
+                        pygame.draw.rect(self.surface, [20, 10, 0], [0, 154, 580, 22])
+                    elif row == "Front":
+                        pygame.draw.rect(self.surface,[20, 10, 0], [0, 176, 580, 72])
+                        
                 sideList = ["Left", "Right"]
                 if i == loopRange - 1:
                     sideList = ["Middle"]
@@ -78,8 +155,18 @@ class RoomScreen:
                             
                             if targetRoom != None:
                                 if isinstance(targetRoom.exit["North"], list) == True:
-                                    northRoom = Room.exists(galaxyList, targetSpaceshipNum, targetRoom.exit["North"][0], targetRoom.exit["North"][1], targetRoom.exit["North"][2], targetRoom.exit["North"][3], targetRoom.exit["North"][4])
-                                
+                                    if len(targetRoom.exit["North"]) == 3:
+                                        northExitArea = targetRoom.exit["North"][1]
+                                        northExitRoom = targetRoom.exit["North"][2]
+                                        northRoom = targetRoom.spaceshipObject.areaList[northExitArea].roomList[northExitRoom]
+                                    else:
+                                        northExitGalaxy = targetRoom.exit["North"][0]
+                                        northExitSystem = targetRoom.exit["North"][1]
+                                        northExitPlanet = targetRoom.exit["North"][2]
+                                        northExitArea = targetRoom.exit["North"][3]
+                                        northExitRoom = targetRoom.exit["North"][4]
+                                        northRoom = Room.exists(galaxyList, targetSpaceshipNum, northExitGalaxy, northExitSystem, northExitPlanet, northExitArea, northExitRoom)
+                                    
                             drawFloor = True
                             if targetRoom == None:
                                 drawFloor = False
@@ -118,4 +205,17 @@ class RoomScreen:
                             floorImage = self.imageDict["Floor"][row][terrainType][targetSide]
                             self.surface.blit(floorImage, [0, 0])
 
+                            # Mobs #
+                            if targetRoom != None and len(targetRoom.mobList) > 0 and row in self.displayOffset and targetSide in self.displayOffset[row]:
+                                for mob in targetRoom.mobList:
+                                    if mob.num in self.imageDict["Mob"] and row in self.imageDict["Mob"][mob.num]:
+                                        mobImage = self.imageDict["Mob"][mob.num][row]
+                                        offsetRatio = 1.0
+                                        if row == "Middle" : offsetRatio = .44
+                                        elif row == "Back" : offsetRatio = .18
+                                        x = self.displayOffset[row][targetSide][0] - (mobImage.get_width() / 2) + int(mob.displayOffset[0] * offsetRatio)
+                                        y = self.displayOffset[row][targetSide][1] - mobImage.get_height() + int(mob.displayOffset[1] * offsetRatio)
+                                        mobSurface.blit(mobImage, [x, y])
+
+        self.surface.blit(mobSurface, [0, 0])
         window.blit(self.surface, [0, 0])

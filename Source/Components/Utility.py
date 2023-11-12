@@ -62,6 +62,48 @@ colorDict = {"lr":[255, 80,  80],  "r":[255, 0,   0],   "dr":[145, 0,   0],   "d
              "la":[150, 150, 150], "a":[150, 150, 150], "da":[120, 120, 120], "dda":[70,  70,  70],  "ddda":[35, 35, 35],
               "x":[0, 0, 0]}
 
+def writeOutline(label, font, pxOutline=2, textColor=[230, 230, 230], outlineColor=[10, 10, 10]):
+    import pygame
+    surfaceText = font.render(label, True, textColor).convert_alpha()
+    textWidth = surfaceText.get_width() + 2 * pxOutline
+    textHeight = font.get_height()
+
+    surfaceOutline = pygame.Surface([textWidth, textHeight + 2 * pxOutline]).convert_alpha()
+    surfaceOutline.fill([0, 0, 0, 0])
+    surfaceMain = surfaceOutline.copy()
+    surfaceOutline.blit(font.render(str(label), True, outlineColor).convert_alpha(), [0, 0])
+
+    circleCache = {}
+    for dx, dy in circlePoints(circleCache, pxOutline):
+        surfaceMain.blit(surfaceOutline, [dx + pxOutline, dy + pxOutline])
+    surfaceMain.blit(surfaceText, [pxOutline, pxOutline])
+
+    return surfaceMain
+
+def circlePoints(circleCache, r):
+    r = int(round(r))
+    if r in circleCache:
+        return circleCache[r]
+
+    x, y, e = r, 0 , 1 - r
+    circleCache[r] = points = []
+
+    while x >= y:
+        points.append([x, y])
+        y += 1
+        if e < 0:
+            e += 2 * y - 1
+        else:
+            x -= 1
+            e += 2 * (y - x) - 1
+
+    points += [[y, x] for x, y in points if x > y]
+    points += [[-x, y] for x, y in points if x]
+    points += [[x, -y] for x, y in points if y]
+    points.sort()
+
+    return points
+
 def stringIsNumber(string):
 	try:
 		int(string)
@@ -264,6 +306,42 @@ def writeCrashReport(errorString, input, player):
                 if targetSlot != None:
                     slotString = str(targetSlot.num) + " - " + targetSlot.name["String"]
                 f.write(gearSlot + indexString + " - " + slotString + "\n")
+
+def createMob(num, targetRoom, targetMob=None):
+    if targetMob == None:
+        from GameData.Player.Player import Player
+        if targetRoom.spaceshipObject != None:
+            targetGalaxy = targetRoom.spaceshipObject.galaxy
+            targetSystem = targetRoom.spaceshipObject.system
+            targetPlanet = targetRoom.spaceshipObject.planet
+            targetArea = targetRoom.area
+            targetRoomNum = targetRoom.room
+            targetSpaceship = targetRoom.spaceshipObject.num
+        else:
+            targetGalaxy = targetRoom.galaxy
+            targetSystem = targetRoom.system
+            targetPlanet = targetRoom.planet
+            targetArea = targetRoom.area
+            targetRoomNum = targetRoom.room
+            targetSpaceship = None
+        targetMob = Player(targetGalaxy, targetSystem, targetPlanet, targetArea, targetRoomNum, targetSpaceship, num)
+
+    # Set Room Display Position #
+    import random
+    xOffset = random.randrange(160) - 80
+    yOffset = random.randrange(65) - 20
+    targetMob.displayOffset = [xOffset, yOffset]
+
+    # Insert Mob Into List (Depending On Y-Offset) #
+    insertIndex = None
+    for i, mob in enumerate(targetRoom.mobList):
+        if yOffset >= mob.displayOffset[1]:
+            insertIndex = i + 1
+    if len(targetRoom.mobList) == 0 or insertIndex == None:
+        insertIndex = 0
+    targetRoom.mobList.insert(insertIndex, targetMob)
+
+    return targetMob
 
 def createItem(num, type=None, quantity=None, targetRoom=None):
     import copy

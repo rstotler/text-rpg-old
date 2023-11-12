@@ -31,9 +31,19 @@ class Planet:
         self.dawnPercent = 0; self.sunrisePercent = 0; self.noonPercent = 0; self.duskPercent = 0; self.sunsetPercent = 0
         self.dawnMessage = False; self.sunriseMessage = False; self.noonMessage = False; self.duskMessage = False; self.sunsetMessage = False
 
+        self.skyColor = [20, 60, 140]
+        self.nightSkyColor = [5, 5, 20]
+        self.targetSkyColor = self.skyColor
+        self.currentSkyColor = self.skyColor
+        self.switchSkyColorCheck = False
+
+        # Randomize Start Time #
         if self.type == "Planet":
             self.currentMinutesInYear = random.randrange(self.minutesInYear)
             self.currentMinutesInDay = self.currentMinutesInYear % self.minutesInDay
+
+            self.updateNightDayTimers()
+            self.updatePosition()
 
     def createContinent(self, galaxyList, size):
         areaNum = len(self.areaList)
@@ -203,6 +213,9 @@ class Planet:
 
                 if dayPercent >= self.dawnPercent and self.dawnMessage == False:
                     self.dawnMessage = True
+                    self.currentSkyColor = self.targetSkyColor
+                    self.targetSkyColor = [240, 130, 30]
+                    self.switchSkyColorCheck = False
                     console.write("The sky begins to lighten.", "4w1dc2ddc11w1dw6ddw1y", True)
                 elif dayPercent >= self.sunrisePercent and self.sunriseMessage == False:
                     self.sunriseMessage = True
@@ -212,6 +225,9 @@ class Planet:
                     console.write("It's noon.", "2w1y6w1y", True)
                 elif dayPercent >= self.duskPercent and self.duskMessage == False:
                     self.duskMessage = True
+                    self.currentSkyColor = self.targetSkyColor
+                    self.targetSkyColor = [240, 130, 30]
+                    self.switchSkyColorCheck = False
                     console.write("The sun begins to set.", "4w1dy2ddy11w1dw2ddw1y", True)
                 elif dayPercent >= self.sunsetPercent and self.sunsetMessage == False:
                     self.sunsetMessage = True
@@ -241,6 +257,12 @@ class Planet:
         self.duskMessage = (self.currentMinutesInDay / self.minutesInDay) >= self.duskPercent
         self.sunsetMessage = (self.currentMinutesInDay / self.minutesInDay) >= self.sunsetPercent
 
+        # Update Sky Color #
+        totalDayPercent = self.currentMinutesInDay / self.minutesInDay
+        if totalDayPercent < self.minutesInDay * self.dawnPercent or totalDayPercent > self.minutesInDay * self.sunsetPercent:
+            self.currentSkyColor = self.nightSkyColor
+            self.targetSkyColor = self.nightSkyColor
+
         # sunriseTime = (self.sunrisePercent * self.minutesInDay)
         # sunriseString = str(int(sunriseTime / 60)) + ":" + str(int(sunriseTime % 60))
         # sunsetTime = (self.sunsetPercent * self.minutesInDay)
@@ -266,6 +288,16 @@ class Planet:
             y = ((math.sin(math.radians((self.currentMinutesInYear / self.minutesInYear) * 360)) * self.distanceFromSun) / 1.4) * orbitMod
         
         self.position = [x, y]
+
+    def updateSkyColor(self, dawnPercent):
+        newColor = []
+        for i in range(3):
+            diffPercent = (self.targetSkyColor[i] - self.currentSkyColor[i]) * dawnPercent
+            colorNum = int(self.currentSkyColor[i] + diffPercent)
+            if colorNum < 0 : colorNum = 0
+            elif colorNum > 255 : colorNum = 255
+            newColor.append(colorNum)
+        return newColor
 
     def dayCheck(self):
         if self.type == "Star":

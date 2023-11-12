@@ -25,6 +25,8 @@ from Components.Utility import *
         # Elemental Planetary Energy
         # Computer/Hacking/Simulation/Breaking The Third Wall
         # Love Story
+        # Very Populated Worlds
+        # Futuristic (1000 Years In The Future) - Populated Space, Space Ships
     # Make Player Lose Sight Of Mobs On Darkness & Other Darkness Effects
     # Let Player Do 'All' Combat Skills In Rooms Without Mobs
     # Stack Damage In Attack Messages
@@ -46,6 +48,8 @@ from Components.Utility import *
     # Moons
     # Reload Messages For Mobs
     # Make Sure Items Don't Generate Over Special Item Numbers
+    # Only 1 Message Should Display When Player Uses Attack Out Of Range
+    # Dialogue/Narrative/Quest System
 
 class Game:
 
@@ -99,8 +103,8 @@ class Game:
             planetProtoEarth = Planet(self.galaxyList, 0, 0, 3, protoEarthName, "Planet", 93456, 1440, 525600, 23.43, 7917)
             systemProtoSol.planetList.append(planetProtoEarth)
             
-            planetProtoEarth.currentMinutesInDay = 480
-            planetProtoEarth.currentMinutesInYear = 480
+            planetProtoEarth.currentMinutesInDay = 350
+            planetProtoEarth.currentMinutesInYear = 350
             planetProtoEarth.updateNightDayTimers()
             planetProtoEarth.updatePosition()
 
@@ -172,7 +176,7 @@ class Game:
             areaCOTU.roomList.append(roomCOTU01)
             roomCOTU01.exit["North"] = [0, 0, 3, areaCOTUNum, 0]
             roomCOTU01.exit["South"] = [0, 0, 3, areaCOTUNum, 2]
-            roomCOTU01.mobList.append(Player(0, 0, 3, areaCOTUNum, 1, None, 1))
+            createMob(1, roomCOTU01)
 
             roomCOTU02Name = {"String":"Spaceport Entrance", "Code":"1w1dw2ddw1dw1w1dw1ddw1dw9w"}
             roomCOTU02 = Room(0, 0, 3, areaCOTUNum, 2, roomCOTU02Name)

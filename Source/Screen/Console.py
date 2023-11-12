@@ -13,6 +13,7 @@ class Console:
         rectSize = [580, (self.consoleLines * 18) + 6]
         self.surface = pygame.Surface(rectSize)
         self.font = pygame.font.Font("../Assets/Fonts/CodeNewRomanB.otf", 18)
+        self.inset = pygame.image.load("../Assets/Images/Interface/Console_Inset.png").convert_alpha()
 
         self.starBackgroundList = []
         self.starBackgroundAlpha = [55, 35, 15]
@@ -26,19 +27,25 @@ class Console:
         self.loadSurfaces(rectSize)
 
     def loadSurfaces(self, rectSize):
+        choiceList = []
         for i in range(len(self.starBackgroundAlpha)):
             self.starBackgroundList.append(pygame.Surface(rectSize, flags=SRCALPHA))
-            self.starBackgroundDir.append(random.randrange(8) / 2)
-            for s in range(50):
-                x = random.randrange(rectSize[0])
-                y = random.randrange(rectSize[1])
+            self.starBackgroundDir.append((random.randrange(6) / 2) + 1.0)
+            for s in range(40):
+                x = 5 + random.randrange(rectSize[0] - 10)
+                y = 5 + random.randrange(rectSize[1] - 10)
                 starColor = [200, 200, 200]
                 if random.randrange(7) == 0:
                     colorNum = random.randrange(3)
                     if colorNum == 0 : starColor = [200, 0, 0]
                     elif colorNum == 1 : starColor = [0, 200, 0]
                     elif colorNum == 2 : starColor = [0, 0, 200]
-                self.starBackgroundList[-1].set_at([x, y], starColor)
+                if [x, y] not in choiceList:
+                    if random.randrange(14) == 0:
+                        pygame.draw.circle(self.starBackgroundList[-1], starColor, [x, y], 1)
+                    else:
+                        self.starBackgroundList[-1].set_at([x, y], starColor)
+                    choiceList.append([x, y])
 
     def draw(self, window):
         self.surface.fill([15, 15, 15])
@@ -48,6 +55,8 @@ class Console:
                 self.starBackgroundDir[i] *= -1
             self.starBackgroundList[i].set_alpha(self.starBackgroundAlpha[i])
             self.surface.blit(self.starBackgroundList[i], [0, 0])
+
+        self.surface.blit(self.inset, [8, 6])
 
         startIndex = self.displayLine
         endIndex = startIndex + self.consoleLines

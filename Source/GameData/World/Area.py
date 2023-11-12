@@ -23,11 +23,16 @@ class Area:
     def zeroCoordinates(self, galaxyList):
         # Reminder: Must Be Called AFTER Adding Area To Planet.areaList! #
 
-        def examineRoomData(currentLoc, targetRoom, examinedRoomNumList):
+        def examineRoomData(currentLoc, targetRoom, examinedRoomNumList, highestYList):
+            if len(highestYList) < currentLoc[2] + 1:
+                highestYList.append(0)
+            if currentLoc[1] > highestYList[currentLoc[2]]:
+                highestYList[currentLoc[2]] = currentLoc[1]
+
             targetRoom.mapCoordinates = copy.deepcopy(currentLoc)
             examinedRoomNumList.append(targetRoom.room)
             firstRoom = copy.deepcopy(targetRoom)
-            for targetExitDir in ["North", "East", "South", "West"]:
+            for targetExitDir in ["North", "East", "South", "West", "Up", "Down"]:
                 if targetExitDir != "North":
                     currentLoc = copy.deepcopy(firstRoom.mapCoordinates)
                     
@@ -38,15 +43,24 @@ class Area:
                         elif targetExitDir == "East" : currentLoc[0] += 1
                         elif targetExitDir == "South" : currentLoc[1] += 1
                         elif targetExitDir == "West" : currentLoc[0] -= 1
-                        
-                        examinedRoomNumList = examineRoomData(currentLoc, tempRoom, examinedRoomNumList)
+                        elif targetExitDir == "Up" : currentLoc[2] += 1
+                        elif targetExitDir == "Down" : currentLoc[2] -= 1
+
+                        examinedRoomNumList, highestYList = examineRoomData(currentLoc, tempRoom, examinedRoomNumList, highestYList)
                         currentLoc = copy.deepcopy(firstRoom.mapCoordinates)
                         firstRoom.mapCoordinates = copy.deepcopy(firstRoom.mapCoordinates)
-                        
-            return examinedRoomNumList
+         
+            return examinedRoomNumList, highestYList
 
         # Get Map Dimensions #
-        examinedRoomNumList = examineRoomData([0, 0], self.roomList[0], [])
+        examinedRoomNumList, highestYList = examineRoomData([0, 0, 0], self.roomList[0], [], [])
+
+        # Zero Z Levels #
+        for roomNum in examinedRoomNumList:
+            targetRoom = self.roomList[roomNum]
+            if targetRoom.mapCoordinates[2] > 0:
+                for i in range(targetRoom.mapCoordinates[2]):
+                    targetRoom.mapCoordinates[1] += (highestYList[targetRoom.mapCoordinates[2]] + 3)
     
         # Zero Map Dimensions From Bottom-Right Corner To Top-Left Corner #
         if len(examinedRoomNumList) > 0:

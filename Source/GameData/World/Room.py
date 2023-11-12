@@ -13,7 +13,7 @@ class Room:
         self.spaceshipObject = None
         self.flags = {}
 
-        self.mapCoordinates = [None, None]
+        self.mapCoordinates = [None, None, None] # Z-Coordinate Is ONLY Used For Map Generation
 
         self.name = createDefaultString(name)
         self.description = {"String":"", "Code":""}

@@ -9,8 +9,7 @@ class Map:
         self.surface = pygame.Surface([220, 220])
         self.surface.fill([10, 30, 70])
         self.font = pygame.font.Font("../Assets/Fonts/CodeNewRomanB.otf", 12)
-        self.border = pygame.image.load("../Assets/Images/Interface/Border_Map.png").convert_alpha()
-
+        
         self.screenLevel = "Area"
 
         self.cellSize = 48
@@ -145,7 +144,6 @@ class Map:
         writeFast("Planet: " + targetPlanetName["String"], [200, 200, 200], [6, 6], self.font, self.surface)
         writeFast("Area: " + targetArea.name["String"], [200, 200, 200], [6, 16], self.font, self.surface)
                 
-        self.surface.blit(self.border, [0, 0])
         window.blit(self.surface, [580, 0])
         
     def drawSystemMap(self, window, galaxyList, player):
@@ -176,5 +174,4 @@ class Map:
 
         writeFast("System: " + self.targetSystem.name["String"], [200, 200, 200], [6, 6], self.font, self.surface)
         
-        self.surface.blit(self.border, [0, 0])
         window.blit(self.surface, [580, 0])
