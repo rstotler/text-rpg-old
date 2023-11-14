@@ -193,6 +193,11 @@ class Spaceship:
         console.lineList.insert(0, {"String": "You see nothing special.", "Code":"23w1y"})
 
     def buildSpaceship(self, galaxyList):
+        targetSystem = galaxyList[self.galaxy].systemList[self.system]
+        targetRoom = targetSystem.planetList[self.planet].areaList[self.landedLocation[0]].roomList[self.landedLocation[1]]
+        targetSystem.spaceshipList.append(self)
+        targetRoom.spaceshipList.append(self)
+        
         targetPlanet = galaxyList[self.galaxy].systemList[self.system].planetList[self.planet]
         self.position = targetPlanet.position
 

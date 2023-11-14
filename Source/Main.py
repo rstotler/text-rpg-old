@@ -10,5 +10,5 @@ game = Game()
 
 while True:
     clock.tick(60)
-    game.update(window)
+    game.update(window, str(int(clock.get_fps())))
     pygame.display.flip()

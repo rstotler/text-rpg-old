@@ -3,7 +3,8 @@ from pygame import *
 from Screen.Console import Console
 from Screen.InputBar import InputBar
 from Screen.Map import Map
-from Screen.RoomScreen import RoomScreen
+from Screen.RoomScreen.RoomScreen import RoomScreen
+from Screen.RoomScreen.DamageAnimation import DamageAnimation
 from Components.Keyboard import Keyboard
 from GameData.Config import Config
 from GameData.Player.Player import Player
@@ -50,6 +51,9 @@ from Components.Utility import *
     # Make Sure Items Don't Generate Over Special Item Numbers
     # Only 1 Message Should Display When Player Uses Attack Out Of Range
     # Dialogue/Narrative/Quest System
+    # Puzzles On The Walls/Hidden Entrances
+    # Temperature (Pull From TypeQuest)
+    # Scrolling Up On The Console Is Acting Weird
 
 class Game:
 
@@ -176,7 +180,8 @@ class Game:
             areaCOTU.roomList.append(roomCOTU01)
             roomCOTU01.exit["North"] = [0, 0, 3, areaCOTUNum, 0]
             roomCOTU01.exit["South"] = [0, 0, 3, areaCOTUNum, 2]
-            createMob(1, roomCOTU01)
+            roomCOTU01Mob = createMob(1, roomCOTU01)
+            #roomCOTU01.damageAnimationList.append(DamageAnimation("Slash", roomCOTU01Mob.displayOffset, self.roomScreen.imageDict["Mob"][roomCOTU01Mob.num]["Front"].get_height(), self.roomScreen.font)) #
 
             roomCOTU02Name = {"String":"Spaceport Entrance", "Code":"1w1dw2ddw1dw1w1dw1ddw1dw9w"}
             roomCOTU02 = Room(0, 0, 3, areaCOTUNum, 2, roomCOTU02Name)
@@ -217,17 +222,20 @@ class Game:
             areaCOTU.roomList.append(roomCOTU06)
             roomCOTU06.exit["West"] = [0, 0, 3, areaCOTUNum, 2]
             roomCOTU06.exit["Up"] = [0, 0, 3, areaCOTUNum, 7]
+            roomCOTU06.inside = True
 
             roomCOTU07Name = {"String":"COTU Training Center Floor 1", "Code":"28w"}
             roomCOTU07 = Room(0, 0, 3, areaCOTUNum, 7, roomCOTU07Name)
             areaCOTU.roomList.append(roomCOTU07)
             roomCOTU07.exit["Down"] = [0, 0, 3, areaCOTUNum, 6]
             roomCOTU07.exit["North"] = [0, 0, 3, areaCOTUNum, 8]
+            roomCOTU07.inside = True
 
             roomCOTU08Name = {"String":"Unarmed Mobs Room", "Code":"17w"}
             roomCOTU08 = Room(0, 0, 3, areaCOTUNum, 8, roomCOTU08Name)
             areaCOTU.roomList.append(roomCOTU08)
             roomCOTU08.exit["South"] = [0, 0, 3, areaCOTUNum, 7]
+            roomCOTU08.inside = True
             unarmedUnskilledControlPanel = createItem(5)
             unarmedUnskilledFlagList = {"Num":2, "Label":{"String":"[1] - Unarmed, Unskilled Mob", "Code":"1r1w1r3y7w2y13w"}, "Key List":["1"], "Skill List":[1], "Gear Dict":{}}
             unarmedUnskilledControlPanel.buttonList.append(Button("Spawn Mob", unarmedUnskilledFlagList))
@@ -245,9 +253,7 @@ class Game:
         if True:
             cotuTransportShipName = {"String":"COTU Transport Ship", "Code":"19w"}
             cotuTransportShip = Spaceship(self.galaxyList, cotuTransportShipName, "COTU Spaceport", [0, 0, 3, areaCOTUNum, 5], [0, 1], [0, 0])
-            roomCOTU05.spaceshipList.append(cotuTransportShip)
-            systemProtoSol.spaceshipList.append(cotuTransportShip)
-
+            
         # (Area) Ice Cavern
         if True:
             areaIceCavernString = {"String":"Ice Cavern", "Code":"10w"}
@@ -363,7 +369,7 @@ class Game:
         self.player.itemDict["Key"].append(createItem(1))
         self.player.gearDict["Finger"][0] = createItem(8, "Armor")
 
-    def draw(self, window):
+    def draw(self, window, fps):
         window.fill([0, 0, 0])
 
         self.roomScreen.draw(window, self.galaxyList, self.player)
@@ -372,7 +378,9 @@ class Game:
 
         self.map.draw(window, self.galaxyList, self.player)
 
-    def update(self, window):
+        writeFast(fps, [200, 200, 200], [0, 0], self.roomScreen.font, window)
+
+    def update(self, window, fps):
         self.processInput()
         self.inputBar.update(self)
         
@@ -399,7 +407,7 @@ class Game:
         if self.frameTick >= 60:
             self.frameTick = 0
 
-        self.draw(window)
+        self.draw(window, fps)
 
     def processInput(self):
         for event in pygame.event.get():

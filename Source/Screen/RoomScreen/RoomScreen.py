@@ -9,11 +9,10 @@ class RoomScreen:
                      "Front":{"Left 2":[100, 207], "Middle":[291, 207], "Right 2":[478, 207]}}
 
     def __init__(self):
-        self.imageDict = self.loadImages()
-        self.surface = pygame.Surface([580, 248])
-        self.mobSurface = pygame.Surface([580, 248], pygame.SRCALPHA)
-
+        self.surface = {"Back":pygame.Surface([580, 248], pygame.SRCALPHA), "Middle":pygame.Surface([580, 248], pygame.SRCALPHA), "Front":pygame.Surface([580, 248], pygame.SRCALPHA)}
         self.font = pygame.font.Font("../Assets/Fonts/CodeNewRomanB.otf", 33)
+
+        self.imageDict = self.loadImages()
 
     def loadImages(self):
         imageDict = {}
@@ -61,6 +60,16 @@ class RoomScreen:
                             newSize = [int(mobImage.get_width() * .5), int(mobImage.get_height() * .5)]
                             imageDict["Mob"][mobNum][row] = pygame.transform.scale(mobImage, newSize)
 
+        # Attack Animations #
+        imageDict["Attack Animation"] = {}
+        for subdir, dirs, files in os.walk("../Assets/Images/Attack/"):
+            attackName = subdir[subdir.rindex('/') + 1::]
+            if attackName not in imageDict["Attack Animation"]:
+                imageDict["Attack Animation"][attackName] = []
+            for file in files:
+                attackFrame = pygame.image.load(subdir + "/" + file).convert_alpha()
+                imageDict["Attack Animation"][attackName].append(attackFrame)
+
         return imageDict
 
     def draw(self, window, galaxyList, player):
@@ -72,7 +81,7 @@ class RoomScreen:
         if playerRoom.spaceshipObject == None or playerRoom.spaceshipObject.landedLocation != None:
             playerPlanet = galaxyList[player.galaxy].systemList[player.system].planetList[player.planet]
 
-        mobSurface = self.mobSurface.copy()
+        screenSurface = {"Back":self.surface["Back"].copy(), "Middle":self.surface["Middle"].copy(), "Front":self.surface["Front"].copy()}
 
         # Sky #
         if True:
@@ -102,7 +111,7 @@ class RoomScreen:
                     if minutesBeforeDusk != None:
                         playerPlanet.targetSkyColor = playerPlanet.nightSkyColor
                 skyColor = playerPlanet.updateSkyColor(dawnDuskPercentMod)
-            self.surface.fill(skyColor)
+            screenSurface["Back"].fill(skyColor)
 
         # Outside - Draw Sun #
         if totalDayPercent >= playerPlanet.dawnPercent and totalDayPercent < playerPlanet.sunsetPercent:
@@ -112,7 +121,7 @@ class RoomScreen:
             dayLightPercent = (playerPlanet.currentMinutesInDay - minutesBeforeDawn) / dayMinutes
             x = (math.cos(math.radians(dayLightPercent * 180)) * 260)
             y = ((math.sin(math.radians(dayLightPercent * 180)) * 175) * -1)
-            pygame.draw.circle(self.surface, [100, 100, 0], [290 + x, 175 + y], 30)
+            pygame.draw.circle(screenSurface["Back"], [100, 100, 0], [290 + x, 175 + y], 30)
 
         # Draw Room Rows #
         rowList = ["Back", "Middle", "Front"]
@@ -125,11 +134,11 @@ class RoomScreen:
                 # Static Ground #
                 if i == 0:
                     if row == "Back":
-                        pygame.draw.rect(self.surface, [20, 10, 0], [0, 141, 580, 13])
+                        pygame.draw.rect(screenSurface["Back"], [20, 10, 0], [0, 141, 580, 13])
                     elif row == "Middle":
-                        pygame.draw.rect(self.surface, [20, 10, 0], [0, 154, 580, 22])
+                        pygame.draw.rect(screenSurface["Back"], [20, 10, 0], [0, 154, 580, 22])
                     elif row == "Front":
-                        pygame.draw.rect(self.surface,[20, 10, 0], [0, 176, 580, 72])
+                        pygame.draw.rect(screenSurface["Back"],[20, 10, 0], [0, 176, 580, 72])
                         
                 sideList = ["Left", "Right"]
                 if i == loopRange - 1:
@@ -173,13 +182,13 @@ class RoomScreen:
 
                         # Back Wall #
                         if row == "Back" and playerRoom.inside == True and (northRoom == None or northRoom.inside == False):
-                            self.surface.blit(self.imageDict["Wall"]["BackWall"]["Default"][targetSide], [0, 0])
+                            screenSurface["Back"].blit(self.imageDict["Wall"]["BackWall"]["Default"][targetSide], [0, 0])
 
                         # Ceiling #
                         if targetRoom != None and targetRoom.inside == True and \
                         not (playerRoom.inside == False and targetSide == "Middle"):
                             ceilingImage = self.imageDict["Ceiling"][row]["Default"][targetSide]
-                            self.surface.blit(ceilingImage, [0, 0])
+                            screenSurface[row].blit(ceilingImage, [0, 0])
                         else:
                             pass
 
@@ -189,12 +198,12 @@ class RoomScreen:
                             # Outside Walls #
                             if playerRoom.inside == False:
                                 wallImage = self.imageDict["Wall"][row]["Default"][targetSide]
-                                self.surface.blit(wallImage, [0, 0])
+                                screenSurface[row].blit(wallImage, [0, 0])
                                 drawFloor = False
 
                         # Inside Walls #
                         elif (playerRoom.inside == True and ((targetRoom != None and targetRoom.inside == False) or targetRoom == None)):
-                            self.surface.blit(self.imageDict["Wall"][row]["Default"][targetSide], [0, 0])
+                            screenSurface[row].blit(self.imageDict["Wall"][row]["Default"][targetSide], [0, 0])
                             drawFloor = False
                             
                         # Floor #
@@ -203,7 +212,7 @@ class RoomScreen:
                             if terrainType not in self.imageDict["Floor"][row]:
                                 terrainType = "Default"
                             floorImage = self.imageDict["Floor"][row][terrainType][targetSide]
-                            self.surface.blit(floorImage, [0, 0])
+                            screenSurface[row].blit(floorImage, [0, 0])
 
                             # Mobs #
                             if targetRoom != None and len(targetRoom.mobList) > 0 and row in self.displayOffset and targetSide in self.displayOffset[row]:
@@ -215,7 +224,13 @@ class RoomScreen:
                                         elif row == "Back" : offsetRatio = .18
                                         x = self.displayOffset[row][targetSide][0] - (mobImage.get_width() / 2) + int(mob.displayOffset[0] * offsetRatio)
                                         y = self.displayOffset[row][targetSide][1] - mobImage.get_height() + int(mob.displayOffset[1] * offsetRatio)
-                                        mobSurface.blit(mobImage, [x, y])
+                                        screenSurface[row].blit(mobImage, [x, y])
 
-        self.surface.blit(mobSurface, [0, 0])
-        window.blit(self.surface, [0, 0])
+                        # Damage Animations #
+                        if targetRoom != None and len(targetRoom.damageAnimationList) > 0:
+                            for damageAnimation in targetRoom.damageAnimationList:
+                                damageAnimation.draw(screenSurface[row], self.imageDict["Attack Animation"][damageAnimation.name], self.displayOffset[row][targetSide])
+                                damageAnimation.update(self.imageDict["Attack Animation"][damageAnimation.name])
+
+        for row in ["Back", "Middle", "Front"]:
+            window.blit(screenSurface[row], [0, 0])

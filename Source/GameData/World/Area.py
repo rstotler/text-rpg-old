@@ -31,7 +31,23 @@ class Area:
 
             targetRoom.mapCoordinates = copy.deepcopy(currentLoc)
             examinedRoomNumList.append(targetRoom.room)
-            firstRoom = copy.deepcopy(targetRoom)
+
+            targetSpaceshipNum = None
+            if targetRoom.spaceshipObject != None:
+                targetSpaceshipNum = targetRoom.spaceshipObject.num
+                targetGalaxy = targetRoom.spaceshipObject.galaxy
+                targetSystem = targetRoom.spaceshipObject.system
+                targetPlanet = targetRoom.spaceshipObject.planet
+                targetArea = targetRoom.area
+                targetRoomNum = targetRoom.room
+            else:
+                targetGalaxy = targetRoom.galaxy
+                targetSystem = targetRoom.system
+                targetPlanet = targetRoom.planet
+                targetArea = targetRoom.area
+                targetRoomNum = targetRoom.room
+            firstRoom = Room.exists(galaxyList, targetSpaceshipNum, targetGalaxy, targetSystem, targetPlanet, targetArea, targetRoomNum)
+            
             for targetExitDir in ["North", "East", "South", "West", "Up", "Down"]:
                 if targetExitDir != "North":
                     currentLoc = copy.deepcopy(firstRoom.mapCoordinates)

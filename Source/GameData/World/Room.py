@@ -29,6 +29,8 @@ class Room:
         self.inside = False
         self.terrainType = "Default"
 
+        self.damageAnimationList = []
+
     def display(self, console, galaxyList, player):
         roomIsLit = self.isLit(galaxyList, player, player)
 
